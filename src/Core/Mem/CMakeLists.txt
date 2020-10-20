@@ -1,6 +1,6 @@
-add_library(Memory STATIC
-        Memory.h
-        Memory.cpp
+add_library(Mem STATIC
+        Mem.h
+        Mem.cpp
         MemoryHelpers.h)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -12,7 +12,7 @@ include_directories(
         ../include
 )
 
-set_target_properties(Memory PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(Mem PROPERTIES LINKER_LANGUAGE CXX)
 
 
-target_include_directories(Memory PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(Mem PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

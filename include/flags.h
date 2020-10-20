@@ -12,8 +12,6 @@
 #define COMPONENT_SCHEDULER   0x02
 #define COMPONENT_CPU         0x04
 
-#define SCREEN_TYPE SCREEN_NTSC
-
 #ifndef NDEBUG
 // change to change verbosity / component logging:
 #define VERBOSITY VERBOSITY_DEBUG

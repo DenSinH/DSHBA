@@ -1,7 +1,7 @@
 #ifndef GC__SYSTEM_H
 #define GC__SYSTEM_H
 
-#include "Memory/Memory.h"
+#include "Mem/Mem.h"
 
 #include "default.h"
 #include "flags.h"
@@ -23,7 +23,7 @@ class GBA {
         s_scheduler scheduler{};
         bool shutdown{};
 
-        Memory memory;
+        Mem memory;
 
         GBA();
         ~GBA();

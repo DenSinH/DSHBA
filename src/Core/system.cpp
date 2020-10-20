@@ -11,6 +11,8 @@ GBA::GBA() {
     breakpoints = {};
     paused      = false;
 
+    memory.LoadBIOS(BIOS_FILE);
+
 #ifdef DO_BREAKPOINTS
 //    add_breakpoint(&GameCube->breakpoints, 0x80005cdc);
 //    add_breakpoint(&GameCube->breakpoints, 0x00000500);

@@ -38,14 +38,15 @@ struct DisassemblyViewer
         ImGui::SetNextWindowSizeConstraints(ImVec2(-1, -1),    ImVec2(-1, -1));
         ImGui::SetNextWindowSize(ImVec2(400, (INSTRS_BEFORE_PC + INSTRS_AFTER_PC + 1) * 14), ImGuiCond_Once);
 
-        if (!memory || !valid_address_check) {
-            // if nullptr is passed to memory, we can't disassemble anything
-            // so just don't even start on the window then
+        if (!ImGui::Begin("Disassembly Viewer", p_open))
+        {
+            ImGui::End();
             return;
         }
 
-        if (!ImGui::Begin("Disassembly Viewer", p_open))
-        {
+        if (!memory || !valid_address_check) {
+            // if nullptr is passed to memory, we can't disassemble anything
+            // so just don't even start on the window then
             ImGui::End();
             return;
         }

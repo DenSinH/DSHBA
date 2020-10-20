@@ -3,7 +3,7 @@
 #ifdef DO_CAPSTONE
 
 void init_disassembly(csh* handle) {
-    cs_err open = cs_open(CS_ARCH_ARM, CS_MODE_32 | CS_MODE_BIG_ENDIAN, handle);
+    cs_err open = cs_open(CS_ARCH_ARM, CS_MODE_THUMB | CS_MODE_LITTLE_ENDIAN, handle);
     if (open != CS_ERR_OK)
         exit(open);
 

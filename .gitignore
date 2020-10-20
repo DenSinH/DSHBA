@@ -1,0 +1,5 @@
+.idea/
+cmake-*/
+venv/
+roms/
+files/gba_bios.bin

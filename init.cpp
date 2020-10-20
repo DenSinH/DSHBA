@@ -24,7 +24,7 @@ GBA* init() {
             &gba->shutdown,
             nullptr,
             nullptr,
-            0,
+            0x1'0000'0000ULL,
             ValidAddresCheck,
             ReadByte,
             nullptr

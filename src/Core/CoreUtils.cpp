@@ -5,7 +5,11 @@
 #include <fstream>
 
 void LoadFileTo(char* buffer, const std::string& file_name, size_t max_length) {
-    std::ifstream infile(file_name);
+    std::ifstream infile(file_name, std::ios::binary);
+
+    if (infile.fail()) {
+        log_fatal("Failed to open file %s", file_name.c_str());
+    }
 
     infile.seekg(0, std::ios::end);
     size_t length = infile.tellg();
@@ -16,4 +20,5 @@ void LoadFileTo(char* buffer, const std::string& file_name, size_t max_length) {
     }
 
     infile.read(buffer, length);
+    log_info("Loaded %x bytes from file %s", length, file_name.c_str());
 }

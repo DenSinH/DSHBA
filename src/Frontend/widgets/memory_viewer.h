@@ -136,7 +136,7 @@ struct MemoryViewer
         s.WindowWidth = s.PosAsciiEnd + style.ScrollbarSize + style.WindowPadding.x * 2 + s.GlyphWidth;
     }
 
-    // Standalone Memory Editor window
+    // Standalone Mem Editor window
     void Draw(bool* p_open)
     {
         uint64_t base_display_addr = 0;
@@ -144,7 +144,7 @@ struct MemoryViewer
         CalcSizes(s, base_display_addr);
         ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, 0.0f), ImVec2(s.WindowWidth, FLT_MAX));
 
-        if (ImGui::Begin("Memory Viewer", p_open, ImGuiWindowFlags_NoScrollbar))
+        if (ImGui::Begin("Mem Viewer", p_open, ImGuiWindowFlags_NoScrollbar))
         {
             if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows) && ImGui::IsMouseClicked(1))
                 ImGui::OpenPopup("context");
@@ -158,13 +158,13 @@ struct MemoryViewer
         ImGui::End();
     }
 
-    // Memory Editor contents only
+    // Mem Editor contents only
     void DrawContents(uint64_t base_display_addr = 0)
     {
         if (Cols < 1)
             Cols = 1;
 
-        if (!mem_data || !ReadFn) {
+        if (!ReadFn && !mem_data) {
             // nullptr passed
             return;
         }
