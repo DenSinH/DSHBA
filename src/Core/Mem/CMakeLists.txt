@@ -3,8 +3,6 @@ add_library(Mem STATIC
         Mem.cpp
         MemoryHelpers.h)
 
-set(CMAKE_CXX_STANDARD 17)
-
 # for logging / stuff I want to use in all files
 include_directories(
         ${PROJECT_SOURCE_DIR}/include

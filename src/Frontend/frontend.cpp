@@ -35,16 +35,15 @@ extern "C" {
 void frontend_init(
         bool *shutdown,
         uint32_t *PC,
-        uint8_t *memory,
         uint64_t mem_size,
-        uint32_t (*valid_address_mask)(uint32_t),
+        uint8_t *(*valid_address_mask)(uint32_t),
         uint8_t (*mem_read)(uint64_t),
         void (*parse_input)(s_controller*)
 ) {
     Frontend.shutdown = shutdown;
     Frontend.parse_input = parse_input;
     debugger_init(
-            PC, memory, mem_size, valid_address_mask, mem_read
+            PC, mem_size, valid_address_mask, mem_read
     );
 }
 

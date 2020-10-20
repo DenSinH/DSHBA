@@ -36,6 +36,7 @@ class Mem {
         void LoadBIOS(const std::string& file_path);
 
     private:
+        friend u8* ValidAddressMask(u32 address);  // for debugging
         u8 BIOS  [0x4000];
         u8 eWRAM [0x4'0000];
         u8 iWRAM [0x8000];

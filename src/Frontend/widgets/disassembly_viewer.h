@@ -7,7 +7,8 @@
 
 #include "imgui/imgui.h"
 
-#define INSTRS_BEFORE_PC 20
+// THUMB mode messes this up
+#define INSTRS_BEFORE_PC 10
 #define INSTRS_AFTER_PC 20
 #define DISASM_BUFER_SIZE 0x100
 
@@ -15,8 +16,7 @@
 struct DisassemblyViewer
 {
     uint32_t* PC;
-    uint8_t* memory;
-    uint32_t (*valid_address_check)(uint32_t address);
+    uint8_t* (*valid_address)(uint32_t address);
 
 #ifdef DO_CAPSTONE
     csh handle;
@@ -44,7 +44,7 @@ struct DisassemblyViewer
             return;
         }
 
-        if (!memory || !valid_address_check) {
+        if (!valid_address) {
             // if nullptr is passed to memory, we can't disassemble anything
             // so just don't even start on the window then
             ImGui::End();
@@ -67,11 +67,11 @@ struct DisassemblyViewer
         uint32_t current_PC = address;
 
         size_t count = INSTRS_BEFORE_PC + INSTRS_AFTER_PC + 1;
-        if (!valid_address_check(address + (INSTRS_AFTER_PC << 2))) {
+        if (!valid_address(address + (INSTRS_AFTER_PC << 2))) {
             count -= INSTRS_AFTER_PC;
         }
 
-        if (!valid_address_check(address - (INSTRS_BEFORE_PC << 2))) {
+        if (!valid_address(address - (INSTRS_BEFORE_PC << 2))) {
             count -= INSTRS_BEFORE_PC;
         }
         else {
@@ -81,7 +81,7 @@ struct DisassemblyViewer
 #ifdef DO_CAPSTONE
         count = disassemble(
                 &this->handle,
-                this->memory + valid_address_check(address),
+                valid_address(address),
                 count << 2,
                 address,
                 count,

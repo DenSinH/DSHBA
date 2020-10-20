@@ -2,6 +2,7 @@
 #define GC__SYSTEM_H
 
 #include "Mem/Mem.h"
+#include "ARM7TDMI/ARM7TDMI.h"
 
 #include "default.h"
 #include "flags.h"
@@ -24,6 +25,7 @@ class GBA {
         bool shutdown{};
 
         Mem memory;
+        ARM7TDMI cpu = ARM7TDMI(&memory);;
 
         GBA();
         ~GBA();
