@@ -7,6 +7,15 @@
 
 static GBA* gba;
 
+static u8 ReadByte(u64 offset) {
+    return gba->memory.Read<u8, false>(offset);
+}
+
+static u32 ValidAddresCheck(u32 address) {
+    // all memory can be read for the GBA
+    return 1;
+}
+
 GBA* init() {
     gba = (GBA*)malloc(sizeof(GBA));
     new(gba) GBA;
@@ -16,8 +25,8 @@ GBA* init() {
             nullptr,
             nullptr,
             0,
-            nullptr,
-            nullptr,
+            ValidAddresCheck,
+            ReadByte,
             nullptr
     );
 

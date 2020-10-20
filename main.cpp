@@ -1,5 +1,3 @@
-#include <cstdio>
-
 #include "src/Core/system.h"
 
 #include "init.h"
@@ -7,6 +5,7 @@
 
 
 int main() {
+    printf("Hello World!\n");
     GBA* gba = init();
     gba->paused = true;
 

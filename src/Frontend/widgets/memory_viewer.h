@@ -41,7 +41,7 @@ struct MemoryViewer
     int             OptMidColsCount;                            // = 8      // set to 0 to disable extra spacing between every mid-cols.
     int             OptAddrDigitsCount;                         // = 0      // number of addr digits to display (default calculated based on maximum displayed addr).
     ImU32           HighlightColor;                             //          // background color of highlighted bytes.
-    ImU8            (*ReadFn)(const ImU8* data, uint64_t off);    // = 0      // optional handler to read bytes.
+    ImU8            (*ReadFn)(uint64_t off);    // = 0      // optional handler to read bytes.
 
     uint8_t* mem_data;
     uint64_t mem_size;
@@ -224,7 +224,7 @@ struct MemoryViewer
 
                 {
                     // NB: The trailing space is not visible but ensure there's no gap that the mouse cannot click on.
-                    ImU8 b = ReadFn ? ReadFn(mem_data, addr) : mem_data[addr];
+                    ImU8 b = ReadFn ? ReadFn(addr) : mem_data[addr];
 
                     if (OptShowHexII)
                     {
@@ -271,7 +271,7 @@ struct MemoryViewer
                         draw_list->AddRectFilled(pos, ImVec2(pos.x + s.GlyphWidth, pos.y + s.LineHeight), ImGui::GetColorU32(ImGuiCol_FrameBg));
                         draw_list->AddRectFilled(pos, ImVec2(pos.x + s.GlyphWidth, pos.y + s.LineHeight), ImGui::GetColorU32(ImGuiCol_TextSelectedBg));
                     }
-                    unsigned char c = ReadFn ? ReadFn(mem_data, addr) : mem_data[addr];
+                    unsigned char c = ReadFn ? ReadFn(addr) : mem_data[addr];
                     char display_c = (c < 32 || c >= 128) ? '.' : c;
                     draw_list->AddText(pos, (display_c == '.') ? color_disabled : color_text, &display_c, &display_c + 1);
                     pos.x += s.GlyphWidth;
@@ -481,7 +481,7 @@ struct MemoryViewer
         uint64_t size = addr + elem_size > mem_size ? mem_size - addr : elem_size;
         if (ReadFn)
             for (int i = 0, n = (int)size; i < n; ++i)
-                buf[i] = ReadFn(mem_data, addr + i);
+                buf[i] = ReadFn(addr + i);
         else
             memcpy(buf, mem_data + addr, size);
 

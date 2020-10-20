@@ -38,7 +38,7 @@ void frontend_init(
         uint8_t *memory,
         uint64_t mem_size,
         uint32_t (*valid_address_mask)(uint32_t),
-        uint8_t (*mem_read)(const uint8_t*, uint64_t),
+        uint8_t (*mem_read)(uint64_t),
         void (*parse_input)(s_controller*)
 ) {
     Frontend.shutdown = shutdown;

@@ -1,6 +1,8 @@
 #ifndef GC__SYSTEM_H
 #define GC__SYSTEM_H
 
+#include "Memory/Memory.h"
+
 #include "default.h"
 #include "flags.h"
 
@@ -20,6 +22,8 @@ class GBA {
     public:
         s_scheduler scheduler{};
         bool shutdown{};
+
+        Memory memory;
 
         GBA();
         ~GBA();

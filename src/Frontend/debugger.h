@@ -10,7 +10,7 @@ void debugger_init(
         uint8_t* memory,
         uint64_t mem_size,
         uint32_t (*valid_address_mask)(uint32_t),
-        uint8_t (*mem_read)(const uint8_t* data, uint64_t off)
+        uint8_t (*mem_read)(uint64_t off)
 );
 
 void debugger_video_init(const char* glsl_version, SDL_Window* window, SDL_GLContext* gl_context);
