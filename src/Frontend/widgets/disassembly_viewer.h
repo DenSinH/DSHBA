@@ -3,12 +3,12 @@
 
 #include <stdint.h>
 #include <inttypes.h>
+#include <cstdlib>
 #include "disassemble.h"
 
 #include "imgui/imgui.h"
 
-// THUMB mode messes this up
-#define INSTRS_BEFORE_PC 10
+#define INSTRS_BEFORE_PC 20
 #define INSTRS_AFTER_PC 20
 #define DISASM_BUFER_SIZE 0x100
 
@@ -79,28 +79,50 @@ struct DisassemblyViewer
         }
 
 #ifdef DO_CAPSTONE
-        count = disassemble(
-                &this->handle,
-                valid_address(address),
-                count << 2,
-                address,
-                count,
-                &this->insn
-                );
 
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
         for (int i = 0; i < count; i++) {
-            if (insn[i].address == current_PC) {
-                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 100));
+            uint8_t* loc = valid_address(address);
+            if (!loc) {
+                address += 4;
             }
-            ImGui::Text("%08" PRIx32 ":\t%-10s\t%s", (uint32_t)insn[i].address, insn[i].mnemonic, insn[i].op_str);
-            if (insn[i].address == current_PC) {
-                ImGui::PopStyleColor(1);
+
+            unsigned int instructions = disassemble(
+                    &this->handle,
+                    loc,
+                    4,
+                    address,
+                    0,
+                    &this->insn
+            );
+
+            address += 4;
+
+            // THUMB mode is severely annoying
+            if (instructions == 1 ||
+                std::abs(int(address - current_PC)) < INSTRS_BEFORE_PC * 2) {
+
+                for (int j = 0; j < instructions; j++) {
+                    if (insn[j].address == current_PC) {
+                        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 100));
+                    }
+                    if (instructions == 1) {
+                        ImGui::Text("%08" PRIx32 ":\t%08x\t%-10s\t%s",
+                                    (uint32_t)insn[j].address, *(uint32_t*)insn[j].bytes, insn[j].mnemonic, insn[j].op_str);
+                    }
+                    else {
+                        ImGui::Text("%08" PRIx32 ":\t%04x    \t%-10s\t%s",
+                                    (uint32_t)insn[j].address, *(uint16_t*)insn[j].bytes, insn[j].mnemonic, insn[j].op_str);
+                    }
+                    if (insn[j].address == current_PC) {
+                        ImGui::PopStyleColor(1);
+                    }
+                }
             }
+
+            free_disassembly(insn, instructions);
         }
         ImGui::PopStyleVar();
-
-        free_disassembly(insn, count);
 #else
         for (int i = 0; i < count; i++) {
             ImGui::Text("Disassembly unsupported");
