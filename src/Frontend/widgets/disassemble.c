@@ -3,7 +3,7 @@
 #ifdef DO_CAPSTONE
 
 void init_disassembly(csh* handle) {
-    cs_err open = cs_open(CS_ARCH_ARM, CS_MODE_THUMB | CS_MODE_LITTLE_ENDIAN, handle);
+    cs_err open = cs_open(CS_ARCH_ARM, CS_MODE_ARM | CS_MODE_LITTLE_ENDIAN, handle);
     if (open != CS_ERR_OK)
         exit(open);
 
@@ -20,7 +20,14 @@ void close_disassembly(csh* handle) {
     cs_close(handle);
 }
 
-size_t disassemble(const csh* handle, uint8_t* code, size_t code_size, uint32_t address, uint32_t count, cs_insn** out) {
+size_t disassemble(const csh* handle, uint8_t* code, size_t code_size, uint32_t address, uint32_t count, cs_insn** out, bool ARM) {
+    if (ARM) {
+        cs_option(*handle, CS_OPT_MODE, CS_MODE_ARM);
+    }
+    else {
+        cs_option(*handle, CS_OPT_MODE, CS_MODE_THUMB);
+    }
+
     return cs_disasm(*handle, code, code_size, address, count, out);
 }
 

@@ -13,27 +13,29 @@
 class GBA {
 
 #ifdef DO_DEBUGGER
-    public:
-        bool paused{};
+public:
+    bool paused{};
 
-    private:
-        u32 stepcount{};
+private:
+    friend class Initializer;
+
+    u32 stepcount = 0;
+#   ifdef DO_BREAKPOINTS
+    s_breakpoints breakpoints = {};
+#   endif
+
 #endif
 
-    public:
-        s_scheduler scheduler{};
-        bool shutdown{};
+public:
+    s_scheduler scheduler = {};
+    bool shutdown = false;
 
-        Mem memory;
-        ARM7TDMI cpu = ARM7TDMI(&memory);;
+    Mem Memory;
+    ARM7TDMI CPU = ARM7TDMI(&Memory);;
 
-        GBA();
-        ~GBA();
-        void Run();
-
-#if defined(DO_BREAKPOINTS) || defined(DO_DEBUGGER)
-    s_breakpoints breakpoints{};
-#endif
+    GBA();
+    ~GBA();
+    void Run();
 
 };
 

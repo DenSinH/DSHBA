@@ -42,11 +42,10 @@ add_executable(DSHBA
         modules/KHR/khrplatform.h
         UIthread.h
         UIthread.c
-#        debugging.h
-#        init.c
-#        init.h
-#
-        init.cpp init.h)
+        debugging.h
+        init.cpp
+        init.h
+)
 
 # add link time optimizations for extra speed
 if( ipo_supported )

@@ -2,16 +2,31 @@
 
 #include "init.h"
 #include "UIthread.h"
+#include "sleeping.h"
 
 #include "const.h"
 
+static GBA* gba;
+
+void exception_handler() {
+    // keep open the screen to still be able to check the register/memory contents (unstable)
+    while (!gba->shutdown) {
+        sleep_ms(16);
+    }
+}
+
 int main() {
-    GBA* gba = init();
-    gba->paused = true;
+    gba = Initializer::init();
+
+#ifdef DO_BREAKPOINTS
+    gba->paused = false;
+#endif
+
+    atexit(exception_handler);
 
     start_ui_thread();
 
-    gba->memory.LoadROM(ROM_FILE);
+    gba->Memory.LoadROM(ROM_FILE);
     gba->Run();
 
     join_ui_thread();

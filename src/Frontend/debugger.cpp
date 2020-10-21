@@ -49,7 +49,8 @@ void debugger_init(
         uint32_t* PC,
         uint64_t mem_size,
         uint8_t* (*valid_address_mask)(uint32_t),
-        uint8_t (*mem_read)(uint64_t off)
+        uint8_t (*mem_read)(uint64_t off),
+        bool (*arm_mode)()
 ) {
     Debugger.disassembly_viewer.PC = PC;
     Debugger.disassembly_viewer.valid_address = valid_address_mask;

@@ -25,25 +25,26 @@ enum class MemoryRegion {
 
 
 class Mem {
-    public:
-        Mem();
-        ~Mem();
+public:
+    Mem();
+    ~Mem();
 
-        template<typename T, bool count> T Read(u32 address);
-        template<typename T, bool count> void Write(u32 address, T value);
-        
-        void LoadROM(const std::string& file_path);
-        void LoadBIOS(const std::string& file_path);
+    template<typename T, bool count> T Read(u32 address);
+    template<typename T, bool count> void Write(u32 address, T value);
 
-    private:
-        friend u8* ValidAddressMask(u32 address);  // for debugging
-        u8 BIOS  [0x4000];
-        u8 eWRAM [0x4'0000];
-        u8 iWRAM [0x8000];
-        u8 PAL   [0x400];
-        u8 VRAM  [0x1'8000];
-        u8 OAM   [0x400];
-        u8 ROM   [0x0200'0000];
+    void LoadROM(const std::string& file_path);
+    void LoadBIOS(const std::string& file_path);
+
+private:
+    friend class Initializer;
+
+    u8 BIOS  [0x4000];
+    u8 eWRAM [0x4'0000];
+    u8 iWRAM [0x8000];
+    u8 PAL   [0x400];
+    u8 VRAM  [0x1'8000];
+    u8 OAM   [0x400];
+    u8 ROM   [0x0200'0000];
 };
 
 template<typename T, bool count>
@@ -77,6 +78,7 @@ T Mem::Read(u32 address) {
         case MemoryRegion::ROM_H2:
         case MemoryRegion::ROM_H:
             // todo: EEPROM attempts
+            log_debug("Read from ROM address %08x", address);
             return ReadArray<T>(ROM, address & 0x01ff'ffff);
         case MemoryRegion::SRAM:
             log_warn("SRAM read @0x%08x", address);

@@ -17,6 +17,7 @@ struct DisassemblyViewer
 {
     uint32_t* PC;
     uint8_t* (*valid_address)(uint32_t address);
+    bool (*arm_mode)();
 
 #ifdef DO_CAPSTONE
     csh handle;
@@ -93,7 +94,8 @@ struct DisassemblyViewer
                     4,
                     address,
                     0,
-                    &this->insn
+                    &this->insn,
+                    arm_mode == nullptr || arm_mode()
             );
 
             address += 4;

@@ -38,12 +38,13 @@ void frontend_init(
         uint64_t mem_size,
         uint8_t *(*valid_address_mask)(uint32_t),
         uint8_t (*mem_read)(uint64_t),
-        void (*parse_input)(s_controller*)
+        void (*parse_input)(s_controller*),
+        bool (*arm_mode)()
 ) {
     Frontend.shutdown = shutdown;
     Frontend.parse_input = parse_input;
     debugger_init(
-            PC, mem_size, valid_address_mask, mem_read
+            PC, mem_size, valid_address_mask, mem_read, arm_mode
     );
 }
 

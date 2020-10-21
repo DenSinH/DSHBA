@@ -7,11 +7,11 @@
 #include "flags.h"
 
 GBA::GBA() {
-    scheduler   = { .timer = nullptr };
+    scheduler   = { .timer = &CPU.timer };
     breakpoints = {};
     paused      = false;
 
-    memory.LoadBIOS(BIOS_FILE);
+    Memory.LoadBIOS(BIOS_FILE);
 
 #ifdef DO_BREAKPOINTS
 //    add_breakpoint(&GameCube->breakpoints, 0x80005cdc);
@@ -25,19 +25,22 @@ GBA::~GBA() {
 }
 
 void GBA::Run() {
+    CPU.SkipBIOS();
+
     while (!shutdown) {
 
         // todo: enable this once at least one event is in the scheduler at all times
 //        if (should_do_events(&scheduler)) {
 //            do_events(&scheduler);
 //        }
+        CPU.Step();
 
-//#if defined(DO_BREAKPOINTS) || defined(DO_DEBUGGER)
-//        if (check_breakpoints(&breakpoints, cpu.PC)) {
-//            log_debug("Hit breakpoint %08x", cpu.PC);
-//            paused = true;
-//        }
-//#endif
+#if defined(DO_BREAKPOINTS) && defined(DO_DEBUGGER)
+        if (check_breakpoints(&breakpoints, CPU.pc)) {
+            log_debug("Hit breakpoint %08x", CPU.pc);
+            paused = true;
+        }
+#endif
 
 #ifdef DO_DEBUGGER
         while (paused && (stepcount == 0) && !shutdown) {

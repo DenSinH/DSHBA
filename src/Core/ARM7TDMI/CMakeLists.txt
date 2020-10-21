@@ -1,6 +1,7 @@
 add_library(ARM7TDMI STATIC
         ARM7TDMI.h
         ARM7TDMI.cpp
+        Pipeline.h
 )
 
 # for logging / stuff I want to use in all files
