@@ -205,6 +205,7 @@ private:
 #include "instructions/ARM/Branch.inl"
 #include "instructions/ARM/DataProcessing.inl"
 #include "instructions/ARM/LoadStore.inl"
+#include "instructions/ARM/BlockDataTransfer.inl"
 #include "instructions/ARM/Multiply.inl"
 
 #include "instructions/THUMB/ALU.inl"

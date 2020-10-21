@@ -180,7 +180,7 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
             this->Registers[Rd] = result;
             break;
         case DataProcessingOpcode::RSB:
-            log_cpu_verbose("%08x RSB %08x (so %08x - %08x) -> R%d", op1, op2, Rd);
+            log_cpu_verbose("%08x RSB %08x -> R%d", op1, op2, Rd);
             result = op2 - op1;
             if constexpr(S)
                 SetCVSub(op2, op1, result);
@@ -225,18 +225,18 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
             result = op1 & op2;
             break;
         case DataProcessingOpcode::TEQ:
-            log_cpu_verbose("%08x TEQ %08x (EOR, no store)", op1, op2, Rd);
+            log_cpu_verbose("%08x TEQ %08x (EOR, no store)", op1, op2);
             result = op1 ^ op2;
             break;
         case DataProcessingOpcode::CMP:
-            log_cpu_verbose("%08x CMP %08x (SUB, no store)", op1, op2, Rd);
+            log_cpu_verbose("%08x CMP %08x (SUB, no store)", op1, op2);
             result = op1 - op2;
             if constexpr(S)
                 SetCVSub(op1, op2, result);
 
             break;
         case DataProcessingOpcode::CMN:
-            log_cpu_verbose("%08x CMN %08x (ADD, no store)", op1, op2, Rd);
+            log_cpu_verbose("%08x CMN %08x (ADD, no store)", op1, op2);
             result = op1 + op2;
             if constexpr(S)
                 SetCVAdd(op1, op2, result);
