@@ -143,6 +143,11 @@ GBA* Initializer::init() {
     add_register_data("Pipe 2", &gba->CPU.Pipeline.Storage[2], 4, cpu_tab);
     add_register_data("Pipe 3", &gba->CPU.Pipeline.Storage[3], 4, cpu_tab);
 
+    add_register_data("", NULL, 4, cpu_tab);
+    add_register_data("", NULL, 8, cpu_tab);
+
+    add_register_data("Time", &gba->CPU.timer, 8, cpu_tab);
+
     // add_command("RESET", "Resets the system. Add 'pause/freeze/break' to freeze on reload.", reset_system);
     add_command("PAUSE", "Pauses the system.", pause_system);
     add_command("CONTINUE", "Unpauses the system.", unpause_system);

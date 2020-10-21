@@ -78,7 +78,6 @@ T Mem::Read(u32 address) {
         case MemoryRegion::ROM_H2:
         case MemoryRegion::ROM_H:
             // todo: EEPROM attempts
-            log_debug("Read from ROM address %08x", address);
             return ReadArray<T>(ROM, address & 0x01ff'ffff);
         case MemoryRegion::SRAM:
             log_warn("SRAM read @0x%08x", address);

@@ -64,7 +64,8 @@ struct DisassemblyViewer
 
         ImGui::BeginChild("Disassembly");
 
-        uint32_t address = *this->PC;
+        bool ARM = arm_mode == nullptr || arm_mode();
+        uint32_t address = *this->PC - (ARM ? 8 : 4);
         uint32_t current_PC = address;
 
         size_t count = INSTRS_BEFORE_PC + INSTRS_AFTER_PC + 1;
@@ -95,7 +96,7 @@ struct DisassemblyViewer
                     address,
                     0,
                     &this->insn,
-                    arm_mode == nullptr || arm_mode()
+                    ARM
             );
 
             address += 4;

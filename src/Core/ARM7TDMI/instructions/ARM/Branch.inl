@@ -12,7 +12,11 @@ class ARM7TDMI_INL : ARM7TDMI {
 template<bool Link>
 void Branch(u32 instruction) {
     if constexpr(Link) {
+        log_cpu_verbose("Branch with link");
         this->lr = this->pc - 4;
+    }
+    else {
+        log_cpu_verbose("Branch");
     }
 
     i32 offset = (i32)(instruction << 8) >> 6;  // shifted left by 2 and sign extended

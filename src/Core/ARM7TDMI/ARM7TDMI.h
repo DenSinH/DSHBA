@@ -5,6 +5,7 @@
 #include "../Mem/Mem.h"
 
 #include "default.h"
+#include "helpers.h"
 #include "flags.h"
 
 class ARM7TDMI;
@@ -48,7 +49,7 @@ typedef void (ARM7TDMI::*THUMBInstructionPtr)(u16 instruction);
 
 class ARM7TDMI {
 public:
-    u64 timer;
+    u64 timer = 0;
 
     explicit ARM7TDMI(Mem* memory) {
         this->Memory = memory;
@@ -117,11 +118,11 @@ private:
     // bits 15-6 for THUMB instructions (less are needed, but this allows for more templating)
     THUMBInstructionPtr THUMBInstructions[THUMBInstructionTableSize];
 
-    static inline __attribute__((always_inline)) u32 ARMHash(u32 instruction) {
+    static inline __attribute__((always_inline)) constexpr u32 ARMHash(u32 instruction) {
         return ((instruction & 0x0ff0'0000) >> 16) | ((instruction & 0x00f0) >> 4);
     }
 
-    static inline __attribute__((always_inline)) u32 THUMBHash(u16 instruction) {
+    static inline __attribute__((always_inline)) constexpr u32 THUMBHash(u16 instruction) {
         return ((instruction & 0xffc0) >> 6);
     }
 
@@ -158,11 +159,20 @@ private:
 #endif
     }
 
+    template<u32>
+    friend constexpr ARMInstructionPtr GetARMInstruction();
+    template<u16>
+    friend constexpr THUMBInstructionPtr GetTHUMBInstruction();
 
     void BuildARMTable();
     void BuildTHUMBTable();
 
-    inline bool CheckCondition(u8 condition) const;
+    inline __attribute__((always_inline)) void SetCVAdd(u32 op1, u32 op2, u32 result);
+    inline __attribute__((always_inline)) void SetCVAddC(u32 op1, u32 op2, u32 c, u32 result);
+    inline __attribute__((always_inline)) void SetCVSub(u32 op1, u32 op2, u32 result);
+    inline __attribute__((always_inline)) void SetCVSubC(u32 op1, u32 op2, u32 c, u32 result);
+    inline __attribute__((always_inline)) void SetNZ(u32 result);
+    [[nodiscard]] inline bool CheckCondition(u8 condition) const;
     void FlushPipeline();
 
     void ChangeMode(Mode NewMode) {
@@ -202,3 +212,35 @@ private:
 #include "instructions/THUMB/LoadStore.inl"
 #undef INLINED_INCLUDES
 };
+
+void ARM7TDMI::SetCVAdd(u32 op1, u32 op2, u32 result)
+{
+    CPSR.C = (op1 > ~op2 ? 1 : 0);
+    CPSR.V = (((op1 ^ result) & (~op1 ^ op2)) >> 31);
+}
+
+void ARM7TDMI::SetCVAddC(u32 op1, u32 op2, u32 c, u32 result)
+{
+    // for ADC
+    CPSR.C = ((op1 + op2 == 0xffff'ffff) && c) || (op1 + c > ~op2 ? 1 : 0);
+    CPSR.V = (((op1 ^ result) & (~op1 ^ op2)) >> 31);
+}
+
+void ARM7TDMI::SetCVSub(u32 op1, u32 op2, u32 result)
+{
+    // for op1 - op2
+    CPSR.C = (op2 <= op1 ? 1 : 0);
+    CPSR.V = (((op1 ^ op2) & (~op2 ^ result)) >> 31);
+}
+
+void ARM7TDMI::SetCVSubC(u32 op1, u32 op2, u32 c, u32 result)
+{
+    // for op1 - op2
+    CPSR.C = (op2 + 1 - c <= op1 ? 1 : 0);
+    CPSR.V = (((op1 ^ op2) & (~op2 ^ result)) >> 31);
+}
+
+void ARM7TDMI::SetNZ(u32 result) {
+    CPSR.N = (i32)result < 0;
+    CPSR.Z = result == 0;
+}

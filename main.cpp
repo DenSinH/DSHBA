@@ -19,7 +19,7 @@ int main() {
     gba = Initializer::init();
 
 #ifdef DO_BREAKPOINTS
-    gba->paused = false;
+    gba->paused = true;
 #endif
 
     atexit(exception_handler);

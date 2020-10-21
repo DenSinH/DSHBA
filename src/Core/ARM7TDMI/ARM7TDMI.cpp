@@ -98,36 +98,3 @@ void ARM7TDMI::FlushPipeline() {
         this->pc += 2;
     }
 }
-
-void ARM7TDMI::BuildARMTable() {
-    for (size_t i = 0; i < ARMInstructionTableSize; i++) {
-        switch ((i & 0xc00) >> 10) {
-            case 0b00:
-            case 0b01:
-                break;
-            case 0b10:
-                if ((i & (ARMHash(0x0e00'0000))) == ARMHash(0x0a00'0000)) {
-                    if (i & ARMHash(0x0100'0000)) {
-                        // Link bit
-                        ARMInstructions[i] = &ARM7TDMI::Branch<true>;
-                    }
-                    else {
-                        ARMInstructions[i] = &ARM7TDMI::Branch<false>;
-                    }
-                    continue;
-                }
-                break;
-            case 0b11:
-                break;
-            default:
-                break;
-        }
-        this->ARMInstructions[i] = &ARM7TDMI::ARMUnimplemented;
-    }
-}
-
-void ARM7TDMI::BuildTHUMBTable() {
-    for (size_t i = 0; i < THUMBInstructionTableSize; i++) {
-        this->THUMBInstructions[i] = &ARM7TDMI::THUMBUnimplemented;
-    }
-}

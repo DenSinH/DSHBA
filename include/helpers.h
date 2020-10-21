@@ -4,22 +4,6 @@
 #include "default.h"
 #include <stdbool.h>
 
-static inline bool ADD_OVERFLOW64(u64 x, u64 y, u64 result) {
-    return (((x ^ result) & (y ^ result)) >> 63) != 0;
-}
-
-static inline bool ADD_OVERFLOW32(u32 x, u32 y, u32 result) {
-    return (((x ^ result) & (y ^ result)) >> 31) != 0;
-}
-
-static inline bool ADD_OVERFLOW16(u16 x, u16 y, u16 result) {
-    return (((x ^ result) & (y ^ result)) >> 15) != 0;
-}
-
-static inline bool ADD_CARRY(u32 x, u32 y) {
-    return (u32)x > ~((u32)y);
-}
-
 #define ROTL32(uval, n) (((uval) << (n)) | ((uval) >> (32 - (n))))
 #define ROTR32(uval, n) (((uval) >> (n)) | ((uval) << (32 - (n))))
 #define EXTS32(val, len) (((i32)((val) << (32 - (len)))) >> (32 - (len)))
@@ -33,12 +17,6 @@ static inline uint8_t flip_byte(uint8_t b) {
     b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
     b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
     return b;
-}
-
-static inline u32 MASK(x, y) {
-    int32_t mask_x = x ? (int32_t)0x80000000 >> (x - 1) : 0;
-    int32_t mask_y = y == 31 ? 0 : 0xffffffffu >> (y + 1);
-    return ((int32_t)(x - y - 1) >> 31) ^ (mask_x ^ mask_y);
 }
 
 static inline u32 popcount(u32 x)

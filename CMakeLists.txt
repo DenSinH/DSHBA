@@ -34,7 +34,6 @@ add_executable(DSHBA
         include/log.h
         include/sleeping.h
         include/const.h
-        include/byteswap.h
         include/custom_threading.h
         custom_threading.c
         modules/glad/glad.h
