@@ -14,10 +14,10 @@ class ARM7TDMI_INL : ARM7TDMI {
 
 template<bool I, bool P, bool U, bool B, bool W, bool L, u8 shift_type>
 void SingleDataTransfer(u32 instruction) {
-    u8 Rn = ((instruction & 0x000f'0000) >> 16);
-    u8 Rd = ((instruction & 0x0000'f000) >> 12);
+    u8 rn = ((instruction & 0x000f'0000) >> 16);
+    u8 rd = ((instruction & 0x0000'f000) >> 12);
 
-    u32 address = Registers[Rn];
+    u32 address = Registers[rn];
     u32 offset;
     if constexpr(!I) {
         // immediate offset
@@ -44,7 +44,7 @@ void SingleDataTransfer(u32 instruction) {
     if constexpr(L) {
         log_cpu_verbose("LDR%c r%d, [r%d, #%x]%c", B ? 'B' : ' ', Rd, Rn, offset, W ? '!' : ' ');
         if constexpr(B) {
-            Registers[Rd] = Memory->Mem::Read<u8, true>(address);
+            Registers[rd] = Memory->Mem::Read<u8, true>(address);
         }
         else {
             u32 loaded = Memory->Mem::Read<u32, true>(address);
@@ -54,18 +54,18 @@ void SingleDataTransfer(u32 instruction) {
                 loaded = ROTR32(loaded, rot);
             }
 
-            Registers[Rd] = loaded;
+            Registers[rd] = loaded;
 
-            if (Rd == 15) {
+            if (rd == 15) {
                 FlushPipeline();
             }
         }
     }
     else {
         log_cpu_verbose("STR%c r%d, [r%d, #%x]%c", B ? 'B' : ' ', Rd, Rn, offset, W ? '!' : ' ');
-        u32 value = Registers[Rd];
+        u32 value = Registers[rd];
 
-        if (Rd == 15) [[unlikely]] {
+        if (rd == 15) [[unlikely]] {
             // correction for pipeline effects
             value += 4;
         }
@@ -80,7 +80,7 @@ void SingleDataTransfer(u32 instruction) {
     }
 
     if constexpr(W || !P) {
-        if (!(L && Rn == Rd)) {
+        if (!(L && rn == rd)) {
             if constexpr(!P) {
                 // post-index
                 if constexpr(U) {
@@ -92,7 +92,7 @@ void SingleDataTransfer(u32 instruction) {
             }
 
             // writeback register will not be PC, I don't know what would happen in that case
-            Registers[Rn] = address;
+            Registers[rn] = address;
         }
     }
 
@@ -106,9 +106,9 @@ void SingleDataTransfer(u32 instruction) {
 template<bool P, bool U, bool imm_offset, bool W, bool L, bool S, bool H>
 void HalfwordDataTransfer(u32 instruction) {
     u32 offset;
-    u8 Rn = (instruction & 0x000f'0000) >> 16;
-    u8 Rd = (instruction & 0xf000) >> 12;
-    u32 address = Registers[Rn];
+    u8 rn = (instruction & 0x000f'0000) >> 16;
+    u8 rd = (instruction & 0xf000) >> 12;
+    u32 address = Registers[rn];
 
     if constexpr(imm_offset) {
         offset = ((instruction & 0x0f00) >> 4) | (instruction & 0x000f);
@@ -130,29 +130,29 @@ void HalfwordDataTransfer(u32 instruction) {
 
     if constexpr(S) {
         if constexpr(H) {
-            // Signed byte
-            if constexpr(L) {
-                Registers[Rd] = (u32)((i32)((i8)Memory->Mem::Read<u8, true>(address)));
-                log_cpu_verbose("LDRSB r%d, [r%d, #%x]%c", Rd, Rn, offset, W ? '!' : '\0');
-            }
-            else {
-                log_fatal("Cannot store signed byte");
-            }
-        }
-        else {
             // signed halfword
             if constexpr(L) {
-                log_cpu_verbose("LDRSH r%d, [r%d, #%x]%c", Rd, Rn, offset, W ? '!' : '\0');
+                log_cpu_verbose("LDRSH r%d, [r%d, #%x]%c", rd, rn, offset, W ? '!' : '\0');
                 if (address & 1) {
                     // misaligned, loads sign extended byte instead
-                    Registers[Rd] = (u32)((i32)((i8)Memory->Mem::Read<u8, true>(address)));
+                    Registers[rd] = (u32)((i32)((i8)Memory->Mem::Read<u8, true>(address)));
                 }
                 else {
-                    Registers[Rd] = (u32)((i32)((i16)Memory->Mem::Read<u16, true>(address)));
+                    Registers[rd] = (u32)((i32)((i16)Memory->Mem::Read<u16, true>(address)));
                 }
             }
             else {
                 log_fatal("Cannot store signed halfword");
+            }
+        }
+        else {
+            // Signed byte
+            if constexpr(L) {
+                Registers[rd] = (u32)((i32)((i8)Memory->Mem::Read<u8, true>(address)));
+                log_cpu_verbose("LDRSB r%d, [r%d, #%x]%c", rd, rn, offset, W ? '!' : '\0');
+            }
+            else {
+                log_fatal("Cannot store signed byte");
             }
         }
     }
@@ -164,15 +164,15 @@ void HalfwordDataTransfer(u32 instruction) {
                 if (address & 1) {
                     // misaligned
                     u32 loaded = Memory->Mem::Read<u16, true>(address);
-                    Registers[Rd] = ROTR32(loaded, 8);
+                    Registers[rd] = ROTR32(loaded, 8);
                 }
                 else {
-                    Registers[Rd] = Memory->Mem::Read<u16, true>(address);
+                    Registers[rd] = Memory->Mem::Read<u16, true>(address);
                 }
             }
             else {
                 log_cpu_verbose("STRH r%d, [r%d, #%x]%c", Rd, Rn, offset, W ? '!' : '\0');
-                Memory->Mem::Write<u16, true>(address, (u16)Registers[Rd]);
+                Memory->Mem::Write<u16, true>(address, (u16)Registers[rd]);
             }
         }
         else {
@@ -182,7 +182,7 @@ void HalfwordDataTransfer(u32 instruction) {
 
     if constexpr((W || !P)) {
         // writeback (post indexing is always written back)
-        if (!(Rn == Rd && L)) {
+        if (!(rn == rd && L)) {
             if constexpr(!P) {
                 // Post-indexed
                 if constexpr(U) {
@@ -194,7 +194,7 @@ void HalfwordDataTransfer(u32 instruction) {
                 }
             }
 
-            Registers[Rn] = address;
+            Registers[rn] = address;
         }
     }
 
@@ -202,6 +202,35 @@ void HalfwordDataTransfer(u32 instruction) {
         // internal cycle
         timer++;
     }
+}
+
+template<bool B>
+void SWP(u32 instruction) {
+    u32 address = Registers[(instruction & 0x000f'0000) >> 16];
+    u32 rd = (instruction & 0xf000) >> 12;
+    u32 rm = (instruction & 0x000f);
+
+    if constexpr(B) {
+        // can not directly load because rd and rm might be the same
+        u8 memory_content = Memory->Mem::Read<u8, true>(address);
+        Memory->Mem::Write<u8, true>(address, Registers[rm]);
+        Registers[rd] = memory_content;
+    }
+    else {
+        // can not directly load because rd and rm might be the same
+        u32 memory_content = Memory->Mem::Read<u32, true>(address);
+        Memory->Mem::Write<u32, true>(address, Registers[rm]);
+
+        // misaligned reads
+        u8 rotate_amount = (address & 3) << 3;
+        if (rotate_amount) {
+            memory_content = ROTR32(memory_content, rotate_amount);
+        }
+        Registers[rd] = memory_content;
+    }
+
+    // internal cycle
+    timer++;
 }
 
 #ifndef INLINED_INCLUDES

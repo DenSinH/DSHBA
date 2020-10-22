@@ -10,11 +10,11 @@ class ARM7TDMI_INL : ARM7TDMI {
 #endif
 
 void BranchExchange(u32 instruction) {
-    u8 Rn = instruction & 0x0f;
-    u32 target = Registers[Rn];
+    u8 rn = instruction & 0x0f;
+    u32 target = Registers[rn];
     CPSR &= ~static_cast<u32>(CPSRFlags::T);
     CPSR |= target & 1 ? static_cast<u32>(CPSRFlags::T) : 0;
-    log_cpu_verbose("BX r%d (-> %x, %s state)", Rn, target, (CPSR & static_cast<u32>(CPSRFlags::T)) ? "THUMB" : "ARM");
+    log_cpu_verbose("BX r%d (-> %x, %s state)", rn, target, (CPSR & static_cast<u32>(CPSRFlags::T)) ? "THUMB" : "ARM");
 
     if (static_cast<State>(target & 1) == State::ARM) {
         pc = target & 0xffff'fffc;

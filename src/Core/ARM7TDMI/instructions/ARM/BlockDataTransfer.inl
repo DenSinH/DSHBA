@@ -15,16 +15,16 @@ class ARM7TDMI_INL : ARM7TDMI {
 template<bool P, bool U, bool S, bool W, bool L>
 void BlockDataTransfer(u32 instruction) {
     u16 register_list = instruction & 0xffff;
-    u8 Rn = (instruction & 0x000f'0000) >> 16;
+    u8 rn = (instruction & 0x000f'0000) >> 16;
 
-    u32 original_address = Registers[Rn];
+    u32 original_address = Registers[rn];
     u32 address = original_address;
 
     if constexpr(L) {
-        log_cpu_verbose("LDM%c%c r%d%c {%x}", U ? 'I' : 'D', P ? 'B' : 'A', Rn, W ? '!' : ' ', register_list);
+        log_cpu_verbose("LDM%c%c r%d%c {%x}", U ? 'I' : 'D', P ? 'B' : 'A', rn, W ? '!' : ' ', register_list);
     }
     else {
-        log_cpu_verbose("STM%c%c r%d%c {%x}", U ? 'I' : 'D', P ? 'B' : 'A', Rn, W ? '!' : ' ', register_list);
+        log_cpu_verbose("STM%c%c r%d%c {%x}", U ? 'I' : 'D', P ? 'B' : 'A', rn, W ? '!' : ' ', register_list);
     }
 
     Mode old_mode = static_cast<Mode>(CPSR & static_cast<u32>(CPSRFlags::Mode));
@@ -53,7 +53,7 @@ void BlockDataTransfer(u32 instruction) {
         }
         if constexpr(W) {
             // writeback
-            Registers[Rn] = U ? (address + 0x40) : (address - 0x40);
+            Registers[rn] = U ? (address + 0x40) : (address - 0x40);
         }
     }
     else {
@@ -71,32 +71,32 @@ void BlockDataTransfer(u32 instruction) {
             // Writeback with Rb included in Rlist: Store OLD base if Rb is FIRST entry in Rlist,
             // otherwise store NEW base (STM/ARMv4)
             // (GBATek)
-            if ((register_list & ((1 << (Rn+ 1)) - 1)) == (1 << Rn)) {
-                // This is only the case if Rn is the first register to be stored.
-                // e.g.: if Rn is 4 and the Rlist ends in 0b11110000, we have
+            if ((register_list & ((1 << (rn+ 1)) - 1)) == (1 << rn)) {
+                // This is only the case if rn is the first register to be stored.
+                // e.g.: if rn is 4 and the Rlist ends in 0b11110000, we have
                 // 0b11110000 & ((1 << 5) - 1) = 0b11110000 & (0b100000 - 1) =
                 // 0b11110000 & 0b011111 = 0b00010000 = 1 << 4
                 if constexpr(P ^ !U) {  // as I mentioned before, P ^ !U instead of P
                     // Pre-index
-                    Memory->Mem::Write<u32, true>(address + 4, Registers[Rn]);
+                    Memory->Mem::Write<u32, true>(address + 4, Registers[rn]);
                 }
                 else {
                     // Post-index
-                    Memory->Mem::Write<u32, true>(address, Registers[Rn]);
+                    Memory->Mem::Write<u32, true>(address, Registers[rn]);
                 }
                 address += 4;
                 original_address += U ? 4 : -4;  // for writeback
 
                 // we already stored this one now
-                register_list &= ~(1 << Rn);
+                register_list &= ~(1 << rn);
                 rcount--;
             }
         }
 
         // So now we want to write back the new base,
-        // and since Rn might be overwritten by the load, we can just do that here
+        // and since rn might be overwritten by the load, we can just do that here
         if constexpr(W) {
-            Registers[Rn] = U ? (original_address + (rcount << 2)) : (original_address - (rcount << 2));
+            Registers[rn] = U ? (original_address + (rcount << 2)) : (original_address - (rcount << 2));
         }
 
         for (unsigned i = 0; i < 16; i++) {

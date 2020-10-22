@@ -8,15 +8,21 @@ static constexpr ARMInstructionPtr GetARMInstruction() {
         {
             if constexpr((instruction & ARM7TDMI::ARMHash(0x0fc0'00f0)) == ARM7TDMI::ARMHash(0x0000'0090)) {
                 // multiply
-                break;
+                const bool A = (instruction & ARM7TDMI::ARMHash(0x0020'0000)) != 0;
+                const bool S = (instruction & ARM7TDMI::ARMHash(0x0010'0000)) != 0;
+                return &ARM7TDMI::Multiply<A, S>;
             }
             else if constexpr((instruction & ARM7TDMI::ARMHash(0x0f80'00f0)) == ARM7TDMI::ARMHash(0x0080'0090)) {
                 // multiply long
-                break;
+                const bool U = (instruction & ARM7TDMI::ARMHash(0x0040'0000)) != 0;
+                const bool A = (instruction & ARM7TDMI::ARMHash(0x0020'0000)) != 0;
+                const bool S = (instruction & ARM7TDMI::ARMHash(0x0010'0000)) != 0;
+                return &ARM7TDMI::MultiplyLong<U, A, S>;
             }
             else if constexpr((instruction & ARM7TDMI::ARMHash(0x0fb0'0ff0)) == ARM7TDMI::ARMHash(0x0100'0090)) {
                 // SWP
-                break;
+                const bool B = (instruction & ARM7TDMI::ARMHash(0x0040'0000)) != 0;
+                return &ARM7TDMI::SWP<B>;
             }
             else if constexpr(instruction == 0b0001'0010'0001) {
                 // BX
@@ -101,6 +107,7 @@ static constexpr ARMInstructionPtr GetARMInstruction() {
                 return &ARM7TDMI::BlockDataTransfer<P, U, S, W, L>;
             }
         case 0b11:
+            // todo: SWI
             break;
         default:
             break;

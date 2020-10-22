@@ -15,15 +15,15 @@ class ARM7TDMI_INL : ARM7TDMI {
 template<bool Ps>
 void MRS(u32 instruction) {
     // PSR -> reg
-    u8 Rd = (instruction & 0xf000) >> 12;
+    u8 rd = (instruction & 0xf000) >> 12;
 
     if constexpr(Ps) {
-        log_cpu_verbose("MRS r%d, SPSR", Rd);
-        Registers[Rd] = SPSR;
+        log_cpu_verbose("MRS r%d, SPSR", rd);
+        Registers[rd] = SPSR;
     }
     else {
-        log_cpu_verbose("MRS r%d, CPSR", Rd);
-        Registers[Rd] = CPSR;
+        log_cpu_verbose("MRS r%d, CPSR", rd);
+        Registers[rd] = CPSR;
     }
 }
 

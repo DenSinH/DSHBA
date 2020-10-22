@@ -173,77 +173,76 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
     else {
         op1 = Registers[(instruction & 0x000f0000) >> 16];
     }
-    u32 Rd = (instruction & 0xf000) >> 12;
+    u32 rd = (instruction & 0xf000) >> 12;
 
     u32 result, temp;
     const u32 carry = (CPSR & static_cast<u32>(CPSRFlags::C)) ? 1 : 0;
     switch (static_cast<DataProcessingOpcode>(opcode)) {
         case DataProcessingOpcode::AND:
-            log_cpu_verbose("%08x AND %08x -> R%d", op1, op2, Rd);
+            log_cpu_verbose("%08x AND %08x -> R%d", op1, op2, rd);
             result = op1 & op2;
-            this->Registers[Rd] = result;
+            this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::EOR:
-            log_cpu_verbose("%08x EOR %08x -> R%d", op1, op2, Rd);
+            log_cpu_verbose("%08x EOR %08x -> R%d", op1, op2, rd);
             result = op1 ^ op2;
-            this->Registers[Rd] = result;
+            this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::SUB:
-            log_cpu_verbose("%08x SUB %08x -> R%d", op1, op2, Rd);
+            log_cpu_verbose("%08x SUB %08x -> R%d", op1, op2, rd);
             result = op1 - op2;
             if constexpr(S) {
                 SetCVSub(op1, op2, result);
             }
 
-            this->Registers[Rd] = result;
+            this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::RSB:
-            log_cpu_verbose("%08x RSB %08x -> R%d", op1, op2, Rd);
+            log_cpu_verbose("%08x RSB %08x -> R%d", op1, op2, rd);
             result = op2 - op1;
             if constexpr(S)
                 SetCVSub(op2, op1, result);
 
-            this->Registers[Rd] = result;
+            this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::ADD:
-            log_cpu_verbose("%08x ADD %08x -> R%d", op1, op2, Rd);
+            log_cpu_verbose("%08x ADD %08x -> R%d", op1, op2, rd);
             result = op1 + op2;
             if constexpr(S) {
                 SetCVAdd(op1, op2, result);
             }
-            this->Registers[Rd] = result;
+            this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::ADC:
-            log_cpu_verbose("%08x ADC %08x -> R%d", op1, op2, Rd);
+            log_cpu_verbose("%08x ADC %08x -> R%d", op1, op2, rd);
             result = op1 + op2 + carry;
             if constexpr(S) {
                 SetCVAddC(op1, op2, carry, result);
             }
-            this->Registers[Rd] = result;
+            this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::SBC:
-            log_cpu_verbose("%08x SBC %08x -> R%d", op1, op2, Rd);
+            log_cpu_verbose("%08x SBC %08x -> R%d", op1, op2, rd);
             temp = op2 - carry + 1;
             result = (u32)(op1 - temp);
             if constexpr(S) {
                 SetCVSubC(op1, op2, carry, result);
             }
 
-            this->Registers[Rd] = result;
+            this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::RSC:
-            log_cpu_verbose("%08x RSC %08x -> R%d", op1, op2, Rd);
+            log_cpu_verbose("%08x RSC %08x -> R%d", op1, op2, rd);
             temp = op1 - carry + 1;
             result = (u32)(op2 - temp);
             if constexpr(S) {
                 SetCVSubC(op2, op1, carry, result);
             }
 
-            this->Registers[Rd] = result;
+            this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::TST:
             log_cpu_verbose("%08x TST %08x (AND, no store)", op1, op2);
-            log_debug("%08x TST %08x (AND, no store)", op1, op2);
             result = op1 & op2;
             break;
         case DataProcessingOpcode::TEQ:
@@ -257,29 +256,28 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
             break;
         case DataProcessingOpcode::CMN:
             log_cpu_verbose("%08x CMN %08x (ADD, no store)", op1, op2);
-            log_debug("%08x CMN %08x (ADD, no store)", op1, op2);
             result = op1 + op2;
             SetCVAdd(op1, op2, result);
             break;
         case DataProcessingOpcode::ORR:
-            log_cpu_verbose("%08x ORR %08x -> R%d", op1, op2, Rd);
+            log_cpu_verbose("%08x ORR %08x -> R%d", op1, op2, rd);
             result = op1 | op2;
-            this->Registers[Rd] = result;
+            this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::MOV:
-            log_cpu_verbose("MOV %08x -> R%d", op2, Rd);
+            log_cpu_verbose("MOV %08x -> R%d", op2, rd);
             result = op2;
-            this->Registers[Rd] = result;
+            this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::BIC:
-            log_cpu_verbose("%08x BIC %08x -> R%d (op1 & ~op2)", op1, op2, Rd);
+            log_cpu_verbose("%08x BIC %08x -> R%d (op1 & ~op2)", op1, op2, rd);
             result = op1 & ~op2;
-            this->Registers[Rd] = result;
+            this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::MVN:
-            log_cpu_verbose("MVN %08x -> R%d", op2, Rd);
+            log_cpu_verbose("MVN %08x -> R%d", op2, rd);
             result = ~op2;
-            this->Registers[Rd] = result;
+            this->Registers[rd] = result;
             break;
         default:
             log_fatal("Invalid opcode for DataProcessing operation: %x", opcode);
@@ -301,7 +299,7 @@ void DataProcessing(u32 instruction) {
                     instruction, I, opcode, S, shift_type, shift_imm);
 
     u32 op2;
-    u8 Rd = (instruction & 0xf000) >> 12;
+    u8 rd = (instruction & 0xf000) >> 12;
     if constexpr(I) {
         u32 imm = instruction & 0xff;
         u32 rot = (instruction & 0xf00) >> 7; // rotated right by twice the value
@@ -322,8 +320,8 @@ void DataProcessing(u32 instruction) {
             op2 = GetShiftedRegister<false, shift_type, shift_imm>(instruction);
         }
         else {
-            if (Rd == 15) {
-                // if Rd == PC, we don't set conditions either because of the force user thing
+            if (rd == 15) {
+                // if rd == PC, we don't set conditions either because of the force user thing
                 op2 = GetShiftedRegister<false, shift_type, shift_imm>(instruction);
             }
             else {
@@ -332,8 +330,8 @@ void DataProcessing(u32 instruction) {
         }
     }
 
-    if (Rd == 15) {
-        // don't set flags if Rd == 15
+    if (rd == 15) {
+        // don't set flags if rd == 15
         DoDataProcessing<opcode, false>(instruction, op2);
         if constexpr(S) {
             // SPSR transfer

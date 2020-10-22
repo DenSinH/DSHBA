@@ -121,9 +121,9 @@ private:
     void BuildTHUMBTable();
 
     inline __attribute__((always_inline)) void SetCVAdd(u32 op1, u32 op2, u32 result);
-    inline __attribute__((always_inline)) void SetCVAddC(u32 op1, u32 op2, u32 c, u32 result);
+    inline __attribute__((always_inline)) void SetCVAddC(u64 op1, u64 op2, u32 c, u32 result);
     inline __attribute__((always_inline)) void SetCVSub(u32 op1, u32 op2, u32 result);
-    inline __attribute__((always_inline)) void SetCVSubC(u32 op1, u32 op2, u32 c, u32 result);
+    inline __attribute__((always_inline)) void SetCVSubC(u64 op1, u64 op2, u32 c, u32 result);
     inline __attribute__((always_inline)) void SetNZ(u32 result);
     [[nodiscard]] inline bool CheckCondition(u8 condition) const;
     void FlushPipeline();
@@ -177,11 +177,11 @@ void ARM7TDMI::SetCVAdd(u32 op1, u32 op2, u32 result)
     CPSR |= (((op1 ^ result) & (~op1 ^ op2)) >> 31) ? static_cast<u32>(CPSRFlags::V) : 0;
 }
 
-void ARM7TDMI::SetCVAddC(u32 op1, u32 op2, u32 c, u32 result)
+void ARM7TDMI::SetCVAddC(u64 op1, u64 op2, u32 c, u32 result)
 {
     // for ADC
     CPSR &= ~(static_cast<u32>(CPSRFlags::C) | static_cast<u32>(CPSRFlags::V));
-    CPSR |= (((op1 + op2 == 0xffff'ffff) && c) || (op1 + c > ~op2)) ? static_cast<u32>(CPSRFlags::C) : 0;
+    CPSR |= ((op1 + op2 + c) > 0xffff'ffffULL) ? static_cast<u32>(CPSRFlags::C) : 0;
     CPSR |= (((op1 ^ result) & (~op1 ^ op2)) >> 31) ? static_cast<u32>(CPSRFlags::V) : 0;
 }
 
@@ -193,7 +193,7 @@ void ARM7TDMI::SetCVSub(u32 op1, u32 op2, u32 result)
     CPSR |= (((op1 ^ op2) & (~op2 ^ result)) >> 31) ? static_cast<u32>(CPSRFlags::V) : 0;
 }
 
-void ARM7TDMI::SetCVSubC(u32 op1, u32 op2, u32 c, u32 result)
+void ARM7TDMI::SetCVSubC(u64 op1, u64 op2, u32 c, u32 result)
 {
     // for op1 - op2
     CPSR &= ~(static_cast<u32>(CPSRFlags::C) | static_cast<u32>(CPSRFlags::V));
