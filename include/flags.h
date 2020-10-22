@@ -20,8 +20,13 @@
 #define DO_DEBUGGER
 #define DO_BREAKPOINTS
 
+#define DIRTY_MEMORY_ACCESS
+
 #else
 #define VERBOSITY VERBOSITY_MAX
+
+#define DIRTY_MEMORY_ACCESS
+
 #endif
 
 #endif //GC__FLAGS_H

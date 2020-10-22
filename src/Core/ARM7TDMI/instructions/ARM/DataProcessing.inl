@@ -200,8 +200,9 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
         case DataProcessingOpcode::RSB:
             log_cpu_verbose("%08x RSB %08x -> R%d", op1, op2, rd);
             result = op2 - op1;
-            if constexpr(S)
+            if constexpr(S) {
                 SetCVSub(op2, op1, result);
+            }
 
             this->Registers[rd] = result;
             break;

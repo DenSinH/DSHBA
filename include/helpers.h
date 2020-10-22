@@ -2,10 +2,40 @@
 #define GC__HELPERS_H
 
 #include "default.h"
-#include <stdbool.h>
 
-#define ROTL32(uval, n) (((uval) << (n)) | ((uval) >> (32 - (n))))
-#define ROTR32(uval, n) (((uval) >> (n)) | ((uval) << (32 - (n))))
+#ifdef _MSC_VER
+#include <intrin.h>     // used in a bunch of stuff here
+#include <immintrin.h>
+#endif
+
+#if defined(__x86_64__) || defined(__i386__)
+#include <x86intrin.h>  // Not just <immintrin.h> for compilers other than icc
+#endif
+
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+
+#if defined(__x86_64__) || defined(__i386__)
+
+static inline __attribute__((always_inline)) u32 ROTR32(u32 uval, u32 rot) {
+    return _rotr(uval, rot);  // gcc, icc, msvc.  Intel-defined.
+}
+
+static inline __attribute__((always_inline)) u32 ROTL32(u32 uval, u32 rot) {
+    return _rotl(uval, rot);  // gcc, icc, msvc.  Intel-defined.
+}
+
+#else
+static inline __attribute__((always_inline)) u32 ROTR32(u32 uval, u32 rot) {
+    return (((uval) >> (n)) | ((uval) << (32 - (n))));
+}
+
+static inline __attribute__((always_inline)) u32 ROTL32(u32 uval, u32 rot) {
+    return (((uval) << (n)) | ((uval) >> (32 - (n))));
+}
+#endif
+
 #define EXTS32(val, len) (((i32)((val) << (32 - (len)))) >> (32 - (len)))
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -19,10 +49,13 @@ static inline uint8_t flip_byte(uint8_t b) {
     return b;
 }
 
-static inline u32 popcount(u32 x)
+static inline __attribute__((always_inline)) u32 popcount(u32 x)
+
 {
 #if HAS_BUILTIN(__builtin_popcount)
     return __builtin_popcount(x);
+#elif defined(__x86_64__) || defined(__i386__)
+    return __popcnt(x);
 #else
     u32 count = 0;
     for (; x != 0; x &= x - 1)
@@ -31,10 +64,12 @@ static inline u32 popcount(u32 x)
 #endif
 }
 
-static inline u32 ctlz(u32 x)
+static inline __attribute__((always_inline)) u32 ctlz(u32 x)
 {
 #if HAS_BUILTIN(__builtin_clz)
     return x ? __builtin_clz(x) : 32;
+#elif defined(__x86_64__) || defined(__i386__)
+    return __lzcnt(x);
 #else
     // todo: binary search
     u8 n;
@@ -47,10 +82,12 @@ static inline u32 ctlz(u32 x)
 #endif
 }
 
-static inline u32 cttz(u32 x)
+static inline __attribute__((always_inline)) u32 cttz(u32 x)
 {
 #if HAS_BUILTIN(__builtin_ctz)
     return x ? __builtin_ctz(x) : 32;
+#elif defined(__x86_64__) || defined(__i386__)
+    return _tzcnt_u32(x);
 #else
     // todo: binary search
     u8 n;

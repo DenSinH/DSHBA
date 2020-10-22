@@ -8,12 +8,13 @@
 
 GBA::GBA() {
     scheduler   = { .timer = &CPU.timer };
-    breakpoints = {};
-    paused      = false;
 
     Memory.LoadBIOS(BIOS_FILE);
 
 #ifdef DO_BREAKPOINTS
+    breakpoints = {};
+    paused      = false;
+
 //    add_breakpoint(&breakpoints, 0x0803123c);
 //    add_breakpoint(&breakpoints, 0x00000500);
 //    add_breakpoint(&breakpoints, 0x8000586c);
