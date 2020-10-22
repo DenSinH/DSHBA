@@ -17,22 +17,6 @@ class ARM7TDMI;
 const size_t ARMInstructionTableSize   = 0x1000;
 const size_t THUMBInstructionTableSize = 0x400;
 
-typedef union s_CPSR {
-    struct {
-        u8 Mode: 5;
-        unsigned T: 1;
-        unsigned F: 1;
-        unsigned I: 1;
-        unsigned: 20;  // reserved
-        unsigned V: 1;
-        unsigned C: 1;
-        unsigned Z: 1;
-        unsigned N: 1;
-    };
-
-    u32 raw;
-} s_CPSR;
-
 enum class CPSRFlags : u32 {
     N    = 0x8000'0000,
     Z    = 0x4000'0000,
@@ -74,7 +58,7 @@ public:
         SPLRBank[static_cast<u8>(Mode::Undefined)  & 0xf][0] = 0x0300'7f00;  // mostly here for show
 
         pc = 0x0800'0000;
-        CPSR = SetCPSR(0x6000'001f);
+        CPSR = 0x6000'001f;
 
         this->FlushPipeline();
         this->pc += 4;
@@ -103,12 +87,14 @@ private:
         System      = 0b11111,
     };
 
-    s_CPSR CPSR         = {};
-    s_CPSR SPSR         = {};
-    s_CPSR SPSRBank[16] = {};
+    u32 CPSR         = {};
+    u32 SPSR         = {};
+    u32 SPSRBank[16] = {};
     u32 SPLRBank[16][2] = {};
     u32 Registers[16]   = {};
 
+    // todo: only buffer pipeline on STR(|H|B) instructions near PC
+    // we still keep PC ahead of course
     s_Pipeline Pipeline;
 
     Mem* Memory;
@@ -124,39 +110,6 @@ private:
 
     static inline __attribute__((always_inline)) constexpr u32 THUMBHash(u16 instruction) {
         return ((instruction & 0xffc0) >> 6);
-    }
-
-    static inline s_CPSR SetCPSR(u32 value) {
-#ifdef SAFE_CPSR_CASTING
-        return (s_CPSR) {
-                .N = (value & static_cast<u32>(CPSRFlags::N)) != 0,
-                .Z = (value & static_cast<u32>(CPSRFlags::Z)) != 0,
-                .C = (value & static_cast<u32>(CPSRFlags::C)) != 0,
-                .V = (value & static_cast<u32>(CPSRFlags::V)) != 0,
-                .I = (value & static_cast<u32>(CPSRFlags::I)) != 0,
-                .F = (value & static_cast<u32>(CPSRFlags::F)) != 0,
-                .T = (value & static_cast<u32>(CPSRFlags::T)) != 0,
-                .Mode = static_cast<u8>((value & static_cast<u32>(CPSRFlags::Mode))),
-        };
-#else
-        return (s_CPSR) { .raw = value };
-#endif
-    }
-
-    static inline u32 GetCPSR(s_CPSR CPSR) {
-#ifdef SAFE_CPSR_CASTING
-        return
-                ((u32)CPSR.N << 31) |
-                ((u32)CPSR.Z << 30) |
-                ((u32)CPSR.C << 29) |
-                ((u32)CPSR.V << 28) |
-                ((u32)CPSR.I << 7)  |
-                ((u32)CPSR.F << 6)  |
-                ((u32)CPSR.T << 5)  |
-                static_cast<u32>(static_cast<u8>(CPSR.Mode));
-#else
-        return CPSR.raw;
-#endif
     }
 
     template<u32>
@@ -176,22 +129,24 @@ private:
     void FlushPipeline();
 
     void ChangeMode(Mode NewMode) {
-            if (NewMode == static_cast<Mode>(this->CPSR.Mode)) {
+            if (NewMode == static_cast<Mode>(this->CPSR & static_cast<u32>(CPSRFlags::Mode))) {
                 return;
             }
             /*
              * FIQ mode is not used in the GBA in general.
              * However, I know that JSMolka's GBA suite (used to) change into FIQ mode, so I keep a bank for that anyway
+             *
+             * Top mode flag is always 1, so just check the other 4
              * */
-            this->SPLRBank[this->CPSR.Mode & 0xf][0] = this->sp;
-            this->SPLRBank[this->CPSR.Mode & 0xf][1] = this->lr;
-            this->SPSRBank[this->CPSR.Mode & 0xf]    = this->SPSR;
+            this->SPLRBank[this->CPSR & 0xf][0] = this->sp;
+            this->SPLRBank[this->CPSR & 0xf][1] = this->lr;
+            this->SPSRBank[this->CPSR & 0xf]    = this->SPSR;
 
             this->sp   = this->SPLRBank[static_cast<u8>(NewMode) & 0xf][0];
             this->lr   = this->SPLRBank[static_cast<u8>(NewMode) & 0xf][1];
             this->SPSR = this->SPSRBank[static_cast<u8>(NewMode) & 0xf];
 
-            this->CPSR.Mode = static_cast<u8>(NewMode);
+            this->CPSR = (this->CPSR & ~static_cast<u32>(CPSRFlags::Mode)) | static_cast<u8>(NewMode);
         }
 
     void ARMUnimplemented(u32 instruction) {
@@ -203,6 +158,7 @@ private:
     }
 #define INLINED_INCLUDES
 #include "instructions/ARM/Branch.inl"
+#include "instructions/ARM/PSRTransfer.inl"
 #include "instructions/ARM/DataProcessing.inl"
 #include "instructions/ARM/LoadStore.inl"
 #include "instructions/ARM/BlockDataTransfer.inl"
@@ -216,32 +172,37 @@ private:
 
 void ARM7TDMI::SetCVAdd(u32 op1, u32 op2, u32 result)
 {
-    CPSR.C = (op1 > ~op2 ? 1 : 0);
-    CPSR.V = (((op1 ^ result) & (~op1 ^ op2)) >> 31);
+    CPSR &= ~(static_cast<u32>(CPSRFlags::C) | static_cast<u32>(CPSRFlags::V));
+    CPSR |= (op1 > ~op2) ? static_cast<u32>(CPSRFlags::C) : 0;
+    CPSR |= (((op1 ^ result) & (~op1 ^ op2)) >> 31) ? static_cast<u32>(CPSRFlags::V) : 0;
 }
 
 void ARM7TDMI::SetCVAddC(u32 op1, u32 op2, u32 c, u32 result)
 {
     // for ADC
-    CPSR.C = ((op1 + op2 == 0xffff'ffff) && c) || (op1 + c > ~op2 ? 1 : 0);
-    CPSR.V = (((op1 ^ result) & (~op1 ^ op2)) >> 31);
+    CPSR &= ~(static_cast<u32>(CPSRFlags::C) | static_cast<u32>(CPSRFlags::V));
+    CPSR |= (((op1 + op2 == 0xffff'ffff) && c) || (op1 + c > ~op2)) ? static_cast<u32>(CPSRFlags::C) : 0;
+    CPSR |= (((op1 ^ result) & (~op1 ^ op2)) >> 31) ? static_cast<u32>(CPSRFlags::V) : 0;
 }
 
 void ARM7TDMI::SetCVSub(u32 op1, u32 op2, u32 result)
 {
     // for op1 - op2
-    CPSR.C = (op2 <= op1 ? 1 : 0);
-    CPSR.V = (((op1 ^ op2) & (~op2 ^ result)) >> 31);
+    CPSR &= ~(static_cast<u32>(CPSRFlags::C) | static_cast<u32>(CPSRFlags::V));
+    CPSR |= (op2 <= op1) ? static_cast<u32>(CPSRFlags::C) : 0;
+    CPSR |= (((op1 ^ op2) & (~op2 ^ result)) >> 31) ? static_cast<u32>(CPSRFlags::V) : 0;
 }
 
 void ARM7TDMI::SetCVSubC(u32 op1, u32 op2, u32 c, u32 result)
 {
     // for op1 - op2
-    CPSR.C = (op2 + 1 - c <= op1 ? 1 : 0);
-    CPSR.V = (((op1 ^ op2) & (~op2 ^ result)) >> 31);
+    CPSR &= ~(static_cast<u32>(CPSRFlags::C) | static_cast<u32>(CPSRFlags::V));
+    CPSR |= ((op2 + 1 - c) <= op1) ? static_cast<u32>(CPSRFlags::C) : 0;
+    CPSR |= (((op1 ^ op2) & (~op2 ^ result)) >> 31) ? static_cast<u32>(CPSRFlags::V) : 0;
 }
 
 void ARM7TDMI::SetNZ(u32 result) {
-    CPSR.N = (i32)result < 0;
-    CPSR.Z = result == 0;
+    CPSR &= ~(static_cast<u32>(CPSRFlags::N) | static_cast<u32>(CPSRFlags::Z));
+    CPSR |= result & 0x8000'0000;
+    CPSR |= (result == 0) ? static_cast<u32>(CPSRFlags::Z) : 0;
 }

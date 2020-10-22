@@ -35,17 +35,37 @@ static constexpr ARMInstructionPtr GetARMInstruction() {
             }
             else {
                 // Data Processing or PSR transfer
-                const bool I = (instruction & ARM7TDMI::ARMHash(0x0200'0000)) != 0;
                 const u8 opcode = (instruction >> 5) & 0xf;
                 const bool S = (instruction & ARM7TDMI::ARMHash(0x0010'0000)) != 0;
-                const u8 shift_type = (instruction & 6) >> 1;
 
                 if constexpr(!S && (0b1000 <= opcode) && (opcode <= 0b1011)) {
                     // PSR transfer
-                    break;
+                    const bool P = (instruction & ARM7TDMI::ARMHash(0x0040'0000)) != 0;
+                    if constexpr((instruction & (ARM7TDMI::ARMHash(0x0fb0'00f0))) == ARM7TDMI::ARMHash(0x0100'0000)) {
+                        // MRS (PSR -> regs)
+                        return &ARM7TDMI::MRS<P>;
+                    }
+                    else {
+                        // MSR (reg/imm -> PSR)
+                        const bool I = (instruction & ARM7TDMI::ARMHash(0x0200'0000)) != 0;
+                        return &ARM7TDMI::MSR<I, P>;
+                    }
                 }
                 else {
-                    return &ARM7TDMI::DataProcessing<I, opcode, S, shift_type>;
+                    const bool I = (instruction & ARM7TDMI::ARMHash(0x0200'0000)) != 0;
+                    const u8 shift_type = (instruction & 6) >> 1;
+                    // has to be == 0, I messed this up, but this is the way it is now...
+                    // doesn't make much of a difference in the end, its nicer to use true for immediate shift anyway,
+                    // cause I need to use it in ldr/str anyway
+                    const bool shift_imm = (instruction & ARM7TDMI::ARMHash(0x0000'0010)) == 0;
+
+                    if constexpr((0b1000 <= opcode) && (opcode <= 0b1011)) {
+                        // S bit is always set on these
+                        return &ARM7TDMI::DataProcessing<I, opcode, true, shift_type, shift_imm>;
+                    }
+                    else {
+                        return &ARM7TDMI::DataProcessing<I, opcode, S, shift_type, shift_imm>;
+                    }
                 }
             }
         }

@@ -27,7 +27,7 @@ void BlockDataTransfer(u32 instruction) {
         log_cpu_verbose("STM%c%c r%d%c {%x}", U ? 'I' : 'D', P ? 'B' : 'A', Rn, W ? '!' : ' ', register_list);
     }
 
-    Mode old_mode = static_cast<Mode>(CPSR.Mode);
+    Mode old_mode = static_cast<Mode>(CPSR & static_cast<u32>(CPSRFlags::Mode));
     if constexpr(S) {
         // PSR & force user
         ChangeMode(Mode::User);

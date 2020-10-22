@@ -86,7 +86,9 @@ struct DisassemblyViewer
         for (int i = 0; i < count; i++) {
             uint8_t* loc = valid_address(address);
             if (!loc) {
+                // nullptr was returned
                 address += 4;
+                continue;
             }
 
             unsigned int instructions = disassemble(

@@ -47,6 +47,8 @@ private:
     u8 ROM   [0x0200'0000];
 };
 
+static u32 stubber = 0;
+
 template<typename T, bool count>
 T Mem::Read(u32 address) {
     switch (static_cast<MemoryRegion>(address >> 24)) {
@@ -60,7 +62,7 @@ T Mem::Read(u32 address) {
             return ReadArray<T>(iWRAM, address & 0x7fff);
         case MemoryRegion::IO:
             log_warn("IO read @0x%08x", address);
-            return 0;
+            return stubber ^= 0xffff'ffff;
         case MemoryRegion::PAL:
             return ReadArray<T>(PAL, address & 0x3ff);
         case MemoryRegion::VRAM:

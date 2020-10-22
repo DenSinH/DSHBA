@@ -105,7 +105,7 @@ u8* Initializer::ValidAddressMask(u32 address) {
 }
 
 bool Initializer::ARMMode() {
-    return !gba->CPU.CPSR.T;
+    return !(gba->CPU.CPSR & static_cast<u32>(CPSRFlags::T));
 }
 
 GBA* Initializer::init() {
@@ -134,6 +134,9 @@ GBA* Initializer::init() {
     add_register_data("r13 (SP)", &gba->CPU.sp, 4, cpu_tab);
     add_register_data("r14 (LR)", &gba->CPU.lr, 4, cpu_tab);
     add_register_data("r15 (PC)", &gba->CPU.pc, 4, cpu_tab);
+
+    add_register_data("CPSR", &gba->CPU.CPSR, 4, cpu_tab);
+    add_register_data("SPSR", &gba->CPU.SPSR, 4, cpu_tab);
 
     add_register_data("", NULL, 4, cpu_tab);
     add_register_data("", NULL, 4, cpu_tab);

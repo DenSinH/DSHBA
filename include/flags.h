@@ -19,7 +19,6 @@
 
 #define DO_DEBUGGER
 #define DO_BREAKPOINTS
-#define SAFE_CPSR_CASTING
 
 #else
 #define VERBOSITY VERBOSITY_MAX

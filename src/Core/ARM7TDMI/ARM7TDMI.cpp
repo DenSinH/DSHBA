@@ -21,33 +21,35 @@ enum class Condition : u8 {
 bool ARM7TDMI::CheckCondition(u8 condition) const {
     switch (static_cast<Condition>(condition)) {
         case Condition::EQ:
-            return this->CPSR.Z != 0u;
+            return (CPSR & static_cast<u32>(CPSRFlags::Z)) != 0;
         case Condition::NE:
-            return this->CPSR.Z == 0u;
+            return (CPSR & static_cast<u32>(CPSRFlags::Z)) == 0;
         case Condition::CS:
-            return this->CPSR.C != 0u;
+            return (CPSR & static_cast<u32>(CPSRFlags::C)) != 0;
         case Condition::CC:
-            return this->CPSR.C == 0u;
+            return (CPSR & static_cast<u32>(CPSRFlags::C)) == 0;
         case Condition::MI:
-            return this->CPSR.N != 0u;
+            return (CPSR & static_cast<u32>(CPSRFlags::N)) != 0;
         case Condition::PL:
-            return this->CPSR.N == 0u;
+            return (CPSR & static_cast<u32>(CPSRFlags::N)) == 0;
         case Condition::VS:
-            return this->CPSR.V != 0u;
+            return (CPSR & static_cast<u32>(CPSRFlags::V)) != 0;
         case Condition::VC:
-            return this->CPSR.V == 0u;
+            return (CPSR & static_cast<u32>(CPSRFlags::V)) == 0;
         case Condition::HI:
-            return (this->CPSR.C != 0u) && (this->CPSR.Z == 0u);
+            return ((CPSR & static_cast<u32>(CPSRFlags::C)) != 0u) && ((CPSR & static_cast<u32>(CPSRFlags::Z)) == 0u);
         case Condition::LS:
-            return (this->CPSR.C == 0u) || (this->CPSR.Z != 0u);
+            return ((CPSR & static_cast<u32>(CPSRFlags::C)) == 0u) || ((CPSR & static_cast<u32>(CPSRFlags::Z)) != 0u);
         case Condition::GE:
-            return this->CPSR.V == this->CPSR.N;
+            return ((CPSR & static_cast<u32>(CPSRFlags::V)) != 0) == ((CPSR & static_cast<u32>(CPSRFlags::N)) != 0);
         case Condition::LT:
-            return this->CPSR.V != this->CPSR.N;
+            return ((CPSR & static_cast<u32>(CPSRFlags::V)) != 0) ^ ((CPSR & static_cast<u32>(CPSRFlags::N)) != 0);
         case Condition::GT:
-            return (this->CPSR.Z == 0u) && (this->CPSR.V == this->CPSR.N);
+            return (!(CPSR & static_cast<u32>(CPSRFlags::Z))) &&
+                    (((CPSR & static_cast<u32>(CPSRFlags::V)) != 0) == ((CPSR & static_cast<u32>(CPSRFlags::N)) != 0));
         case Condition::LE:
-            return (this->CPSR.Z != 0u) || (this->CPSR.V != this->CPSR.N);
+            return ((CPSR & static_cast<u32>(CPSRFlags::Z)) != 0) &&
+                   (((CPSR & static_cast<u32>(CPSRFlags::V)) != 0) ^ ((CPSR & static_cast<u32>(CPSRFlags::N)) != 0));
         case Condition::AL:
             return true;
         default:
@@ -56,7 +58,7 @@ bool ARM7TDMI::CheckCondition(u8 condition) const {
 }
 
 void ARM7TDMI::Step() {
-    if (!this->CPSR.T) {
+    if (!(CPSR & static_cast<u32>(CPSRFlags::T))) {
         // ARM mode
         this->Pipeline.Enqueue(this->Memory->Mem::Read<u32, true>(this->pc));
 
@@ -85,7 +87,7 @@ void ARM7TDMI::Step() {
 void ARM7TDMI::FlushPipeline() {
     this->Pipeline.Clear();
 
-    if (!this->CPSR.T) {
+    if (!(CPSR & static_cast<u32>(CPSRFlags::T))) {
         // ARM mode
         this->Pipeline.Enqueue(this->Memory->Mem::Read<u32, true>(this->pc));
         this->Pipeline.Enqueue(this->Memory->Mem::Read<u32, true>(this->pc + 4));

@@ -14,9 +14,9 @@ GBA::GBA() {
     Memory.LoadBIOS(BIOS_FILE);
 
 #ifdef DO_BREAKPOINTS
-//    add_breakpoint(&GameCube->breakpoints, 0x80005cdc);
-//    add_breakpoint(&GameCube->breakpoints, 0x00000500);
-//    add_breakpoint(&GameCube->breakpoints, 0x8000586c);
+//    add_breakpoint(&breakpoints, 0x0803123c);
+//    add_breakpoint(&breakpoints, 0x00000500);
+//    add_breakpoint(&breakpoints, 0x8000586c);
 #endif
 }
 
@@ -36,8 +36,8 @@ void GBA::Run() {
         CPU.Step();
 
 #if defined(DO_BREAKPOINTS) && defined(DO_DEBUGGER)
-        if (check_breakpoints(&breakpoints, CPU.pc)) {
-            log_debug("Hit breakpoint %08x", CPU.pc);
+        if (check_breakpoints(&breakpoints, CPU.pc - ((CPU.CPSR & static_cast<u32>(CPSRFlags::T)) ? 4 : 8))) {
+            log_debug("Hit breakpoint %08x", CPU.pc - ((CPU.CPSR & static_cast<u32>(CPSRFlags::T)) ? 4 : 8));
             paused = true;
         }
 #endif

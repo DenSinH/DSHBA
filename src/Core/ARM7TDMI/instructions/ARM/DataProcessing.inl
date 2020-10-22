@@ -68,17 +68,19 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
             case ShiftType::ASR:
                 shift_amount = 32;
                 break;
-            case ShiftType::ROR:
+            case ShiftType::ROR: {
+                const u32 carry = (CPSR & static_cast<u32>(CPSRFlags::C)) ? 1 : 0;
                 // RRX
                 if constexpr(S) {
                     u32 new_carry = Rm & 1;
-                    Rm = (Rm >> 1) | (this->CPSR.C << 31);
-                    this->CPSR.C = new_carry;
+                    Rm = (Rm >> 1) | (carry << 31);
+                    CPSR |= new_carry ? static_cast<u32>(CPSRFlags::C) : 0;
                     return Rm;
                 }
                 else {
-                    return (Rm >> 1) | (this->CPSR.C << 31);
+                    return (Rm >> 1) | (carry << 31);
                 }
+            }
             default:
                 log_fatal("Invalid shift type: %d for shifting operand", shift_type);
         }
@@ -88,38 +90,42 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
         case ShiftType::LSL:
             if (shift_amount > 32) {
                 if constexpr(S) {
-                    this->CPSR.C = 0;
+                    CPSR &= ~(static_cast<u32>(CPSRFlags::C));
                 }
                 return 0;
             }
             else if (shift_amount == 32) {
                 if constexpr(S) {
-                    this->CPSR.C = Rm & 1;
+                    CPSR &= ~(static_cast<u32>(CPSRFlags::C));
+                    CPSR |= (Rm & 1) ? static_cast<u32>(CPSRFlags::C) : 0;
                 }
                 return 0;
             }
             else {
                 if constexpr(S) {
-                    this->CPSR.C = (Rm & (0x10000'0000LLU >> shift_amount)) != 0;
+                    CPSR &= ~(static_cast<u32>(CPSRFlags::C));
+                    CPSR |= ((Rm & (0x10000'0000LLU >> shift_amount)) != 0) ? static_cast<u32>(CPSRFlags::C) : 0;
                 }
                 return Rm << shift_amount;
             }
         case ShiftType::LSR:
             if (shift_amount > 32) {
                 if constexpr(S) {
-                    this->CPSR.C = 0;
+                    CPSR &= ~(static_cast<u32>(CPSRFlags::C));
                 }
                 return 0;
             }
             else if (shift_amount == 32) {
                 if constexpr(S)  {
-                    this->CPSR.C = Rm >> 31;
+                    CPSR &= ~(static_cast<u32>(CPSRFlags::C));
+                    CPSR |= (Rm >> 31) ? static_cast<u32>(CPSRFlags::C) : 0;
                 }
                 return 0;
             }
             else {
                 if constexpr(S) {
-                    this->CPSR.C = (Rm & (1 << (shift_amount - 1))) != 0;
+                    CPSR &= ~(static_cast<u32>(CPSRFlags::C));
+                    CPSR |= ((Rm & (1 << (shift_amount - 1))) != 0) ? static_cast<u32>(CPSRFlags::C) : 0;
                 }
                 return Rm >> shift_amount;
             }
@@ -127,20 +133,23 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
             if (shift_amount >= 32) {
                 Rm = (Rm & 0x8000'0000) ? 0xffff'ffff : 0;
                 if constexpr(S) {
-                    this->CPSR.C = Rm & 1;
+                    CPSR &= ~(static_cast<u32>(CPSRFlags::C));
+                    CPSR |= (Rm & 1) ? static_cast<u32>(CPSRFlags::C) : 0;
                 }
                 return Rm;
             }
             else {
                 if constexpr(S) {
-                    this->CPSR.C = (Rm & (1 << (shift_amount - 1))) != 0;
+                    CPSR &= ~(static_cast<u32>(CPSRFlags::C));
+                    CPSR |= ((Rm & (1 << (shift_amount - 1))) != 0) ? static_cast<u32>(CPSRFlags::C) : 0;
                 }
                 return Rm >> shift_amount;
             }
         case ShiftType::ROR:
             shift_amount &= 0x1f;
             if constexpr(S) {
-                this->CPSR.C = (Rm & (1 << (shift_amount - 1)));
+                CPSR &= ~(static_cast<u32>(CPSRFlags::C));
+                CPSR |= ((Rm >> (shift_amount - 1)) & 1) ? static_cast<u32>(CPSRFlags::C) : 0;
             }
             return ROTR32(Rm, shift_amount);
         default:
@@ -160,6 +169,7 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
     u32 Rd = (instruction & 0xf000) >> 12;
 
     u32 result, temp;
+    const u32 carry = (CPSR & static_cast<u32>(CPSRFlags::C)) ? 1 : 0;
     switch (static_cast<DataProcessingOpcode>(opcode)) {
         case DataProcessingOpcode::AND:
             log_cpu_verbose("%08x AND %08x -> R%d", op1, op2, Rd);
@@ -190,33 +200,37 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
         case DataProcessingOpcode::ADD:
             log_cpu_verbose("%08x ADD %08x -> R%d", op1, op2, Rd);
             result = op1 + op2;
-            if constexpr(S)
+            if constexpr(S) {
                 SetCVAdd(op1, op2, result);
+            }
             this->Registers[Rd] = result;
             break;
         case DataProcessingOpcode::ADC:
             log_cpu_verbose("%08x ADC %08x -> R%d", op1, op2, Rd);
-            result = op1 + op2 + CPSR.C;
-            if constexpr(S)
-                SetCVAddC(op1, op2, CPSR.C, result);
+            result = op1 + op2 + carry;
+            if constexpr(S) {
+                SetCVAddC(op1, op2, carry, result);
+            }
 
             this->Registers[Rd] = result;
             break;
         case DataProcessingOpcode::SBC:
             log_cpu_verbose("%08x SBC %08x -> R%d", op1, op2, Rd);
-            temp = op2 - CPSR.C + 1;
+            temp = op2 - carry + 1;
             result = (u32)(op1 - temp);
-            if constexpr(S)
-                SetCVSubC(op1, op2, CPSR.C, result);
+            if constexpr(S) {
+                SetCVSubC(op1, op2, carry, result);
+            }
 
             this->Registers[Rd] = result;
             break;
         case DataProcessingOpcode::RSC:
             log_cpu_verbose("%08x RSC %08x -> R%d", op1, op2, Rd);
-            temp = op1 - CPSR.C + 1;
+            temp = op1 - carry + 1;
             result = (u32)(op2 - temp);
-            if constexpr(S)
-                SetCVSubC(op2, op1, CPSR.C, result);
+            if constexpr(S) {
+                SetCVSubC(op2, op1, carry, result);
+            }
 
             this->Registers[Rd] = result;
             break;
@@ -231,15 +245,16 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
         case DataProcessingOpcode::CMP:
             log_cpu_verbose("%08x CMP %08x (SUB, no store)", op1, op2);
             result = op1 - op2;
-            if constexpr(S)
+            if constexpr(S) {
                 SetCVSub(op1, op2, result);
-
+            }
             break;
         case DataProcessingOpcode::CMN:
             log_cpu_verbose("%08x CMN %08x (ADD, no store)", op1, op2);
             result = op1 + op2;
-            if constexpr(S)
+            if constexpr(S) {
                 SetCVAdd(op1, op2, result);
+            }
 
             break;
         case DataProcessingOpcode::ORR:
@@ -276,13 +291,13 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
  * xSS0 or 0SS1 fits in 7-4
  * this allows for some pretty intense specialization
  * */
-template<bool I, u8 opcode, bool S, u8 shift_type>
+template<bool I, u8 opcode, bool S, u8 shift_type, bool shift_imm>
 void DataProcessing(u32 instruction) {
-    log_cpu_verbose("Data Processing %08x (imm: %d, opcode: %x, S: %d, shift_type: %d)",
-                    instruction, I, opcode, S, shift_type);
+    log_cpu_verbose("Data Processing %08x (imm: %d, opcode: %x, S: %d, shift_type: %d, imm_shif_amt: %d)",
+                    instruction, I, opcode, S, shift_type, shift_imm);
 
     u32 op2;
-    u32 _Rd = (instruction & 0xf000) >> 12;
+    u8 Rd = (instruction & 0xf000) >> 12;
     if constexpr(I) {
         u32 imm = instruction & 0xff;
         u32 rot = (instruction & 0xf00) >> 7; // rotated right by twice the value
@@ -295,20 +310,21 @@ void DataProcessing(u32 instruction) {
                 static_cast<DataProcessingOpcode>(opcode) == DataProcessingOpcode::RSC
         ) {
             // preserve old carry value
-            op2 = GetShiftedRegister<false, shift_type, I>(instruction);
+            op2 = GetShiftedRegister<false, shift_type, shift_imm>(instruction);
         }
         else {
-            if (_Rd == 15) {
-                // if Rd == PC, we don't set conditions either
-                op2 = GetShiftedRegister<false, shift_type, I>(instruction);
+            if (Rd == 15) {
+                // if Rd == PC, we don't set conditions either because of the force user thing
+                op2 = GetShiftedRegister<false, shift_type, shift_imm>(instruction);
             }
             else {
-                op2 = GetShiftedRegister<S, shift_type, I>(instruction);
+                op2 = GetShiftedRegister<S, shift_type, shift_imm>(instruction);
             }
         }
     }
 
-    if (_Rd == 15) {
+    if (Rd == 15) {
+        // don't set flags if Rd == 15
         DoDataProcessing<opcode, false>(instruction, op2);
         if constexpr(S) {
             // SPSR transfer
@@ -316,7 +332,7 @@ void DataProcessing(u32 instruction) {
         }
     }
     else {
-        DoDataProcessing<opcode, true>(instruction, op2);
+        DoDataProcessing<opcode, S>(instruction, op2);
     }
 
 }
