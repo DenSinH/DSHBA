@@ -15,7 +15,7 @@
 #ifndef NDEBUG
 // change to change verbosity / component logging:
 #define VERBOSITY VERBOSITY_DEBUG
-#define COMPONENT_FLAGS (COMPONENT_CPU_VERBOSE)
+#define COMPONENT_FLAGS (0)
 
 #define DO_DEBUGGER
 #define DO_BREAKPOINTS

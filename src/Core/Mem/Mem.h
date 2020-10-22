@@ -62,7 +62,7 @@ T Mem::Read(u32 address) {
             return ReadArray<T>(iWRAM, address & 0x7fff);
         case MemoryRegion::IO:
             log_warn("IO read @0x%08x", address);
-            return stubber ^= 0xffff'ffff;
+            return 0;// stubber ^= 0xffff'ffff;
         case MemoryRegion::PAL:
             return ReadArray<T>(PAL, address & 0x3ff);
         case MemoryRegion::VRAM:

@@ -48,7 +48,7 @@ bool ARM7TDMI::CheckCondition(u8 condition) const {
             return (!(CPSR & static_cast<u32>(CPSRFlags::Z))) &&
                     (((CPSR & static_cast<u32>(CPSRFlags::V)) != 0) == ((CPSR & static_cast<u32>(CPSRFlags::N)) != 0));
         case Condition::LE:
-            return ((CPSR & static_cast<u32>(CPSRFlags::Z)) != 0) &&
+            return ((CPSR & static_cast<u32>(CPSRFlags::Z)) != 0) ||
                    (((CPSR & static_cast<u32>(CPSRFlags::V)) != 0) ^ ((CPSR & static_cast<u32>(CPSRFlags::N)) != 0));
         case Condition::AL:
             return true;

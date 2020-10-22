@@ -55,34 +55,38 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
     if constexpr(shift_imm) {
         // xSS0 pattern, bit 4 is 0
         shift_amount = (instruction & 0x0f80) >> 7;
+
+        if (!shift_amount) {
+            switch (static_cast<ShiftType>(shift_type)) {
+                case ShiftType::LSL:
+                    return Rm;
+                case ShiftType::LSR:
+                case ShiftType::ASR:
+                    shift_amount = 32;
+                    break;
+                case ShiftType::ROR: {
+                    const u32 carry = (CPSR & static_cast<u32>(CPSRFlags::C)) ? 1 : 0;
+                    // RRX
+                    if constexpr(S) {
+                        u32 new_carry = Rm & 1;
+                        Rm = (Rm >> 1) | (carry << 31);
+                        CPSR |= new_carry ? static_cast<u32>(CPSRFlags::C) : 0;
+                        return Rm;
+                    }
+                    else {
+                        return (Rm >> 1) | (carry << 31);
+                    }
+                }
+                default:
+                    log_fatal("Invalid shift type: %d for shifting operand", shift_type);
+            }
+        }
     }
     else {
         shift_amount = Registers[(instruction & 0x0f00) >> 8];
-    }
-
-    if (!shift_amount) {
-        switch (static_cast<ShiftType>(shift_type)) {
-            case ShiftType::LSL:
-                return Rm;
-            case ShiftType::LSR:
-            case ShiftType::ASR:
-                shift_amount = 32;
-                break;
-            case ShiftType::ROR: {
-                const u32 carry = (CPSR & static_cast<u32>(CPSRFlags::C)) ? 1 : 0;
-                // RRX
-                if constexpr(S) {
-                    u32 new_carry = Rm & 1;
-                    Rm = (Rm >> 1) | (carry << 31);
-                    CPSR |= new_carry ? static_cast<u32>(CPSRFlags::C) : 0;
-                    return Rm;
-                }
-                else {
-                    return (Rm >> 1) | (carry << 31);
-                }
-            }
-            default:
-                log_fatal("Invalid shift type: %d for shifting operand", shift_type);
+        if (shift_amount == 0) {
+            // no special case shifting in this case
+            return Rm;
         }
     }
 
@@ -104,7 +108,7 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
             else {
                 if constexpr(S) {
                     CPSR &= ~(static_cast<u32>(CPSRFlags::C));
-                    CPSR |= ((Rm & (0x10000'0000LLU >> shift_amount)) != 0) ? static_cast<u32>(CPSRFlags::C) : 0;
+                    CPSR |= ((((u64)Rm) << shift_amount) & 0x1'0000'0000ULL) ? static_cast<u32>(CPSRFlags::C) : 0;
                 }
                 return Rm << shift_amount;
             }
@@ -143,15 +147,18 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
                     CPSR &= ~(static_cast<u32>(CPSRFlags::C));
                     CPSR |= ((Rm & (1 << (shift_amount - 1))) != 0) ? static_cast<u32>(CPSRFlags::C) : 0;
                 }
-                return Rm >> shift_amount;
+                return ((i32)Rm) >> shift_amount;
             }
         case ShiftType::ROR:
+        {
             shift_amount &= 0x1f;
+            u32 shifted = ROTR32(Rm, shift_amount);
             if constexpr(S) {
                 CPSR &= ~(static_cast<u32>(CPSRFlags::C));
-                CPSR |= ((Rm >> (shift_amount - 1)) & 1) ? static_cast<u32>(CPSRFlags::C) : 0;
+                CPSR |= (shifted & 0x8000'0000) ? static_cast<u32>(CPSRFlags::C) : 0;
             }
-            return ROTR32(Rm, shift_amount);
+            return shifted;
+        }
         default:
             log_fatal("Invalid shift type for shifted operand: %x", shift_type);
     }
@@ -184,8 +191,9 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
         case DataProcessingOpcode::SUB:
             log_cpu_verbose("%08x SUB %08x -> R%d", op1, op2, Rd);
             result = op1 - op2;
-            if constexpr(S)
+            if constexpr(S) {
                 SetCVSub(op1, op2, result);
+            }
 
             this->Registers[Rd] = result;
             break;
@@ -211,7 +219,6 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
             if constexpr(S) {
                 SetCVAddC(op1, op2, carry, result);
             }
-
             this->Registers[Rd] = result;
             break;
         case DataProcessingOpcode::SBC:
@@ -236,6 +243,7 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
             break;
         case DataProcessingOpcode::TST:
             log_cpu_verbose("%08x TST %08x (AND, no store)", op1, op2);
+            log_debug("%08x TST %08x (AND, no store)", op1, op2);
             result = op1 & op2;
             break;
         case DataProcessingOpcode::TEQ:
@@ -245,17 +253,13 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
         case DataProcessingOpcode::CMP:
             log_cpu_verbose("%08x CMP %08x (SUB, no store)", op1, op2);
             result = op1 - op2;
-            if constexpr(S) {
-                SetCVSub(op1, op2, result);
-            }
+            SetCVSub(op1, op2, result);
             break;
         case DataProcessingOpcode::CMN:
             log_cpu_verbose("%08x CMN %08x (ADD, no store)", op1, op2);
+            log_debug("%08x CMN %08x (ADD, no store)", op1, op2);
             result = op1 + op2;
-            if constexpr(S) {
-                SetCVAdd(op1, op2, result);
-            }
-
+            SetCVAdd(op1, op2, result);
             break;
         case DataProcessingOpcode::ORR:
             log_cpu_verbose("%08x ORR %08x -> R%d", op1, op2, Rd);
@@ -302,6 +306,11 @@ void DataProcessing(u32 instruction) {
         u32 imm = instruction & 0xff;
         u32 rot = (instruction & 0xf00) >> 7; // rotated right by twice the value
         op2 = ROTR32(imm, rot);
+
+        if constexpr(S) {
+            CPSR &= ~(static_cast<u32>(CPSRFlags::C));
+            CPSR |= (op2 & 0x8000'0000) ? static_cast<u32>(CPSRFlags::C) : 0;
+        }
     }
     else {
         if constexpr(
