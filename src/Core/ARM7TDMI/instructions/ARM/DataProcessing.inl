@@ -39,56 +39,10 @@ enum class ShiftType : u8 {
     ROR = 0b11,
 };
 
-template<bool S, u8 shift_type, bool shift_imm>
-inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
-    // When the I bit is 0
-    u32 shift_amount;
-    u32 Rm;
-    if (unlikely((instruction & 0xf) == 15)) {
-        // account for PC offset, should be 12, is 8
-        Rm = pc + 4;
-    }
-    else {
-        Rm = Registers[instruction & 0xf];
-    }
-
-    if constexpr(shift_imm) {
-        // xSS0 pattern, bit 4 is 0
-        shift_amount = (instruction & 0x0f80) >> 7;
-
-        if (!shift_amount) {
-            switch (static_cast<ShiftType>(shift_type)) {
-                case ShiftType::LSL:
-                    return Rm;
-                case ShiftType::LSR:
-                case ShiftType::ASR:
-                    shift_amount = 32;
-                    break;
-                case ShiftType::ROR: {
-                    const u32 carry = (CPSR & static_cast<u32>(CPSRFlags::C)) ? 1 : 0;
-                    // RRX
-                    if constexpr(S) {
-                        u32 new_carry = Rm & 1;
-                        Rm = (Rm >> 1) | (carry << 31);
-                        CPSR |= new_carry ? static_cast<u32>(CPSRFlags::C) : 0;
-                        return Rm;
-                    }
-                    else {
-                        return (Rm >> 1) | (carry << 31);
-                    }
-                }
-                default: UNREACHABLE
-                    log_fatal("Invalid shift type: %d for shifting operand", shift_type);
-            }
-        }
-    }
-    else {
-        shift_amount = Registers[(instruction & 0x0f00) >> 8];
-        if (shift_amount == 0) {
-            // no special case shifting in this case
-            return Rm;
-        }
-    }
+template<bool S, u8 shift_type>
+ALWAYS_INLINE u32 DoShift(u32 Rm, u32 shift_amount) {
+    // must be caught before
+    ASSUME(shift_amount != 0);
 
     switch (static_cast<ShiftType>(shift_type)) {
         case ShiftType::LSL:
@@ -164,6 +118,60 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
     }
 }
 
+template<bool S, u8 shift_type, bool shift_imm>
+inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
+    // When the I bit is 0
+    u32 shift_amount;
+    u32 Rm;
+    if (unlikely((instruction & 0xf) == 15)) {
+        // account for PC offset, should be 12, is 8
+        Rm = pc + 4;
+    }
+    else {
+        Rm = Registers[instruction & 0xf];
+    }
+
+    if constexpr(shift_imm) {
+        // xSS0 pattern, bit 4 is 0
+        shift_amount = (instruction & 0x0f80) >> 7;
+
+        if (!shift_amount) {
+            switch (static_cast<ShiftType>(shift_type)) {
+                case ShiftType::LSL:
+                    return Rm;
+                case ShiftType::LSR:
+                case ShiftType::ASR:
+                    shift_amount = 32;
+                    break;
+                case ShiftType::ROR: {
+                    const u32 carry = (CPSR & static_cast<u32>(CPSRFlags::C)) ? 1 : 0;
+                    // RRX
+                    if constexpr(S) {
+                        u32 new_carry = Rm & 1;
+                        Rm = (Rm >> 1) | (carry << 31);
+                        CPSR |= new_carry ? static_cast<u32>(CPSRFlags::C) : 0;
+                        return Rm;
+                    }
+                    else {
+                        return (Rm >> 1) | (carry << 31);
+                    }
+                }
+                default: UNREACHABLE
+                    log_fatal("Invalid shift type: %d for shifting operand", shift_type);
+            }
+        }
+    }
+    else {
+        shift_amount = Registers[(instruction & 0x0f00) >> 8];
+        if (shift_amount == 0) {
+            // no special case shifting in this case
+            return Rm;
+        }
+    }
+
+    return DoShift<S, shift_type>(Rm, shift_amount);
+}
+
 template<u8 opcode, bool S>
 inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32 op2) {
     u32 op1;
@@ -175,7 +183,7 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
     }
     u32 rd = (instruction & 0xf000) >> 12;
 
-    u32 result, temp;
+    u32 result;
     const u32 carry = (CPSR & static_cast<u32>(CPSRFlags::C)) ? 1 : 0;
     switch (static_cast<DataProcessingOpcode>(opcode)) {
         case DataProcessingOpcode::AND:
@@ -235,8 +243,7 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
                 result = sbcs_cv(op1, op2, carry);
             }
             else {
-                temp = op2 - carry + 1;
-                result = (u32)(op1 - temp);
+                result = (u32)(op1 - (op2 - carry + 1));
             }
 
             this->Registers[rd] = result;
@@ -248,8 +255,7 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
                 result = sbcs_cv(op2, op1, carry);
             }
             else {
-                temp = op1 - carry + 1;
-                result = (u32)(op2 - temp);
+                result = (u32)(op2 - (op1 - carry + 1));
             }
 
             this->Registers[rd] = result;
@@ -353,6 +359,10 @@ void DataProcessing(u32 instruction) {
         DoDataProcessing<opcode, S>(instruction, op2);
     }
 
+    if constexpr(I) {
+        // internal cycle for immediate operand
+        timer++;
+    }
 }
 
 #ifndef INLINED_INCLUDES

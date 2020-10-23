@@ -5,6 +5,7 @@
 
 #ifdef _MSC_VER
 #include <intrin.h>     // used in a bunch of stuff here
+#include <immintrin.h>
 #endif
 
 #if defined(__x86_64__) || defined(__i386__)
@@ -115,6 +116,12 @@ static ALWAYS_INLINE u32 cttz(u32 x)
 #define UNREACHABLE __builtin_unreachable();
 #else
 #define UNREACHABLE
+#endif
+
+#if __has_builtin(__builtin_unreachable)
+#define ASSUME(x) __builtin_assume(x);
+#else
+#define ASSUME(x)
 #endif
 
 #endif //GC__HELPERS_H

@@ -117,6 +117,17 @@ static constexpr ARMInstructionPtr GetARMInstruction() {
 
 template<u16 instruction>
 static constexpr THUMBInstructionPtr GetTHUMBInstruction() {
+    if constexpr((instruction & ARM7TDMI::THUMBHash(0xfc00)) == ARM7TDMI::THUMBHash(0x4000)) {
+        const u8 opcode = (instruction & 0xf);
+        return &ARM7TDMI::ALUOperations<opcode>;
+    }
+    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xfc00)) == ARM7TDMI::THUMBHash(0x4400)) {
+        const u8 opcode = (instruction & 0xc) >> 2;
+        const bool H1 = (instruction & ARM7TDMI::THUMBHash(0x0080)) != 0;
+        const bool H2 = (instruction & ARM7TDMI::THUMBHash(0x0040)) != 0;
+        return &ARM7TDMI::HiRegOps_BX<opcode, H1, H2>;
+    }
+
     return &ARM7TDMI::THUMBUnimplemented;
 }
 

@@ -54,6 +54,7 @@ void debugger_init(
 ) {
     Debugger.disassembly_viewer.PC = PC;
     Debugger.disassembly_viewer.valid_address = valid_address_mask;
+    Debugger.disassembly_viewer.arm_mode = arm_mode;
     Debugger.memory_viewer.mem_size = mem_size;
     Debugger.memory_viewer.ReadFn = mem_read;
 }
