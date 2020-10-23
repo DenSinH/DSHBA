@@ -64,6 +64,13 @@ CONSOLE_COMMAND(Initializer::step_system) {
 #endif
 }
 
+static u64 ticks, prev_ticks;
+static OVERLAY_INFO(cpu_ticks) {
+    ticks = gba->CPU.timer;
+    SPRINTF(output, output_length, "CPU ticks/s: %.1f", (float)(ticks - prev_ticks) / delta_time);
+    prev_ticks = ticks;
+}
+
 u8 Initializer::ReadByte(u64 offset) {
     return gba->Memory.Read<u8, false>(offset);
 }
@@ -98,7 +105,6 @@ u8* Initializer::ValidAddressMask(u32 address) {
         case MemoryRegion::ROM_H:
             return &gba->Memory.ROM[address & 0x01ff'ffff];
         case MemoryRegion::SRAM:
-            return nullptr;
         default:
             return nullptr;
     }
@@ -138,16 +144,16 @@ GBA* Initializer::init() {
     add_register_data("CPSR", &gba->CPU.CPSR, 4, cpu_tab);
     add_register_data("SPSR", &gba->CPU.SPSR, 4, cpu_tab);
 
-    add_register_data("", NULL, 4, cpu_tab);
-    add_register_data("", NULL, 4, cpu_tab);
+    add_register_data("", nullptr, 4, cpu_tab);
+    add_register_data("", nullptr, 4, cpu_tab);
 
     add_register_data("Pipe 0", &gba->CPU.Pipeline.Storage[0], 4, cpu_tab);
     add_register_data("Pipe 1", &gba->CPU.Pipeline.Storage[1], 4, cpu_tab);
     add_register_data("Pipe 2", &gba->CPU.Pipeline.Storage[2], 4, cpu_tab);
     add_register_data("Pipe 3", &gba->CPU.Pipeline.Storage[3], 4, cpu_tab);
 
-    add_register_data("", NULL, 4, cpu_tab);
-    add_register_data("", NULL, 8, cpu_tab);
+    add_register_data("", nullptr, 4, cpu_tab);
+    add_register_data("", nullptr, 8, cpu_tab);
 
     add_register_data("Time", &gba->CPU.timer, 8, cpu_tab);
 
@@ -157,6 +163,8 @@ GBA* Initializer::init() {
     add_command("BREAK", "Add breakpoint to system at PC = $1.", break_system);
     add_command("UNBREAK", "Remove breakpoint to system at PC = $1.", unbreak_system);
     add_command("STEP", "Step system for $1 CPU steps (defaults to 1 step).", step_system);
+
+    add_overlay_info(cpu_ticks);
 
     return gba;
 }

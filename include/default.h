@@ -27,11 +27,7 @@
 
 #endif
 
-#if defined(__has_builtin)
-#define HAS_BUILTIN(builtin) __has_builtin(builtin)
-#else
-#define HAS_BUILTIN(builtin) 0
-#endif
+#define ALWAYS_INLINE inline __attribute__((always_inline))
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -42,7 +38,5 @@ typedef int8_t i8;
 typedef int16_t i16;
 typedef int32_t i32;
 typedef int64_t i64;
-
-#define CLOCK_FREQUENCY 486000000
 
 #endif //GC__DEFAULT_H

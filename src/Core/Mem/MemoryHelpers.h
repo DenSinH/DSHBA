@@ -1,13 +1,12 @@
 #pragma once
 
-
 #include "default.h"
 #include "log.h"
 
 #include <type_traits>
 
 template<typename T>
-static inline __attribute__((always_inline)) T ReadArray(const u8 array[], u32 address);
+static ALWAYS_INLINE T ReadArray(const u8 array[], u32 address);
 
 template<>
 u8 ReadArray(const u8 array[], u32 address) {
@@ -35,7 +34,7 @@ u32 ReadArray(const u8 array[], u32 address) {
 }
 
 template<typename T>
-static inline __attribute__((always_inline)) void WriteArray(u8 array[], u32 address, T value);
+static ALWAYS_INLINE void WriteArray(u8 array[], u32 address, T value);
 
 template<>
 void WriteArray(u8 array[], u32 address, u8 value) {

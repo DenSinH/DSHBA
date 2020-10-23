@@ -32,8 +32,7 @@ void BlockDataTransfer(u32 instruction) {
         // PSR & force user
         ChangeMode(Mode::User);
     }
-
-    if (!register_list) [[unlikely]] {
+    if (unlikely(!register_list)) {
         // invalid register lists
         if constexpr(L) {
             pc = Memory->Mem::Read<u32, true>(address);
@@ -71,7 +70,7 @@ void BlockDataTransfer(u32 instruction) {
             // Writeback with Rb included in Rlist: Store OLD base if Rb is FIRST entry in Rlist,
             // otherwise store NEW base (STM/ARMv4)
             // (GBATek)
-            if (cttz(register_list) == rn - 1) {
+            if (unlikely(cttz(register_list) == rn - 1)) {
                 // This is only the case if rn is the first register to be stored.
                 // e.g.: if rn is 4 and the Rlist ends in 0b11110000, we have
                 // 0b11110000 & ((1 << 5) - 1) = 0b11110000 & (0b100000 - 1) =
@@ -120,7 +119,7 @@ void BlockDataTransfer(u32 instruction) {
             }
         }
 
-        if (register_list & (1 << 15)) [[unlikely]] {
+        if (unlikely(register_list & (1 << 15))) {
             if constexpr(L) {
                 FlushPipeline();
             }

@@ -44,7 +44,7 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
     // When the I bit is 0
     u32 shift_amount;
     u32 Rm;
-    if ((instruction & 0xf) == 15) {
+    if (unlikely((instruction & 0xf) == 15)) {
         // account for PC offset, should be 12, is 8
         Rm = pc + 4;
     }
@@ -77,7 +77,7 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
                         return (Rm >> 1) | (carry << 31);
                     }
                 }
-                default:
+                default: UNREACHABLE
                     log_fatal("Invalid shift type: %d for shifting operand", shift_type);
             }
         }
@@ -159,7 +159,7 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
             }
             return shifted;
         }
-        default:
+        default: UNREACHABLE
             log_fatal("Invalid shift type for shifted operand: %x", shift_type);
     }
 }
@@ -167,7 +167,7 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
 template<u8 opcode, bool S>
 inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32 op2) {
     u32 op1;
-    if (((instruction & 0x000f0000) >> 16) == 15) {
+    if (unlikely(((instruction & 0x000f0000) >> 16) == 15)) {
         op1 = pc + 4;  // account for extra offset, same as before
     }
     else {
@@ -190,54 +190,66 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
             break;
         case DataProcessingOpcode::SUB:
             log_cpu_verbose("%08x SUB %08x -> R%d", op1, op2, rd);
-            result = op1 - op2;
             if constexpr(S) {
-                SetCVSub(op1, op2, result);
+                result = subs_cv(op1, op2);
             }
-
+            else {
+                result = op1 - op2;
+            }
             this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::RSB:
             log_cpu_verbose("%08x RSB %08x -> R%d", op1, op2, rd);
-            result = op2 - op1;
             if constexpr(S) {
-                SetCVSub(op2, op1, result);
+                result = subs_cv(op2, op1);
+            }
+            else {
+                result = op2 - op1;
             }
 
             this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::ADD:
             log_cpu_verbose("%08x ADD %08x -> R%d", op1, op2, rd);
-            result = op1 + op2;
             if constexpr(S) {
-                SetCVAdd(op1, op2, result);
+                result = adds_cv(op1, op2);
+            }
+            else {
+                result = op1 + op2;
             }
             this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::ADC:
             log_cpu_verbose("%08x ADC %08x -> R%d", op1, op2, rd);
-            result = op1 + op2 + carry;
             if constexpr(S) {
-                SetCVAddC(op1, op2, carry, result);
+                result = adcs_cv(op1, op2, carry);
+            }
+            else {
+                result = op1 + op2 + carry;
             }
             this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::SBC:
             log_cpu_verbose("%08x SBC %08x -> R%d", op1, op2, rd);
-            temp = op2 - carry + 1;
-            result = (u32)(op1 - temp);
             if constexpr(S) {
-                SetCVSubC(op1, op2, carry, result);
+                result = sbcs_cv(op1, op2, carry);
+            }
+            else {
+                temp = op2 - carry + 1;
+                result = (u32)(op1 - temp);
             }
 
             this->Registers[rd] = result;
             break;
         case DataProcessingOpcode::RSC:
             log_cpu_verbose("%08x RSC %08x -> R%d", op1, op2, rd);
-            temp = op1 - carry + 1;
-            result = (u32)(op2 - temp);
+
             if constexpr(S) {
-                SetCVSubC(op2, op1, carry, result);
+                result = sbcs_cv(op2, op1, carry);
+            }
+            else {
+                temp = op1 - carry + 1;
+                result = (u32)(op2 - temp);
             }
 
             this->Registers[rd] = result;
@@ -252,13 +264,11 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
             break;
         case DataProcessingOpcode::CMP:
             log_cpu_verbose("%08x CMP %08x (SUB, no store)", op1, op2);
-            result = op1 - op2;
-            SetCVSub(op1, op2, result);
+            result = subs_cv(op1, op2);
             break;
         case DataProcessingOpcode::CMN:
             log_cpu_verbose("%08x CMN %08x (ADD, no store)", op1, op2);
-            result = op1 + op2;
-            SetCVAdd(op1, op2, result);
+            result = adds_cv(op1, op2);
             break;
         case DataProcessingOpcode::ORR:
             log_cpu_verbose("%08x ORR %08x -> R%d", op1, op2, rd);
@@ -280,7 +290,7 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
             result = ~op2;
             this->Registers[rd] = result;
             break;
-        default:
+        default: UNREACHABLE
             log_fatal("Invalid opcode for DataProcessing operation: %x", opcode);
     }
 
@@ -331,7 +341,7 @@ void DataProcessing(u32 instruction) {
         }
     }
 
-    if (rd == 15) {
+    if (unlikely(rd == 15)) {
         // don't set flags if rd == 15
         DoDataProcessing<opcode, false>(instruction, op2);
         if constexpr(S) {

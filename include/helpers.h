@@ -5,7 +5,6 @@
 
 #ifdef _MSC_VER
 #include <intrin.h>     // used in a bunch of stuff here
-#include <immintrin.h>
 #endif
 
 #if defined(__x86_64__) || defined(__i386__)
@@ -18,20 +17,20 @@
 
 #if defined(__x86_64__) || defined(__i386__)
 
-static inline __attribute__((always_inline)) u32 ROTR32(u32 uval, u32 rot) {
+static ALWAYS_INLINE u32 ROTR32(u32 uval, u32 rot) {
     return _rotr(uval, rot);  // gcc, icc, msvc.  Intel-defined.
 }
 
-static inline __attribute__((always_inline)) u32 ROTL32(u32 uval, u32 rot) {
+static ALWAYS_INLINE u32 ROTL32(u32 uval, u32 rot) {
     return _rotl(uval, rot);  // gcc, icc, msvc.  Intel-defined.
 }
 
 #else
-static inline __attribute__((always_inline)) u32 ROTR32(u32 uval, u32 rot) {
+static ALWAYS_INLINE u32 ROTR32(u32 uval, u32 rot) {
     return (((uval) >> (n)) | ((uval) << (32 - (n))));
 }
 
-static inline __attribute__((always_inline)) u32 ROTL32(u32 uval, u32 rot) {
+static ALWAYS_INLINE u32 ROTL32(u32 uval, u32 rot) {
     return (((uval) << (n)) | ((uval) >> (32 - (n))));
 }
 #endif
@@ -42,17 +41,21 @@ static inline __attribute__((always_inline)) u32 ROTL32(u32 uval, u32 rot) {
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define CLAMP(val, min, max) MIN(max, MAX(val, min))
 
-static inline uint8_t flip_byte(uint8_t b) {
+static ALWAYS_INLINE uint8_t flip_byte(uint8_t b) {
+#if __has_builtin(__builtin_bitreverse8)
+    return __builtin_bitreverse8(b);
+#else
     b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
     b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
     b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
     return b;
+#endif
 }
 
-static inline __attribute__((always_inline)) u32 popcount(u32 x)
+static ALWAYS_INLINE u32 popcount(u32 x)
 
 {
-#if HAS_BUILTIN(__builtin_popcount)
+#if __has_builtin(__builtin_popcount)
     return __builtin_popcount(x);
 #elif defined(__x86_64__) || defined(__i386__)
     return __popcnt(x);
@@ -64,9 +67,9 @@ static inline __attribute__((always_inline)) u32 popcount(u32 x)
 #endif
 }
 
-static inline __attribute__((always_inline)) u32 ctlz(u32 x)
+static ALWAYS_INLINE u32 ctlz(u32 x)
 {
-#if HAS_BUILTIN(__builtin_clz)
+#if __has_builtin(__builtin_clz)
     return x ? __builtin_clz(x) : 32;
 #elif defined(__x86_64__) || defined(__i386__)
     return __lzcnt(x);
@@ -82,9 +85,9 @@ static inline __attribute__((always_inline)) u32 ctlz(u32 x)
 #endif
 }
 
-static inline __attribute__((always_inline)) u32 cttz(u32 x)
+static ALWAYS_INLINE u32 cttz(u32 x)
 {
-#if HAS_BUILTIN(__builtin_ctz)
+#if __has_builtin(__builtin_ctz)
     return x ? __builtin_ctz(x) : 32;
 #elif defined(__x86_64__) || defined(__i386__)
     return _tzcnt_u32(x);
@@ -99,5 +102,19 @@ static inline __attribute__((always_inline)) u32 cttz(u32 x)
     return n;
 #endif
 }
+
+#if __is_identifier(__builtin_expect)
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#else
+#define likely(x) (x)
+#define unlikely(x) (x)
+#endif
+
+#if __has_builtin(__builtin_unreachable)
+#define UNREACHABLE __builtin_unreachable();
+#else
+#define UNREACHABLE
+#endif
 
 #endif //GC__HELPERS_H

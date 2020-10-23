@@ -41,7 +41,7 @@ int add_register_tab(const char* name){
     return Debugger.register_viewer.AddRegisterTab(name);
 }
 
-void add_register_data(char* name, const void* value, size_t size, int tab) {
+void add_register_data(const char* name, const void* value, size_t size, int tab) {
     Debugger.register_viewer.AddRegister(name, value, size, tab);
 }
 

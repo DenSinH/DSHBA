@@ -50,13 +50,13 @@ void SingleDataTransfer(u32 instruction) {
             u32 loaded = Memory->Mem::Read<u32, true>(address);
             // misaligned loads fetch rotated value
             u32 rot = (address & 3) << 3;
-            if (rot != 0) [[unlikely]] {
+            if (unlikely(rot != 0)) {
                 loaded = ROTR32(loaded, rot);
             }
 
             Registers[rd] = loaded;
 
-            if (rd == 15) {
+            if (unlikely(rd == 15)) {
                 FlushPipeline();
             }
         }
@@ -65,7 +65,7 @@ void SingleDataTransfer(u32 instruction) {
         log_cpu_verbose("STR%c r%d, [r%d, #%x]%c", B ? 'B' : ' ', Rd, Rn, offset, W ? '!' : ' ');
         u32 value = Registers[rd];
 
-        if (rd == 15) [[unlikely]] {
+        if (unlikely(rd == 15)) {
             // correction for pipeline effects
             value += 4;
         }
@@ -133,7 +133,7 @@ void HalfwordDataTransfer(u32 instruction) {
             // signed halfword
             if constexpr(L) {
                 log_cpu_verbose("LDRSH r%d, [r%d, #%x]%c", rd, rn, offset, W ? '!' : '\0');
-                if (address & 1) {
+                if (unlikely(address & 1)) {
                     // misaligned, loads sign extended byte instead
                     Registers[rd] = (u32)((i32)((i8)Memory->Mem::Read<u8, true>(address)));
                 }
@@ -161,7 +161,7 @@ void HalfwordDataTransfer(u32 instruction) {
             // unsigned halfwords
             if constexpr(L) {
                 log_cpu_verbose("LDRH r%d, [r%d, #%x]%c", Rd, Rn, offset, W ? '!' : '\0');
-                if (address & 1) {
+                if (unlikely(address & 1)) {
                     // misaligned
                     u32 loaded = Memory->Mem::Read<u16, true>(address);
                     Registers[rd] = ROTR32(loaded, 8);
@@ -176,6 +176,7 @@ void HalfwordDataTransfer(u32 instruction) {
             }
         }
         else {
+            UNREACHABLE
             log_fatal("Unintended SWP instruction");
         }
     }
@@ -223,7 +224,7 @@ void SWP(u32 instruction) {
 
         // misaligned reads
         u8 rotate_amount = (address & 3) << 3;
-        if (rotate_amount) {
+        if (unlikely(rotate_amount != 0)) {
             memory_content = ROTR32(memory_content, rotate_amount);
         }
         Registers[rd] = memory_content;

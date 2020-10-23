@@ -21,6 +21,7 @@
 #define DO_BREAKPOINTS
 
 #define DIRTY_MEMORY_ACCESS
+#define FAST_ADD_SUB
 
 #else
 #define VERBOSITY VERBOSITY_MAX

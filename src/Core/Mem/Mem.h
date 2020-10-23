@@ -1,6 +1,7 @@
 #pragma once
 
 #include "default.h"
+#include "helpers.h"
 #include "MemoryHelpers.h"
 
 #include <string>

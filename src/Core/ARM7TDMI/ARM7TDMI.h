@@ -72,6 +72,8 @@ private:
     // this is to hack CLion into thinking we can access everything
     friend class ARM7TDMI_INL;
 
+    friend void benchmark();
+
     enum class State : u8 {
         ARM   = 0,
         THUMB = 1,
@@ -104,11 +106,11 @@ private:
     // bits 15-6 for THUMB instructions (less are needed, but this allows for more templating)
     THUMBInstructionPtr THUMBInstructions[THUMBInstructionTableSize];
 
-    static inline __attribute__((always_inline)) constexpr u32 ARMHash(u32 instruction) {
+    static ALWAYS_INLINE constexpr u32 ARMHash(u32 instruction) {
         return ((instruction & 0x0ff0'0000) >> 16) | ((instruction & 0x00f0) >> 4);
     }
 
-    static inline __attribute__((always_inline)) constexpr u32 THUMBHash(u16 instruction) {
+    static ALWAYS_INLINE constexpr u32 THUMBHash(u16 instruction) {
         return ((instruction & 0xffc0) >> 6);
     }
 
@@ -120,11 +122,18 @@ private:
     void BuildARMTable();
     void BuildTHUMBTable();
 
-    inline __attribute__((always_inline)) void SetCVAdd(u32 op1, u32 op2, u32 result);
-    inline __attribute__((always_inline)) void SetCVAddC(u64 op1, u64 op2, u32 c, u32 result);
-    inline __attribute__((always_inline)) void SetCVSub(u32 op1, u32 op2, u32 result);
-    inline __attribute__((always_inline)) void SetCVSubC(u64 op1, u64 op2, u32 c, u32 result);
-    inline __attribute__((always_inline)) void SetNZ(u32 result);
+//    ALWAYS_INLINE void SetCVAdd(u32 op1, u32 op2, u32 result);
+//    ALWAYS_INLINE void SetCVAddC(u64 op1, u64 op2, u32 c, u32 result);
+//    ALWAYS_INLINE void SetCVSub(u32 op1, u32 op2, u32 result);
+//    ALWAYS_INLINE void SetCVSubC(u64 op1, u64 op2, u32 c, u32 result);
+    ALWAYS_INLINE void SetNZ(u32 result);
+
+    ALWAYS_INLINE u32 adcs_cv(u32 op1, u32 op2, u32 carry_in);
+    ALWAYS_INLINE u32 adds_cv(u32 op1, u32 op2);
+    ALWAYS_INLINE u32 sbcs_cv(u32 op1, u32 op2, u32 carry_in);
+    ALWAYS_INLINE u32 sbcs_cv_old(u32 op1, u32 op2, u32 carry_in);
+    ALWAYS_INLINE u32 subs_cv(u32 op1, u32 op2);
+
     [[nodiscard]] inline bool CheckCondition(u8 condition) const;
     void FlushPipeline();
 
@@ -170,35 +179,81 @@ private:
 #undef INLINED_INCLUDES
 };
 
-void ARM7TDMI::SetCVAdd(u32 op1, u32 op2, u32 result)
-{
+u32 ARM7TDMI::adcs_cv(u32 op1, u32 op2, u32 carry_in) {
+    // add with carry and set CV
     CPSR &= ~(static_cast<u32>(CPSRFlags::C) | static_cast<u32>(CPSRFlags::V));
-    CPSR |= (op1 > ~op2) ? static_cast<u32>(CPSRFlags::C) : 0;
+    u32 result;
+#if defined(FAST_ADD_SUB) && __has_builtin(__builtin_addc)
+    u32 carry_out;
+    result = __builtin_addc(op1, op2, carry_in, &carry_out);
+    if (carry_out) {
+        CPSR |= static_cast<u32>(CPSRFlags::C);
+    }
+#else
+    result = op1 + op2 + carry_in;
+    CPSR |= ((op1 + op2 + carry_in) > 0xffff'ffffULL) ? static_cast<u32>(CPSRFlags::C) : 0;
+#endif // addc
+
+#if defined(FAST_ADD_SUB) && __has_builtin(__builtin_sadd_overflow)
+    int _; // we already have the result
+    if (__builtin_sadd_overflow(op1 + carry_in, op2, &_)) {
+        CPSR |= static_cast<u32>(CPSRFlags::V);
+    }
+#else
     CPSR |= (((op1 ^ result) & (~op1 ^ op2)) >> 31) ? static_cast<u32>(CPSRFlags::V) : 0;
+#endif // add_overflow
+
+    return result;
 }
 
-void ARM7TDMI::SetCVAddC(u64 op1, u64 op2, u32 c, u32 result)
-{
-    // for ADC
-    CPSR &= ~(static_cast<u32>(CPSRFlags::C) | static_cast<u32>(CPSRFlags::V));
-    CPSR |= ((op1 + op2 + c) > 0xffff'ffffULL) ? static_cast<u32>(CPSRFlags::C) : 0;
-    CPSR |= (((op1 ^ result) & (~op1 ^ op2)) >> 31) ? static_cast<u32>(CPSRFlags::V) : 0;
+u32 ARM7TDMI::adds_cv(u32 op1, u32 op2) {
+    // add and set CV
+    return adcs_cv(op1, op2, 0);
 }
 
-void ARM7TDMI::SetCVSub(u32 op1, u32 op2, u32 result)
-{
-    // for op1 - op2
+u32 ARM7TDMI::sbcs_cv(u32 op1, u32 op2, u32 carry_in) {
+    // subtract with carry and set CV
     CPSR &= ~(static_cast<u32>(CPSRFlags::C) | static_cast<u32>(CPSRFlags::V));
-    CPSR |= (op2 <= op1) ? static_cast<u32>(CPSRFlags::C) : 0;
+    u32 result;
+#if defined(FAST_ADD_SUB) && __has_builtin(__builtin_subc)
+    u32 carry_out;
+    // carry is kind of backwards in ARM, so we do !carry_in and !carry_out
+    result = __builtin_subc(op1, op2, !carry_in, &carry_out);
+    if (!carry_out) {
+        CPSR |= static_cast<u32>(CPSRFlags::C);
+    }
+#else
+    result = (u32)(op1 - (op2 - carry_in + 1));
+    CPSR |= ((op2 + 1 - carry_in) <= op1) ? static_cast<u32>(CPSRFlags::C) : 0;
+#endif // addc
+
+#if defined(FAST_ADD_SUB) && __has_builtin(__builtin_ssub_overflow)
+    int _;  // we already have the result
+    if (__builtin_ssub_overflow(op1, op2 + 1 - carry_in, &_)) {
+        CPSR |= static_cast<u32>(CPSRFlags::V);
+    }
+#else
     CPSR |= (((op1 ^ op2) & (~op2 ^ result)) >> 31) ? static_cast<u32>(CPSRFlags::V) : 0;
+#endif // add_overflow
+
+    return result;
 }
 
-void ARM7TDMI::SetCVSubC(u64 op1, u64 op2, u32 c, u32 result)
-{
-    // for op1 - op2
+u32 ARM7TDMI::sbcs_cv_old(u32 op1, u32 op2, u32 carry_in) {
+    // subtract with carry and set CV
     CPSR &= ~(static_cast<u32>(CPSRFlags::C) | static_cast<u32>(CPSRFlags::V));
-    CPSR |= ((op2 + 1 - c) <= op1) ? static_cast<u32>(CPSRFlags::C) : 0;
+    u32 result;
+    result = (u32)(op1 - (op2 - carry_in + 1));
+    CPSR |= ((op2 + 1 - carry_in) <= op1) ? static_cast<u32>(CPSRFlags::C) : 0;
     CPSR |= (((op1 ^ op2) & (~op2 ^ result)) >> 31) ? static_cast<u32>(CPSRFlags::V) : 0;
+
+    return result;
+
+}
+
+u32 ARM7TDMI::subs_cv(u32 op1, u32 op2) {
+    // subtract and set CV
+    return sbcs_cv(op1, op2, 1);
 }
 
 void ARM7TDMI::SetNZ(u32 result) {

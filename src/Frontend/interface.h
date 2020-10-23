@@ -42,7 +42,7 @@ extern "C" {
     void add_command(const char* command, const char* description, CONSOLE_COMMAND((*callback)));
     void add_overlay_info(OVERLAY_INFO((*getter)));
     int add_register_tab(const char* name);
-    void add_register_data(char* name, const void* value, size_t size, int tab);
+    void add_register_data(const char* name, const void* value, size_t size, int tab);
 
     void bind_video_init(void (*initializer)(void));
     void bind_video_render(s_framebuffer (*render)(uint32_t time_left));
