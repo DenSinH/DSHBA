@@ -53,7 +53,7 @@ int main() {
 #endif
 
 #ifdef DO_BREAKPOINTS
-    gba->paused = true;
+    gba->paused = false;
 #endif
 
     atexit(exception_handler);

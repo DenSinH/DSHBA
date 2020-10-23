@@ -67,6 +67,8 @@ void ARM7TDMI::Step() {
             (this->*ARMInstructions[ARMHash(instruction)])(instruction);
         }
 
+        // we handle mode changes in the BX instruction by correcting PC for it there
+        // this saves us from doing another check after every instruction
         this->pc += 4;
     }
     else {
@@ -77,6 +79,7 @@ void ARM7TDMI::Step() {
         (this->*THUMBInstructions[THUMBHash(instruction)])(instruction);
 
         this->pc += 2;
+        // same here
     }
 
     // for now, tick every instruction

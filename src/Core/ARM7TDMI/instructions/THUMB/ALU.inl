@@ -33,6 +33,7 @@ enum class ALUOperationsOpcode : u8 {
 
 template<u8 op>
 void ALUOperations(u16 instruction) {
+    log_cpu_verbose("ALU ops %x", instruction);
     u8 rd = instruction & 7;
     u32 op1 = Registers[rd];
     u32 op2 = Registers[(instruction & 0x0038) >> 3];
@@ -145,15 +146,48 @@ void ALUOperations(u16 instruction) {
     SetNZ(result);
 }
 
+template<bool I, bool Op, u8 RnOff3>
+void AddSubtract(u16 instruction) {
+    log_cpu_verbose("AddSubtract %x", instruction);
+    u32 operand;
+
+    u8 rd = (instruction & 0x0007);
+    u8 rs = (instruction & 0x0038) >> 3;
+
+    if constexpr(I) {
+        operand = RnOff3;
+    }
+    else {
+        operand = Registers[RnOff3];
+    }
+
+    if (Op) {
+        // subtract
+        Registers[rd] = subs_cv(Registers[rs], operand);
+    }
+    else {
+        // add
+        Registers[rd] = adds_cv(Registers[rs], operand);
+    }
+
+    SetNZ(Registers[rd]);
+
+    if constexpr(I) {
+        // internal cycle
+        timer++;
+    }
+}
+
 enum class HiRegOp : u8{
     ADD = 0b00,
     CMP = 0b01,
-    SUB = 0b10,
+    MOV = 0b10,
     BX  = 0b11,
 };
 
 template<u8 op, bool H1, bool H2>
 void HiRegOps_BX(u16 instruction) {
+    log_cpu_verbose("HiRegOps %x", instruction);
     u8 rd = (instruction & 0x0007);
     u8 rs = ((instruction & 0x0038) >> 3);
 
@@ -183,8 +217,8 @@ void HiRegOps_BX(u16 instruction) {
             // only opcode that sets condition codes in this category
             SetNZ(subs_cv(Rd, Rs));
             return;
-        case HiRegOp::SUB:
-            Registers[rd] -= Rs;
+        case HiRegOp::MOV:
+            Registers[rd] = Rs;
             if constexpr(H1) {
                 // Rd == PC is only possible if H1 is set
                 if (unlikely(rd == 15)) {
