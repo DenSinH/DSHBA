@@ -78,12 +78,12 @@ void ARM7TDMI::Step() {
         u16 instruction = this->Pipeline.Dequeue();
         (this->*THUMBInstructions[THUMBHash(instruction)])(instruction);
 
-        this->pc += 2;
         // same here
+        this->pc += 2;
     }
 
     // for now, tick every instruction
-    // todo: proper timings
+    // todo: proper timings (in memory accesses)
     this->timer++;
 }
 

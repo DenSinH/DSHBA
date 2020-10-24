@@ -133,6 +133,33 @@ static constexpr THUMBInstructionPtr GetTHUMBInstruction() {
         const bool H2 = (instruction & ARM7TDMI::THUMBHash(0x0040)) != 0;
         return &ARM7TDMI::HiRegOps_BX<opcode, H1, H2>;
     }
+    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xf000)) == ARM7TDMI::THUMBHash(0x8000)) {
+        const bool L   = (instruction & ARM7TDMI::THUMBHash(0x0800)) != 0;
+        const u8 Offs5 = (instruction & 0x1f);
+        return &ARM7TDMI::LoadStoreHalfword<L, Offs5>;
+    }
+    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xf000)) == ARM7TDMI::THUMBHash(0x5000)) {
+        const bool H_L = (instruction & ARM7TDMI::THUMBHash(0x0800)) != 0;
+        const bool S_B = (instruction & ARM7TDMI::THUMBHash(0x0400)) != 0;
+        const u8 ro  = (instruction & 0x7);
+        if (instruction & ARM7TDMI::THUMBHash(0x0200)) {
+            return &ARM7TDMI::LoadStoreSEBH<H_L, S_B, ro>;
+        }
+        else {
+            return &ARM7TDMI::LoadStoreRegOffs<H_L, S_B, ro>;
+        }
+    }
+    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xe000)) == ARM7TDMI::THUMBHash(0x6000)) {
+        const bool B = (instruction & ARM7TDMI::THUMBHash(0x1000)) != 0;
+        const bool L = (instruction & ARM7TDMI::THUMBHash(0x0800)) != 0;
+        const u8 Offs5 = (instruction & 0x1f);
+        return &ARM7TDMI::LoadStoreImmOffs<B, L, Offs5>;
+    }
+    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xf600)) == ARM7TDMI::THUMBHash(0xb400)) {
+        const bool L = (instruction & ARM7TDMI::THUMBHash(0x0800)) != 0;
+        const bool R = (instruction & ARM7TDMI::THUMBHash(0x0100)) != 0;
+        return &ARM7TDMI::PushPop<L, R>;
+    }
 
     return &ARM7TDMI::THUMBUnimplemented;
 }

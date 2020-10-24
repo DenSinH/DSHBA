@@ -13,6 +13,7 @@ void BranchExchange(u32 instruction) {
     u8 rn = instruction & 0x0f;
     u32 target = Registers[rn];
     bool was_thumb = (CPSR & static_cast<u32>(CPSRFlags::T)) != 0;
+
     CPSR &= ~static_cast<u32>(CPSRFlags::T);
     CPSR |= (target & 1) ? static_cast<u32>(CPSRFlags::T) : 0;
     log_cpu_verbose("BX r%d (-> %x, %s state)", rn, target, (CPSR & static_cast<u32>(CPSRFlags::T)) ? "THUMB" : "ARM");

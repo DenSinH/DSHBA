@@ -58,6 +58,8 @@ void BlockDataTransfer(u32 instruction) {
     else {
         // normal Rlists
         u32 rcount = popcount(register_list);
+        ASSUME(rcount <= 16);
+        
         if (!U) {
             // start stacking from the bottom of the register list
             address -= rcount << 2;
