@@ -26,10 +26,10 @@ layout (std430, binding = ++VRAMSSBO++) readonly buffer VRAMSSBO
     uint VRAM[++VRAMSize++ >> 2];
 };
 
-vec4 mode3(vec2);
+vec4 mode4(vec2);
 
 void main() {
-    FragColor = mode3(texCoord);
+    FragColor = mode4(texCoord);
 }
 
 // END FragmentShaderSource

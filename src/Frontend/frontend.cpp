@@ -7,10 +7,9 @@
 #include <cstdio>
 #include <SDL.h>
 
-#define WINDOW_WIDTH 1280
-#define WINDOW_HEIGHT 720
+const unsigned WINDOW_WIDTH = 1280;
+const unsigned WINDOW_HEIGHT = 720;
 #define FPS 60
-#define DELTA_TIME (1000 / FPS)
 
 static struct s_frontend {
     ImGuiIO io;
@@ -20,7 +19,7 @@ static struct s_frontend {
     bool* shutdown;
     void (*video_init)();
     void (*destroy)();
-    s_framebuffer (*render)(uint32_t time_left);
+    s_framebuffer (*render)(void);
 } Frontend;
 
 ImGuiIO *frontend_set_io() {
@@ -52,7 +51,7 @@ void bind_video_init(void (*initializer)()) {
     Frontend.video_init = initializer;
 }
 
-void bind_video_render(s_framebuffer (*render)(uint32_t time_left)) {
+void bind_video_render(s_framebuffer (*render)(void)) {
     Frontend.render = render;
 }
 
@@ -103,8 +102,8 @@ int ui_run() {
     const char *glsl_version = "#version 400";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 #endif
 
     // Create window with graphics context
@@ -115,11 +114,11 @@ int ui_run() {
 
     auto window_flags = (SDL_WindowFlags) (SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | // SDL_WINDOW_RESIZABLE |
                                            SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window *window = SDL_CreateWindow("GC-", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
+    SDL_Window *window = SDL_CreateWindow("DSHBA", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720,
                                           window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
-    SDL_GL_SetSwapInterval(1); // Enable vsync
+    SDL_GL_SetSwapInterval(1); // vsync
 
     debugger_video_init(glsl_version, window, &gl_context);
     if (Frontend.video_init) {
@@ -204,10 +203,8 @@ int ui_run() {
         };
 
 
-        while ((time_left = SDL_GetTicks() - frame_ticks) < DELTA_TIME) {
-            if (Frontend.render) {
-                emu_framebuffer = Frontend.render(time_left);
-            }
+        if (Frontend.render) {
+            emu_framebuffer = Frontend.render();
         }
 
         glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -217,11 +214,11 @@ int ui_run() {
             scale = (float) WINDOW_HEIGHT / emu_framebuffer.dest_height;
         }
 
-        unsigned offsx = (WINDOW_WIDTH - scale * emu_framebuffer.dest_width) / 2;
-        unsigned offsy = (WINDOW_HEIGHT - scale * emu_framebuffer.dest_height) / 2;
+        auto offsx = (unsigned)((WINDOW_WIDTH - scale * emu_framebuffer.dest_width) / 2);
+        auto offsy = (unsigned)((WINDOW_HEIGHT - scale * emu_framebuffer.dest_height) / 2);
 
-        float x_start = -1.0 + 2 * offsx / (float)WINDOW_WIDTH;
-        float y_start = -1.0 + 2 * offsy / (float)WINDOW_HEIGHT;
+        float x_start = -1.0 + 2.0 * offsx / (float)WINDOW_WIDTH;
+        float y_start = -1.0 + 2.0 * offsy / (float)WINDOW_HEIGHT;
         float dest_width = -2 * x_start;
         float dest_height = -2 * y_start;
 
@@ -235,13 +232,13 @@ int ui_run() {
         );
 
         // blit the overlay
-        if (emu_framebuffer.draw_overlay) {
-            emu_framebuffer.draw_overlay(
-                emu_framebuffer.caller,
-                x_start, y_start,
-                dest_width, dest_height
-            );
-        }
+//        if (emu_framebuffer.draw_overlay) {
+//            emu_framebuffer.draw_overlay(
+//                emu_framebuffer.caller,
+//                x_start, y_start,
+//                dest_width, dest_height
+//            );
+//        }
 
         // then draw the imGui stuff over it
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

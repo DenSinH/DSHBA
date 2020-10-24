@@ -29,6 +29,7 @@
 #define VERBOSITY VERBOSITY_MAX
 
 #define DIRTY_MEMORY_ACCESS
+#define FAST_ADD_SUB
 
 #endif
 

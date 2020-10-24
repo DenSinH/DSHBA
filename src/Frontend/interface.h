@@ -45,7 +45,7 @@ extern "C" {
     void add_register_data(const char* name, const void* value, size_t size, int tab);
 
     void bind_video_init(void (*initializer)(void));
-    void bind_video_render(s_framebuffer (*render)(uint32_t time_left));
+    void bind_video_render(s_framebuffer (*render)(void));
     void bind_video_destroy(void (*destroy)(void));
 #ifdef __cplusplus
 }

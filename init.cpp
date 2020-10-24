@@ -78,6 +78,16 @@ static OVERLAY_INFO(cpu_ticks) {
     prev_ticks = ticks;
 }
 
+static float accum_time;
+static OVERLAY_INFO(fps_counter) {
+    accum_time += delta_time;
+    SPRINTF(output, output_length, "FPS        : %.1f", (double)(gba->PPU.Frame) / accum_time);
+    if (accum_time > 1) {
+        gba->PPU.Frame = 0;
+        accum_time = 0;
+    }
+}
+
 u8 Initializer::ReadByte(u64 offset) {
     return gba->Memory.Read<u8, false>(offset);
 }
@@ -125,12 +135,8 @@ static void frontend_video_init() {
     gba->PPU.VideoInit();
 }
 
-static s_framebuffer frontend_render(u32 time_left) {
-    return gba->PPU.Render(time_left);
-}
-
-static void frontend_destroy() {
-    gba->PPU.ReleaseAll();
+static s_framebuffer frontend_render() {
+    return gba->PPU.Render();
 }
 
 GBA* Initializer::init() {
@@ -139,7 +145,6 @@ GBA* Initializer::init() {
 
     bind_video_init(frontend_video_init);
     bind_video_render(frontend_render);
-    bind_video_destroy(frontend_destroy);
 
     frontend_init(
             &gba->Shutdown,
@@ -188,6 +193,7 @@ GBA* Initializer::init() {
     add_command("STEP", "Step system for $1 CPU steps (defaults to 1 step).", step_system);
 
     add_overlay_info(cpu_ticks);
+    add_overlay_info(fps_counter);
 
     return gba;
 }
