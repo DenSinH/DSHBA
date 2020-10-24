@@ -13,9 +13,7 @@ Mem::Mem() {
     memset(BIOS, 0, sizeof(BIOS));
     memset(eWRAM, 0, sizeof(eWRAM));
     memset(iWRAM, 0, sizeof(iWRAM));
-    memset(PAL, 0, sizeof(PAL));
-    memset(VRAM, 0, sizeof(VRAM));
-    memset(OAM, 0, sizeof(OAM));
+    memset(&VMEM, 0, sizeof(s_VMEM));
     memset(ROM, 0, sizeof(ROM));
 }
 

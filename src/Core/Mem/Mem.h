@@ -2,6 +2,7 @@
 
 #include "default.h"
 #include "helpers.h"
+#include "flags.h"
 #include "MemoryHelpers.h"
 
 #include <string>
@@ -24,6 +25,17 @@ enum class MemoryRegion {
     SRAM   = 0x0e
 };
 
+/*
+ * Every time we draw a scanline, we buffer the video memory data to a separate array, to be read in another thread
+ * */
+typedef struct s_VMEM {
+    u8 PAL   [0x400];
+    u8 VRAM  [0x1'8000];
+    u8 OAM   [0x400];
+} s_VMEM;
+
+
+#define CurrentBuffer VMEMBuffer[CurrentBufferIndex];
 
 class Mem {
 public:
@@ -38,14 +50,13 @@ public:
 
 private:
     friend class Initializer;
+    friend class GBAPPU;
 
-    u8 BIOS  [0x4000];
-    u8 eWRAM [0x4'0000];
-    u8 iWRAM [0x8000];
-    u8 PAL   [0x400];
-    u8 VRAM  [0x1'8000];
-    u8 OAM   [0x400];
-    u8 ROM   [0x0200'0000];
+    u8 BIOS  [0x4000]      = {};
+    u8 eWRAM [0x4'0000]    = {};
+    u8 iWRAM [0x8000]      = {};
+    s_VMEM VMEM            = {};
+    u8 ROM   [0x0200'0000] = {};
 };
 
 static u32 stubber = 0;
@@ -62,17 +73,17 @@ T Mem::Read(u32 address) {
         case MemoryRegion::iWRAM:
             return ReadArray<T>(iWRAM, address & 0x7fff);
         case MemoryRegion::IO:
-            log_warn("IO read @0x%08x", address);
+            // log_warn("IO read @0x%08x", address);
             return 0;// stubber ^= 0xffff'ffff;
         case MemoryRegion::PAL:
-            return ReadArray<T>(PAL, address & 0x3ff);
+            return ReadArray<T>(VMEM.PAL, address & 0x3ff);
         case MemoryRegion::VRAM:
             if ((address & 0x1'ffff) < 0x1'0000) {
-                return ReadArray<T>(VRAM, address & 0xffff);
+                return ReadArray<T>(VMEM.VRAM, address & 0xffff);
             }
-            return ReadArray<T>(VRAM, 0x1'0000 | (address & 0x7fff));
+            return ReadArray<T>(VMEM.VRAM, 0x1'0000 | (address & 0x7fff));
         case MemoryRegion::OAM:
-            return ReadArray<T>(OAM, address & 0x3ff);
+            return ReadArray<T>(VMEM.OAM, address & 0x3ff);
         case MemoryRegion::ROM_L1:
         case MemoryRegion::ROM_L2:
             // todo: EEPROM attempts
@@ -104,19 +115,19 @@ void Mem::Write(u32 address, T value) {
             WriteArray<T>(iWRAM, address & 0x7fff, value);
             return;
         case MemoryRegion::IO:
-            log_warn("IO write @0x%08x", address);
+            // log_warn("IO write @0x%08x", address);
             return;
         case MemoryRegion::PAL:
-            WriteArray<T>(PAL, address & 0x3ff, value);
+            WriteArray<T>(VMEM.PAL, address & 0x3ff, value);
             return;
         case MemoryRegion::VRAM:
             if ((address & 0x1'ffff) < 0x1'0000) {
-                WriteArray<T>(VRAM, address & 0xffff, value);
+                WriteArray<T>(VMEM.VRAM, address & 0xffff, value);
             }
-            WriteArray<T>(VRAM, 0x1'0000 | (address & 0x7fff), value);
+            WriteArray<T>(VMEM.VRAM, 0x1'0000 | (address & 0x7fff), value);
             return;
         case MemoryRegion::OAM:
-            WriteArray<T>(OAM, address & 0x3ff, value);
+            WriteArray<T>(VMEM.OAM, address & 0x3ff, value);
             return;
         case MemoryRegion::ROM_L1:
         case MemoryRegion::ROM_L2:

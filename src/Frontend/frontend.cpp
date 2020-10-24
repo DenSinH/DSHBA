@@ -261,7 +261,9 @@ int ui_run() {
     SDL_Quit();
 
     if (Frontend.destroy) {
+        printf("Destroying frontend\n");
         Frontend.destroy();
+        printf("Frontend destroyed\n");
     }
     else {
         printf("No frontend destroy function bound\n");

@@ -3,6 +3,7 @@
 
 #include "Mem/Mem.h"
 #include "ARM7TDMI/ARM7TDMI.h"
+#include "PPU/PPU.h"
 
 #include "default.h"
 #include "flags.h"
@@ -14,29 +15,29 @@ class GBA {
 
 #ifdef DO_DEBUGGER
 public:
-    bool paused{};
+    bool Paused = false;
 
 private:
     friend class Initializer;
 
-    u32 stepcount = 0;
-#   ifdef DO_BREAKPOINTS
-    s_breakpoints breakpoints = {};
-#   endif
+    u32 Stepcount = 0;
+# ifdef DO_BREAKPOINTS
+    s_breakpoints Breakpoints = {};
+# endif
 
 #endif
 
 public:
-    s_scheduler scheduler = {};
-    bool shutdown = false;
+    s_scheduler Scheduler = {};
+    bool Shutdown = false;
 
-    Mem Memory;
-    ARM7TDMI CPU = ARM7TDMI(&Memory);;
+    Mem Memory= Mem();
+    ARM7TDMI CPU = ARM7TDMI(&Memory);
+    GBAPPU PPU = GBAPPU(&Scheduler, &Memory);
 
     GBA();
     ~GBA();
     void Run();
-
 };
 
 #endif //GC__SYSTEM_H

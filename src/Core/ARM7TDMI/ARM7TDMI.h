@@ -102,9 +102,9 @@ private:
     Mem* Memory;
 
     // bits 27-20 and 7-4 for ARM instructions
-    ARMInstructionPtr ARMInstructions[ARMInstructionTableSize];
+    ARMInstructionPtr ARMInstructions[ARMInstructionTableSize] = {};
     // bits 15-6 for THUMB instructions (less are needed, but this allows for more templating)
-    THUMBInstructionPtr THUMBInstructions[THUMBInstructionTableSize];
+    THUMBInstructionPtr THUMBInstructions[THUMBInstructionTableSize] = {};
 
     static ALWAYS_INLINE constexpr u32 ARMHash(u32 instruction) {
         return ((instruction & 0x0ff0'0000) >> 16) | ((instruction & 0x00f0) >> 4);

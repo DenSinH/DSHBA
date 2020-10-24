@@ -9,7 +9,7 @@ static GBA* gba;
 
 CONSOLE_COMMAND(Initializer::pause_system) {
 #ifdef DO_DEBUGGER
-    gba->paused = true;
+    gba->Paused = true;
 
     STRCPY(output, MAX_OUTPUT_LENGTH, "System paused");
 #endif
@@ -17,7 +17,7 @@ CONSOLE_COMMAND(Initializer::pause_system) {
 
 CONSOLE_COMMAND(Initializer::unpause_system) {
 #ifdef DO_DEBUGGER
-    gba->paused = false;
+    gba->Paused = false;
 
     STRCPY(output, MAX_OUTPUT_LENGTH, "System unpaused");
 #endif
@@ -30,9 +30,13 @@ CONSOLE_COMMAND(Initializer::break_system) {
         return;
     }
 
+#ifdef DO_BREAKPOINTS
     u32 breakpoint = parsehex(args[1]);
-    add_breakpoint(&gba->breakpoints, breakpoint);
+    add_breakpoint(&gba->Breakpoints, breakpoint);
     SPRINTF(output, MAX_OUTPUT_LENGTH, "Added breakpoint at %08x", breakpoint);
+#else
+    STRCPY(output, MAX_OUTPUT_LENGTH, "Breakpoints disabled");
+#endif
 #endif
 }
 
@@ -42,23 +46,26 @@ CONSOLE_COMMAND(Initializer::unbreak_system) {
         unpause_system(args, argc, output);
         return;
     }
-
+#ifdef DO_BREAKPOINTS
     u32 breakpoint = parsehex(args[1]);
-    remove_breakpoint(&gba->breakpoints, breakpoint);
+    remove_breakpoint(&gba->Breakpoints, breakpoint);
     SPRINTF(output, MAX_OUTPUT_LENGTH, "Removed breakpoint at %08x", breakpoint);
+#else
+    STRCPY(output, MAX_OUTPUT_LENGTH, "Breakpoints disabled");
+#endif
 #endif
 }
 
 CONSOLE_COMMAND(Initializer::step_system) {
 #ifdef DO_DEBUGGER
     if (argc < 2) {
-        gba->paused = true;
-        gba->stepcount = 1;
+        gba->Paused = true;
+        gba->Stepcount = 1;
         STRCPY(output, MAX_OUTPUT_LENGTH, "Stepping system for one step");
     } else {
-        gba->paused = true;
+        gba->Paused = true;
         u32 steps = parsedec(args[1]);
-        gba->stepcount = steps;
+        gba->Stepcount = steps;
         SPRINTF(output, MAX_OUTPUT_LENGTH, "Stepping system for %d steps", steps);
     }
 #endif
@@ -89,14 +96,14 @@ u8* Initializer::ValidAddressMask(u32 address) {
         case MemoryRegion::IO:
             return nullptr;
         case MemoryRegion::PAL:
-            return &gba->Memory.PAL[address & 0x3ff];
+            return &gba->Memory.VMEM.PAL[address & 0x3ff];
         case MemoryRegion::VRAM:
             if ((address & 0x1'ffff) < 0x1'0000) {
-                return &gba->Memory.VRAM[address & 0xffff];
+                return &gba->Memory.VMEM.VRAM[address & 0xffff];
             }
-            return &gba->Memory.VRAM[0x1'0000 | (address & 0x7fff)];
+            return &gba->Memory.VMEM.VRAM[0x1'0000 | (address & 0x7fff)];
         case MemoryRegion::OAM:
-            return &gba->Memory.OAM[address & 0x3ff];
+            return &gba->Memory.VMEM.OAM[address & 0x3ff];
         case MemoryRegion::ROM_L1:
         case MemoryRegion::ROM_L2:
         case MemoryRegion::ROM_L:
@@ -114,12 +121,28 @@ bool Initializer::ARMMode() {
     return !(gba->CPU.CPSR & static_cast<u32>(CPSRFlags::T));
 }
 
+static void frontend_video_init() {
+    gba->PPU.VideoInit();
+}
+
+static s_framebuffer frontend_render(u32 time_left) {
+    return gba->PPU.Render(time_left);
+}
+
+static void frontend_destroy() {
+    gba->PPU.ReleaseAll();
+}
+
 GBA* Initializer::init() {
     gba = (GBA *) malloc(sizeof(GBA));
     new(gba) GBA;
 
+    bind_video_init(frontend_video_init);
+    bind_video_render(frontend_render);
+    bind_video_destroy(frontend_destroy);
+
     frontend_init(
-            &gba->shutdown,
+            &gba->Shutdown,
             &gba->CPU.pc,
             0x1'0000'0000ULL,
             ValidAddressMask,

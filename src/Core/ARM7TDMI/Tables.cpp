@@ -164,7 +164,7 @@ static constexpr THUMBInstructionPtr GetTHUMBInstruction() {
     return &ARM7TDMI::THUMBUnimplemented;
 }
 
-static constexpr ARMInstructionPtr* _BuildARMTable(ARMInstructionPtr lut[ARMInstructionTableSize]) {
+static constexpr ARMInstructionPtr* staticBuildARMTable(ARMInstructionPtr lut[ARMInstructionTableSize]) {
     static_for<size_t, 0, ARMInstructionTableSize>(
             [&](auto i) {
                 lut[i] = GetARMInstruction<i>();
@@ -173,7 +173,7 @@ static constexpr ARMInstructionPtr* _BuildARMTable(ARMInstructionPtr lut[ARMInst
     return lut;
 }
 
-static constexpr THUMBInstructionPtr* _BuildTHUMBTable(THUMBInstructionPtr lut[THUMBInstructionTableSize]) {
+static constexpr THUMBInstructionPtr* staticBuildTHUMBTable(THUMBInstructionPtr lut[THUMBInstructionTableSize]) {
     static_for<size_t, 0, THUMBInstructionTableSize>(
             [&](auto i) {
                 lut[i] = GetTHUMBInstruction<i>();
@@ -183,9 +183,9 @@ static constexpr THUMBInstructionPtr* _BuildTHUMBTable(THUMBInstructionPtr lut[T
 }
 
 void ARM7TDMI::BuildARMTable() {
-    ::_BuildARMTable(ARMInstructions);
+    ::staticBuildARMTable(ARMInstructions);
 }
 
 void ARM7TDMI::BuildTHUMBTable() {
-    ::_BuildTHUMBTable(THUMBInstructions);
+    ::staticBuildTHUMBTable(THUMBInstructions);
 }

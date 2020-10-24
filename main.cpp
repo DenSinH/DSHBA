@@ -1,16 +1,18 @@
 #include "src/Core/system.h"
+#include "src/Frontend/interface.h"
 
 #include "init.h"
-#include "UIthread.h"
 #include "sleeping.h"
 
 #include "const.h"
+
+#include <thread>
 
 static GBA* gba;
 
 void exception_handler() {
     // keep open the screen to still be able to check the register/memory contents (unstable)
-    while (!gba->shutdown) {
+    while (!gba->Shutdown) {
         sleep_ms(16);
     }
 }
@@ -53,17 +55,17 @@ int main() {
 #endif
 
 #ifdef DO_BREAKPOINTS
-    gba->paused = false;
+    gba->Paused = false;
 #endif
 
     atexit(exception_handler);
 
-    start_ui_thread();
+    std::thread ui_thread(ui_run);
 
     gba->Memory.LoadROM(ROM_FILE);
     gba->Run();
 
-    join_ui_thread();
+    ui_thread.join();
 
     return 0;
 }
