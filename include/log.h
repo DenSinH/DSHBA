@@ -55,6 +55,16 @@
 #define log_cpu(message, ...) do { } while(0)
 #endif
 
+#if COMPONENT_FLAGS & COMPONENT_PPU
+#define log_ppu(message, ...) do {                        \
+        CONSOLE_PINK();                                \
+        fprintf(stdout, "[PPU]: " message "\n",  ##__VA_ARGS__); \
+        CONSOLE_RESTORE();                             \
+    } while(0)
+#else
+#define log_ppu(message, ...) do { } while(0)
+#endif
+
 #if COMPONENT_FLAGS & COMPONENT_SCHEDULER
 #define log_sched(message, ...) do {                        \
         CONSOLE_BLUE();                                \
@@ -77,7 +87,7 @@
 
 #if VERBOSITY <= VERBOSITY_DEBUG
     #define log_debug(message, ...) do {                 \
-        fprintf(stdout, "[DEBUG]:");                  \
+        fprintf(stdout, "[DEBUG]: ");                  \
         fprintf(stdout, message "\n", ##__VA_ARGS__); \
     } while(0)
 #else
@@ -86,7 +96,7 @@
 
 #if VERBOSITY <= VERBOSITY_INFO
 #define log_info(message, ...) do {                 \
-        fprintf(stdout, "[INFO]:");                  \
+        fprintf(stdout, "[INFO]: ");                  \
         fprintf(stdout, message "\n", ##__VA_ARGS__); \
     } while(0)
 #else
@@ -96,7 +106,7 @@
 #if VERBOSITY <= VERBOSITY_WARN
     #define log_warn(message, ...) do {                  \
         CONSOLE_YELLOW();                             \
-        fprintf(stdout, "[WARN]:");                   \
+        fprintf(stdout, "[WARN]: ");                   \
         fprintf(stdout, message "\n", ##__VA_ARGS__); \
         CONSOLE_RESTORE();                            \
     } while(0)

@@ -26,7 +26,12 @@ private:
     u32 BufferScanlineCount = 0;
     u32 BufferFrame = 0;
 
-    s_VMEM VMEMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
+    PALMEM PALBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
+    s_UpdateRange PALRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
+    VRAMMEM VRAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
+    s_UpdateRange VRAMRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
+    VRAMMEM OAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
+    s_UpdateRange OAMRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
 
     s_scheduler* Scheduler;
     s_event BufferScanline;
@@ -46,5 +51,5 @@ private:
     void InitFramebuffers();
     void InitPrograms();
     void InitBuffers();
-    void DrawScanLine(s_VMEM* VMEM, u32 scanline) const;
+    void DrawScanLine(u32 scanline) const;
 };

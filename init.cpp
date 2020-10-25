@@ -106,14 +106,14 @@ u8* Initializer::ValidAddressMask(u32 address) {
         case MemoryRegion::IO:
             return nullptr;
         case MemoryRegion::PAL:
-            return &gba->Memory.VMEM.PAL[address & 0x3ff];
+            return &gba->Memory.PAL[address & 0x3ff];
         case MemoryRegion::VRAM:
             if ((address & 0x1'ffff) < 0x1'0000) {
-                return &gba->Memory.VMEM.VRAM[address & 0xffff];
+                return &gba->Memory.VRAM[address & 0xffff];
             }
-            return &gba->Memory.VMEM.VRAM[0x1'0000 | (address & 0x7fff)];
+            return &gba->Memory.VRAM[0x1'0000 | (address & 0x7fff)];
         case MemoryRegion::OAM:
-            return &gba->Memory.VMEM.OAM[address & 0x3ff];
+            return &gba->Memory.OAM[address & 0x3ff];
         case MemoryRegion::ROM_L1:
         case MemoryRegion::ROM_L2:
         case MemoryRegion::ROM_L:

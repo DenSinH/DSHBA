@@ -11,8 +11,7 @@
 #define COMPONENT_CPU_VERBOSE 0x01
 #define COMPONENT_SCHEDULER   0x02
 #define COMPONENT_CPU         0x04
-
-#define MAX_BUFFERED_SCANLINES 320
+#define COMPONENT_PPU         0x08
 
 #ifndef NDEBUG
 // change to change verbosity / component logging:
