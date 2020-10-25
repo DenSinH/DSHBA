@@ -209,7 +209,7 @@ void HiRegOps_BX(u16 instruction) {
                 // Rd == PC is only possible if H1 is set
                 if (unlikely(rd == 15)) {
                     pc &= 0xffff'fffe;
-                    FlushPipeline();
+                    FakePipelineFlush();
                 }
             }
             return;
@@ -223,7 +223,7 @@ void HiRegOps_BX(u16 instruction) {
                 // Rd == PC is only possible if H1 is set
                 if (unlikely(rd == 15)) {
                     pc &= 0xffff'fffe;
-                    FlushPipeline();
+                    FakePipelineFlush();
                 }
             }
             return;

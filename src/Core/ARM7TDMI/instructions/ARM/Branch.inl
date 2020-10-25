@@ -19,22 +19,40 @@ void BranchExchange(u32 instruction) {
     log_cpu_verbose("BX r%d (-> %x, %s state)", rn, target, (CPSR & static_cast<u32>(CPSRFlags::T)) ? "THUMB" : "ARM");
 
     if (static_cast<State>(target & 1) == State::ARM) {
+#ifdef BASIC_IDLE_DETECTION
+        u32 instruction_address = pc - 8;
+#endif
         pc = target & 0xffff'fffc;
-        FlushPipeline();
+        FakePipelineFlush();
 
         if (was_thumb) {
-            // correct for adding 2 after instruction
+            // correct for adding 2 after instruction because we were in THUMB mode
             pc += 2;
         }
+#ifdef BASIC_IDLE_DETECTION
+        else if (unlikely(target == instruction_address)) {
+            // we can only really detect idle branches if we don't change modes
+            Idle();
+        }
+#endif
     }
     else {
+#ifdef BASIC_IDLE_DETECTION
+        u32 instruction_address = pc - 4;
+#endif
         pc = target & 0xffff'fffe;
-        FlushPipeline();
+        FakePipelineFlush();
 
         if (!was_thumb) {
-            // correct for adding 4 after instruction
+            // correct for adding 4 after instruction because we were in ARM mode
             pc -= 2;
         }
+#ifdef BASIC_IDLE_DETECTION
+        else if (unlikely(target == instruction_address)) {
+            // we can only really detect idle branches if we don't change modes
+            Idle();
+        }
+#endif
     }
 }
 
@@ -50,8 +68,24 @@ void Branch(u32 instruction) {
 
     i32 offset = (i32)(instruction << 8) >> 6;  // shifted left by 2 and sign extended
 
+#ifdef BASIC_IDLE_DETECTION
+    if (unlikely((offset == -8) || (offset == -4))) {
+        // at this point, it's not unlikely that this is an idle branch anymore
+        if ((CPSR & static_cast<u32>(CPSRFlags::T)) == 0) {
+            if (offset == -8) {
+                Idle();
+            }
+        }
+        else {
+            if (offset == -4) {
+                Idle();
+            }
+        }
+    }
+#endif
+
     this->pc += offset;
-    this->FlushPipeline();
+    this->FakePipelineFlush();
 }
 
 #ifndef INLINED_INCLUDES

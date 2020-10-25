@@ -31,8 +31,10 @@ public:
     s_scheduler Scheduler = {};
     bool Shutdown = false;
 
-    Mem Memory= Mem();
-    ARM7TDMI CPU = ARM7TDMI(&Memory);
+    Mem Memory = Mem(&CPU.pc, [&cpu = CPU]() -> void {
+        cpu.PipelineReflush();
+    });
+    ARM7TDMI CPU = ARM7TDMI(&Scheduler, &Memory);
     GBAPPU PPU = GBAPPU(&Scheduler, &Memory);
 
     GBA();

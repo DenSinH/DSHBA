@@ -57,7 +57,7 @@ void SingleDataTransfer(u32 instruction) {
             Registers[rd] = loaded;
 
             if (unlikely(rd == 15)) {
-                FlushPipeline();
+                FakePipelineFlush();
             }
         }
     }
@@ -71,11 +71,11 @@ void SingleDataTransfer(u32 instruction) {
         }
 
         if constexpr(B) {
-            Memory->Mem::Write<u8, true>(address, (u8)value);
+            Memory->Mem::Write<u8, true, true>(address, (u8)value);
         }
         else {
             // stores are force aligned
-            Memory->Mem::Write<u32, true>(address, value);
+            Memory->Mem::Write<u32, true, true>(address, value);
         }
     }
 
@@ -172,7 +172,7 @@ void HalfwordDataTransfer(u32 instruction) {
             }
             else {
                 log_cpu_verbose("STRH r%d, [r%d, #%x]%c", Rd, Rn, offset, W ? '!' : '\0');
-                Memory->Mem::Write<u16, true>(address, (u16)Registers[rd]);
+                Memory->Mem::Write<u16, true, true>(address, (u16)Registers[rd]);
             }
         }
         else {
@@ -214,13 +214,13 @@ void SWP(u32 instruction) {
     if constexpr(B) {
         // can not directly load because rd and rm might be the same
         u8 memory_content = Memory->Mem::Read<u8, true>(address);
-        Memory->Mem::Write<u8, true>(address, Registers[rm]);
+        Memory->Mem::Write<u8, true, true>(address, Registers[rm]);
         Registers[rd] = memory_content;
     }
     else {
         // can not directly load because rd and rm might be the same
         u32 memory_content = Memory->Mem::Read<u32, true>(address);
-        Memory->Mem::Write<u32, true>(address, Registers[rm]);
+        Memory->Mem::Write<u32, true, true>(address, Registers[rm]);
 
         // misaligned reads
         u8 rotate_amount = (address & 3) << 3;

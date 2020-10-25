@@ -40,6 +40,7 @@ void change_event(s_scheduler *scheduler, s_event *event, u64 new_time);
 void delay_event_by(s_scheduler *scheduler, s_event *event, uint64_t dt);
 void hasten_event_by(s_scheduler *scheduler, s_event *event, uint64_t dt);
 void do_events(s_scheduler *scheduler);
+u64 peek_event(s_scheduler *scheduler);
 
 static inline bool should_do_events(s_scheduler *scheduler) {
     return scheduler->events[0]->time < *scheduler->timer;

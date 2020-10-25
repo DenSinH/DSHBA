@@ -183,3 +183,7 @@ void do_events(s_scheduler* scheduler) {
         first = scheduler->events[ROOT];
     }
 }
+
+u64 peek_event(s_scheduler *scheduler) {
+    return scheduler->events[ROOT]->time;
+}

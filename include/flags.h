@@ -18,17 +18,22 @@
 #define VERBOSITY VERBOSITY_DEBUG
 #define COMPONENT_FLAGS (0)
 
+// checks
 #define DO_DEBUGGER
 #define DO_BREAKPOINTS
+#define CHECK_INVALID_REFLUSHES
 
+// optimizations
 #define DIRTY_MEMORY_ACCESS
 #define FAST_ADD_SUB
+#define BASIC_IDLE_DETECTION
 
 #else
 #define VERBOSITY VERBOSITY_MAX
 
 #define DIRTY_MEMORY_ACCESS
 #define FAST_ADD_SUB
+#define BASIC_IDLE_DETECTION
 
 #endif
 

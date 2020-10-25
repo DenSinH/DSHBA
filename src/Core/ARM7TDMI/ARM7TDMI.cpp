@@ -58,28 +58,37 @@ bool ARM7TDMI::CheckCondition(u8 condition) const {
 }
 
 void ARM7TDMI::Step() {
-    if (!(CPSR & static_cast<u32>(CPSRFlags::T))) {
-        // ARM mode
-        this->Pipeline.Enqueue(this->Memory->Mem::Read<u32, true>(this->pc));
+    u32 instruction;
+    bool ARMMode = !(CPSR & static_cast<u32>(CPSRFlags::T));
+    if (unlikely(Pipeline.Count)) {
+        // we only have stuff in the pipeline if writes near PC happened
+        instruction = Pipeline.Dequeue();
+    }
+    else if (ARMMode) {
+        // before the instruction gets executed, we are 2 instructions ahead
+        instruction = Memory->Mem::Read<u32, true>(pc - 8);
+    }
+    else {
+        // THUMB mode
+        instruction = Memory->Mem::Read<u16, true>(pc - 4);
+    }
 
-        u32 instruction = this->Pipeline.Dequeue();
+    if (ARMMode) {
+        // ARM mode
         if (CheckCondition(instruction >> 28)) {
             (this->*ARMInstructions[ARMHash(instruction)])(instruction);
         }
 
         // we handle mode changes in the BX instruction by correcting PC for it there
         // this saves us from doing another check after every instruction
-        this->pc += 4;
+        pc += 4;
     }
     else {
         // THUMB mode
-        this->Pipeline.Enqueue(this->Memory->Mem::Read<u16, true>(this->pc));
-
-        u16 instruction = this->Pipeline.Dequeue();
-        (this->*THUMBInstructions[THUMBHash(instruction)])(instruction);
+        (this->*THUMBInstructions[THUMBHash((u16)instruction)])((u16)instruction);
 
         // same here
-        this->pc += 2;
+        pc += 2;
     }
 
     // for now, tick every instruction
@@ -87,19 +96,33 @@ void ARM7TDMI::Step() {
     this->timer++;
 }
 
-void ARM7TDMI::FlushPipeline() {
+void ARM7TDMI::FakePipelineFlush() {
     this->Pipeline.Clear();
+    // todo: fake memory timings for pipeline fills
 
     if (!(CPSR & static_cast<u32>(CPSRFlags::T))) {
         // ARM mode
-        this->Pipeline.Enqueue(this->Memory->Mem::Read<u32, true>(this->pc));
-        this->Pipeline.Enqueue(this->Memory->Mem::Read<u32, true>(this->pc + 4));
         this->pc += 4;
     }
     else {
         // THUMB mode
-        this->Pipeline.Enqueue(this->Memory->Mem::Read<u16, true>(this->pc));
-        this->Pipeline.Enqueue(this->Memory->Mem::Read<u16, true>(this->pc + 2));
         this->pc += 2;
+    }
+}
+
+void ARM7TDMI::PipelineReflush() {
+    this->Pipeline.Clear();
+    // if instructions that should be in the pipeline get written to
+    // PC is in an instruction when this happens (marked by a bool in the template)
+
+    if (!(CPSR & static_cast<u32>(CPSRFlags::T))) {
+        // ARM mode
+        this->Pipeline.Enqueue(this->Memory->Mem::Read<u32, true>(this->pc - 4));
+        this->Pipeline.Enqueue(this->Memory->Mem::Read<u32, true>(this->pc));
+    }
+    else {
+        // THUMB mode
+        this->Pipeline.Enqueue(this->Memory->Mem::Read<u16, true>(this->pc - 2));
+        this->Pipeline.Enqueue(this->Memory->Mem::Read<u16, true>(this->pc));
     }
 }

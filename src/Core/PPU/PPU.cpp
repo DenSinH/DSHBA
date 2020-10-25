@@ -48,8 +48,6 @@ static ALWAYS_INLINE void ConditionalBuffer(s_UpdateRange* range, u8* dest, u8* 
 SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
     auto ppu = (GBAPPU*)caller;
 
-    // wait until the next buffer is free
-
     // copy over range data
     ppu->PALRanges[ppu->BufferFrame][ppu->BufferScanlineCount] = ppu->Memory->PALUpdate;
     ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount] = ppu->Memory->VRAMUpdate;

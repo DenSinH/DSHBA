@@ -33,7 +33,7 @@ void LoadStoreHalfword(u16 instruction) {
         timer++;
     }
     else {
-        Memory->Mem::Write<u16, true>(address, (u16)Registers[rd]);
+        Memory->Mem::Write<u16, true, true>(address, (u16)Registers[rd]);
     }
 }
 
@@ -60,11 +60,11 @@ ALWAYS_INLINE void DoLoadStoreBL(u8 rd, u32 address) {
         // Store
         if constexpr(B) {
             // STRB
-            Memory->Mem::Write<u8, true>(address, (u8)Registers[rd]);
+            Memory->Mem::Write<u8, true, true>(address, (u8)Registers[rd]);
         }
         else {
             // STR
-            Memory->Mem::Write<u32, true>(address, Registers[rd]);
+            Memory->Mem::Write<u32, true, true>(address, Registers[rd]);
         }
     }
 }
@@ -137,7 +137,7 @@ void LoadStoreSEBH(u16 instruction) {
         }
         else {
             // STRH
-            Memory->Mem::Write<u16, true>(address, Registers[rd]);
+            Memory->Mem::Write<u16, true, true>(address, Registers[rd]);
         }
     }
 }
@@ -159,7 +159,7 @@ void PushPop(u16 instruction) {
             // load PC/LR
             pc = Memory->Mem::Read<u32, true>(sp);
             sp += 4;
-            FlushPipeline();
+            FakePipelineFlush();
         }
 
         // internal cycle
@@ -171,14 +171,14 @@ void PushPop(u16 instruction) {
         if constexpr(R) {
             // push LR
             sp -= 4;
-            Memory->Mem::Write<u32, true>(sp, lr);
-            FlushPipeline();
+            Memory->Mem::Write<u32, true, true>(sp, lr);
+            FakePipelineFlush();
         }
 
         for (int i = 7; i >= 0; i--) {
             if (rlist & (1 << i)) {
                 sp -= 4;
-                Memory->Mem::Write<u32, true>(sp, Registers[i]);
+                Memory->Mem::Write<u32, true, true>(sp, Registers[i]);
             }
         }
     }

@@ -36,18 +36,18 @@ void BlockDataTransfer(u32 instruction) {
         // invalid register lists
         if constexpr(L) {
             pc = Memory->Mem::Read<u32, true>(address);
-            FlushPipeline();
+            FakePipelineFlush();
         }
         else {
             if constexpr(U) {
                 // Up
                 // If Pre-indexed: write at address + 4, otherwise at the starting address
-                Memory->Mem::Write<u32, true>(address + (P ? 4 : 0), pc + 4);
+                Memory->Mem::Write<u32, true, true>(address + (P ? 4 : 0), pc + 4);
             }
             else {
                 // Down
                 // more messed up, but same idea
-                Memory->Mem::Write<u32, true>(address - (P ? 0x40 : 0x3c), pc + 4);
+                Memory->Mem::Write<u32, true, true>(address - (P ? 0x40 : 0x3c), pc + 4);
             }
         }
         if constexpr(W) {
@@ -79,11 +79,11 @@ void BlockDataTransfer(u32 instruction) {
                 // 0b11110000 & 0b011111 = 0b00010000 = 1 << 4
                 if constexpr(P ^ !U) {  // as I mentioned before, P ^ !U instead of P
                     // Pre-index
-                    Memory->Mem::Write<u32, true>(address + 4, Registers[rn]);
+                    Memory->Mem::Write<u32, true, true>(address + 4, Registers[rn]);
                 }
                 else {
                     // Post-index
-                    Memory->Mem::Write<u32, true>(address, Registers[rn]);
+                    Memory->Mem::Write<u32, true, true>(address, Registers[rn]);
                 }
                 address += 4;
                 original_address += U ? 4 : -4;  // for writeback
@@ -111,7 +111,7 @@ void BlockDataTransfer(u32 instruction) {
                     Registers[i] = Memory->Mem::Read<u32, true>(address);
                 }
                 else {
-                    Memory->Mem::Write<u32, false>(address, Registers[i]);
+                    Memory->Mem::Write<u32, false, true>(address, Registers[i]);
                 }
 
                 if constexpr(!(P ^ !U)) {
@@ -123,12 +123,12 @@ void BlockDataTransfer(u32 instruction) {
 
         if (unlikely(register_list & (1 << 15))) {
             if constexpr(L) {
-                FlushPipeline();
+                FakePipelineFlush();
             }
             else {
                 // we wrote the value of PC + 8, while it should be + 12, so we correct for that now
                 // in case of post-indexing, we need to subtract 4 again because we added this in the end
-                Memory->Mem::Write<u32, true>(address - (!(P ^ !U) ? 4 : 0), pc + 4);
+                Memory->Mem::Write<u32, true, true>(address - (!(P ^ !U) ? 4 : 0), pc + 4);
             }
         }
     }

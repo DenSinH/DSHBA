@@ -5,7 +5,11 @@
 #include "flags.h"
 #include "MemoryHelpers.h"
 
+#include <math.h>
+
 #include <string>
+#include <functional>
+#include <utility>
 
 enum class MemoryRegion {
     BIOS   = 0x00,
@@ -39,11 +43,11 @@ typedef u8 VRAMMEM[0x1'8000];
 
 class Mem {
 public:
-    Mem();
+    Mem(u32* pc_ptr, std::function<void(void)> reflush);
     ~Mem();
 
     template<typename T, bool count> T Read(u32 address);
-    template<typename T, bool count> void Write(u32 address, T value);
+    template<typename T, bool count, bool do_reflush> void Write(u32 address, T value);
 
     void LoadROM(const std::string& file_path);
     void LoadBIOS(const std::string& file_path);
@@ -51,6 +55,9 @@ public:
 private:
     friend class Initializer;
     friend class GBAPPU;
+
+    u32* pc_ptr;
+    std::function<void(void)> Reflush;
 
     u8 BIOS  [0x4000]        = {};
     u8 eWRAM [0x4'0000]      = {};
@@ -118,27 +125,63 @@ static ALWAYS_INLINE void UpdateRange(s_UpdateRange* range, u8* array, u32 addre
     }
 }
 
-template<typename T, bool count>
+template<typename T, bool count, bool do_reflush>
 void Mem::Write(u32 address, T value) {
+    // We only want to re-flush the ARM7TDMI pipeline if we are in an instruction when it happens
+    // DMAs, we assume that PC is not in the DMA-ed part of the code
+
     switch (static_cast<MemoryRegion>(address >> 24)) {
         case MemoryRegion::BIOS:
             // BIOS is read-only
         case MemoryRegion::Unused:
             return;
         case MemoryRegion::eWRAM:
+            if constexpr(do_reflush) {
+                if (unlikely(((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & 0x3'ffff) <= 8))) {
+                    Reflush();
+                }
+            }
             WriteArray<T>(eWRAM, address & 0x3'ffff, value);
             return;
         case MemoryRegion::iWRAM:
+            if constexpr(do_reflush) {
+                if (unlikely(((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & 0x7fff) <= 8))) {
+                    Reflush();
+                }
+            }
             WriteArray<T>(iWRAM, address & 0x7fff, value);
             return;
         case MemoryRegion::IO:
+#ifdef CHECK_INVALID_REFLUSHES
+            if constexpr(do_reflush) {
+                if (unlikely(((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & 0x3ff) <= 8))) {
+                    log_fatal("Code was being ran from IO and manipulated");
+                }
+            }
+#endif
             // log_warn("IO write @0x%08x", address);
             return;
         case MemoryRegion::PAL:
+#ifdef CHECK_INVALID_REFLUSHES
+            if constexpr(do_reflush) {
+                if (unlikely(((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & 0x3ff) <= 8))) {
+                    log_fatal("Code was being ran from PAL and manipulated");
+                }
+            }
+#endif
             UpdateRange<T>(&PALUpdate, PAL, address, 0x3ff, value);
             WriteArray<T>(PAL, address & 0x3ff, value);
             return;
         case MemoryRegion::VRAM:
+#ifdef CHECK_INVALID_REFLUSHES
+            if constexpr(do_reflush) {
+                // this address is actually not quite right, but we are doing this as check anyway
+                // I doubt many games will actually run code from VRAM AND manipulate the code right in front of PC
+                if (unlikely(((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & 0xffff) <= 8))) {
+                    log_fatal("Code was being ran from VRAM and manipulated");
+                }
+            }
+#endif
             if ((address & 0x1'ffff) < 0x1'0000) {
                 UpdateRange<T>(&VRAMUpdate, VRAM, address, 0xffff, value);
                 WriteArray<T>(VRAM, address & 0xffff, value);
@@ -150,6 +193,13 @@ void Mem::Write(u32 address, T value) {
             }
             return;
         case MemoryRegion::OAM:
+#ifdef CHECK_INVALID_REFLUSHES
+            if constexpr(do_reflush) {
+                if (unlikely(((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & 0x3ff) <= 8))) {
+                    log_fatal("Code was being ran from OAM and manipulated");
+                }
+            }
+#endif
             UpdateRange<T>(&OAMUpdate, OAM, address, 0x3ff, value);
             WriteArray<T>(OAM, address & 0x3ff, value);
             return;

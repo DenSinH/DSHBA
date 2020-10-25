@@ -3,6 +3,7 @@
 #include "Pipeline.h"
 
 #include "../Mem/Mem.h"
+#include "../Scheduler/scheduler.h"
 
 #include "default.h"
 #include "helpers.h"
@@ -35,7 +36,8 @@ class ARM7TDMI {
 public:
     u64 timer = 0;
 
-    explicit ARM7TDMI(Mem* memory) {
+    explicit ARM7TDMI(s_scheduler* scheduler, Mem* memory) {
+        this->Scheduler = scheduler;
         this->Memory = memory;
 
         this->BuildARMTable();
@@ -60,10 +62,11 @@ public:
         pc = 0x0800'0000;
         CPSR = 0x6000'001f;
 
-        this->FlushPipeline();
+        this->FakePipelineFlush();
         this->pc += 4;
     }
     void Step();
+    void PipelineReflush();
 
 private:
     friend class Initializer;
@@ -100,6 +103,7 @@ private:
     s_Pipeline Pipeline;
 
     Mem* Memory;
+    s_scheduler* Scheduler;
 
     // bits 27-20 and 7-4 for ARM instructions
     ARMInstructionPtr ARMInstructions[ARMInstructionTableSize] = {};
@@ -134,8 +138,12 @@ private:
     ALWAYS_INLINE u32 sbcs_cv_old(u32 op1, u32 op2, u32 carry_in);
     ALWAYS_INLINE u32 subs_cv(u32 op1, u32 op2);
 
+    ALWAYS_INLINE void Idle() {
+        timer = peek_event(Scheduler);
+    }
+
     [[nodiscard]] inline bool CheckCondition(u8 condition) const;
-    void FlushPipeline();
+    void FakePipelineFlush();
 
     void ChangeMode(Mode NewMode) {
             if (NewMode == static_cast<Mode>(this->CPSR & static_cast<u32>(CPSRFlags::Mode))) {
