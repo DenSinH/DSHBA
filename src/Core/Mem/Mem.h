@@ -34,9 +34,6 @@ typedef struct s_VMEM {
     u8 OAM   [0x400];
 } s_VMEM;
 
-
-#define CurrentBuffer VMEMBuffer[CurrentBufferIndex];
-
 class Mem {
 public:
     Mem();

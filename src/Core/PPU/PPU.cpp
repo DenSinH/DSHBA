@@ -136,16 +136,29 @@ void GBAPPU::InitBuffers() {
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_UNIFORM_BUFFER, PALUBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, static_cast<unsigned int>(BufferBindings::PALUBO), PALUBO);
+    glBindBufferBase(GL_UNIFORM_BUFFER, static_cast<unsigned int>(BufferBindings::PALUBO), PALUBO);
+    glBufferData(
+            GL_UNIFORM_BUFFER, sizeof(VMEMBuffer[0]->PAL),
+            nullptr, GL_STATIC_COPY
+    );
 
+    // Initially buffer the buffers with some data so we don't have to reallocate memory every time
     glBindBuffer(GL_UNIFORM_BUFFER, OAMUBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, static_cast<unsigned int>(BufferBindings::OAMUBO), OAMUBO);
+    glBindBufferBase(GL_UNIFORM_BUFFER, static_cast<unsigned int>(BufferBindings::OAMUBO), OAMUBO);
+    glBufferData(
+            GL_UNIFORM_BUFFER, sizeof(VMEMBuffer[0]->OAM),
+            nullptr, GL_STATIC_COPY
+    );
 
     glBindBuffer(GL_UNIFORM_BUFFER, IOUBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, static_cast<unsigned int>(BufferBindings::IOUBO), IOUBO);
+    glBindBufferBase(GL_UNIFORM_BUFFER, static_cast<unsigned int>(BufferBindings::IOUBO), IOUBO);
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, static_cast<unsigned int>(BufferBindings::VRAMSSBO), VRAMSSBO);
+    glBufferData(
+            GL_SHADER_STORAGE_BUFFER, sizeof(VMEMBuffer[0]->VRAM),
+            nullptr, GL_STATIC_COPY
+    );
 
     glGenBuffers(1, &VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -174,27 +187,27 @@ void GBAPPU::VideoInit() {
 
 void GBAPPU::DrawScanLine(s_VMEM* VMEM, u32 scanline) const {
     glBindBuffer(GL_UNIFORM_BUFFER, PALUBO);
-    glBufferData(
-            GL_SHADER_STORAGE_BUFFER,
+    glBufferSubData(
+            GL_UNIFORM_BUFFER,
+            0,
             sizeof(VMEM->PAL),
-            &VMEM->PAL,
-            GL_STATIC_COPY
+            &VMEM->PAL
     );
 
     glBindBuffer(GL_UNIFORM_BUFFER, OAMUBO);
-    glBufferData(
-            GL_SHADER_STORAGE_BUFFER,
+    glBufferSubData(
+            GL_UNIFORM_BUFFER,
+            0,
             sizeof(VMEM->OAM),
-            &VMEM->OAM,
-            GL_STATIC_COPY
+            &VMEM->OAM
     );
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
-    glBufferData(
+    glBufferSubData(
             GL_SHADER_STORAGE_BUFFER,
+            0,
             sizeof(VMEM->VRAM),
-            &VMEM->VRAM,
-            GL_STATIC_COPY
+            &VMEM->VRAM
     );
 
     // todo: buffer IO
