@@ -269,3 +269,60 @@ void ARM7TDMI::SetNZ(u32 result) {
     CPSR |= result & 0x8000'0000;
     CPSR |= (result == 0) ? static_cast<u32>(CPSRFlags::Z) : 0;
 }
+
+enum class Condition : u8 {
+    EQ = 0b0000,
+    NE = 0b0001,
+    CS = 0b0010,
+    CC = 0b0011,
+    MI = 0b0100,
+    PL = 0b0101,
+    VS = 0b0110,
+    VC = 0b0111,
+    HI = 0b1000,
+    LS = 0b1001,
+    GE = 0b1010,
+    LT = 0b1011,
+    GT = 0b1100,
+    LE = 0b1101,
+    AL = 0b1110,
+};
+
+bool ARM7TDMI::CheckCondition(u8 condition) const {
+    switch (static_cast<Condition>(condition)) {
+        case Condition::EQ:
+            return (CPSR & static_cast<u32>(CPSRFlags::Z)) != 0;
+        case Condition::NE:
+            return (CPSR & static_cast<u32>(CPSRFlags::Z)) == 0;
+        case Condition::CS:
+            return (CPSR & static_cast<u32>(CPSRFlags::C)) != 0;
+        case Condition::CC:
+            return (CPSR & static_cast<u32>(CPSRFlags::C)) == 0;
+        case Condition::MI:
+            return (CPSR & static_cast<u32>(CPSRFlags::N)) != 0;
+        case Condition::PL:
+            return (CPSR & static_cast<u32>(CPSRFlags::N)) == 0;
+        case Condition::VS:
+            return (CPSR & static_cast<u32>(CPSRFlags::V)) != 0;
+        case Condition::VC:
+            return (CPSR & static_cast<u32>(CPSRFlags::V)) == 0;
+        case Condition::HI:
+            return ((CPSR & static_cast<u32>(CPSRFlags::C)) != 0u) && ((CPSR & static_cast<u32>(CPSRFlags::Z)) == 0u);
+        case Condition::LS:
+            return ((CPSR & static_cast<u32>(CPSRFlags::C)) == 0u) || ((CPSR & static_cast<u32>(CPSRFlags::Z)) != 0u);
+        case Condition::GE:
+            return ((CPSR & static_cast<u32>(CPSRFlags::V)) != 0) == ((CPSR & static_cast<u32>(CPSRFlags::N)) != 0);
+        case Condition::LT:
+            return ((CPSR & static_cast<u32>(CPSRFlags::V)) != 0) ^ ((CPSR & static_cast<u32>(CPSRFlags::N)) != 0);
+        case Condition::GT:
+            return (!(CPSR & static_cast<u32>(CPSRFlags::Z))) &&
+                   (((CPSR & static_cast<u32>(CPSRFlags::V)) != 0) == ((CPSR & static_cast<u32>(CPSRFlags::N)) != 0));
+        case Condition::LE:
+            return ((CPSR & static_cast<u32>(CPSRFlags::Z)) != 0) ||
+                   (((CPSR & static_cast<u32>(CPSRFlags::V)) != 0) ^ ((CPSR & static_cast<u32>(CPSRFlags::N)) != 0));
+        case Condition::AL:
+            return true;
+        default:
+            log_fatal("Invalid condition code: %x", condition);
+    }
+}

@@ -33,6 +33,8 @@ private:
     VRAMMEM OAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
     s_UpdateRange OAMRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
 
+    LCDIO LCDIOBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
+
     s_scheduler* Scheduler;
     s_event BufferScanline;
 

@@ -12,7 +12,43 @@
 class ARM7TDMI_INL : ARM7TDMI {
 #endif
 
+template<u8 cond>
+void ConditionalBranch(u16 instruction) {
+    if (CheckCondition(cond)) {
+        i32 offset = (i32)((i8)((u8)instruction)) << 1;
 
+#ifdef BASIC_IDLE_DETECTION
+        if (unlikely(offset == -4)) {
+            // We know we are in ARM mode
+            Idle();
+        }
+#endif
+        pc += offset;
+        FakePipelineFlush();
+    }
+}
+
+template<bool H>
+void LongBranchLink(u16 instruction) {
+    // part of a bigger instruction (H bit clear, H bit set)
+    u16 offset = (instruction & 0x07ff);
+
+    if constexpr(!H) {
+        // First Instruction - LR = PC+4+(nn SHL 12)
+        // PC + 4 is just because it's 2 instructions ahead in the above description
+        i16 signed_offset = (i16)(offset << 5) >> 5;
+        lr = pc + ((i32)signed_offset << 12);
+    }
+    else {
+        // Second Instruction - PC = LR + (nn SHL 1), and LR = PC+2 OR 1
+        u32 old_pc = pc - 2;  // correct for pipeline effects
+        pc = lr + (offset << 1);
+        // todo: idle loop detection
+
+        lr = old_pc | 1;
+        FakePipelineFlush();
+    }
+}
 
 #ifndef INLINED_INCLUDES
 };

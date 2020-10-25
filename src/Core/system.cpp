@@ -15,9 +15,8 @@ GBA::GBA() {
     Breakpoints = {};
     Paused      = false;
 
-//    add_breakpoint(&breakpoints, 0x0803123c);
-//    add_breakpoint(&breakpoints, 0x00000500);
-//    add_breakpoint(&breakpoints, 0x8000586c);
+//    add_breakpoint(&Breakpoints, 0x080004f0);
+//    add_breakpoint(&Breakpoints, 0x080041b8);
 #endif
 }
 

@@ -36,9 +36,12 @@ GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
 }
 
 static ALWAYS_INLINE void ConditionalBuffer(s_UpdateRange* range, u8* dest, u8* src) {
+    range->min &= ~3;
+    range->max = (range->max + 3) & ~3;
+
     if (range->min <= range->max) {
         memcpy(
-            dest,
+            dest + range->min,
             src + range->min,
             range->max + 4 - range->min
         );
@@ -55,19 +58,24 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
 
     // copy over actual new data
     ConditionalBuffer(
-            &ppu->Memory->PALUpdate,
+            &ppu->PALRanges[ppu->BufferFrame][ppu->BufferScanlineCount],
             ppu->PALBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
             ppu->Memory->PAL
     );
     ConditionalBuffer(
-            &ppu->Memory->VRAMUpdate,
+            &ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount],
             ppu->VRAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
             ppu->Memory->VRAM
     );
     ConditionalBuffer(
-            &ppu->Memory->OAMUpdate,
+            &ppu->OAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount],
             ppu->OAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
             ppu->Memory->OAM
+    );
+    memcpy(
+            &ppu->LCDIOBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
+            ppu->Memory->IO,
+            sizeof(LCDIO)
     );
 
     // resetting range data happens in the rendering thread
@@ -161,29 +169,33 @@ void GBAPPU::InitBuffers() {
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
 
+    // Initially buffer the buffers with some data so we don't have to reallocate memory every time
     glBindBuffer(GL_UNIFORM_BUFFER, PALUBO);
     glBindBufferBase(GL_UNIFORM_BUFFER, static_cast<unsigned int>(BufferBindings::PALUBO), PALUBO);
     glBufferData(
             GL_UNIFORM_BUFFER, sizeof(PALMEM),
-            nullptr, GL_STATIC_COPY
+            PALBuffer[0][0], GL_DYNAMIC_DRAW
     );
 
-    // Initially buffer the buffers with some data so we don't have to reallocate memory every time
     glBindBuffer(GL_UNIFORM_BUFFER, OAMUBO);
     glBindBufferBase(GL_UNIFORM_BUFFER, static_cast<unsigned int>(BufferBindings::OAMUBO), OAMUBO);
     glBufferData(
             GL_UNIFORM_BUFFER, sizeof(OAMMEM),
-            nullptr, GL_STATIC_COPY
+            OAMBuffer[0][0], GL_DYNAMIC_DRAW
     );
 
     glBindBuffer(GL_UNIFORM_BUFFER, IOUBO);
     glBindBufferBase(GL_UNIFORM_BUFFER, static_cast<unsigned int>(BufferBindings::IOUBO), IOUBO);
+    glBufferData(
+            GL_UNIFORM_BUFFER, sizeof(LCDIO),
+            LCDIOBuffer[0][0], GL_DYNAMIC_DRAW
+    );
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, static_cast<unsigned int>(BufferBindings::VRAMSSBO), VRAMSSBO);
     glBufferData(
             GL_SHADER_STORAGE_BUFFER, sizeof(VRAMMEM),
-            nullptr, GL_STATIC_COPY
+            VRAMBuffer[0][0], GL_DYNAMIC_DRAW
     );
 
     glGenBuffers(1, &VBO);
@@ -205,10 +217,10 @@ void GBAPPU::VideoInit() {
     InitBuffers();
 
     glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);  // todo: base this on BP register
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//    glEnable(GL_DEPTH_TEST);
+//    glDepthFunc(GL_LEQUAL);
+//    glEnable(GL_BLEND);
+//    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void GBAPPU::DrawScanLine(u32 scanline) const {
@@ -218,12 +230,15 @@ void GBAPPU::DrawScanLine(u32 scanline) const {
     range = PALRanges[DrawFrame][scanline];
     if (range.min <= range.max) {
         log_ppu("Buffering %x bytes of PAL data (%x -> %x)", range.max + 4 - range.min, range.min, range.max);
+        for (size_t i = range.min; i <= range.max; i += 4) {
+            log_ppu("%02x: %08x", i, *(u32*)&PALBuffer[DrawFrame][scanline][i]);
+        }
         glBindBuffer(GL_UNIFORM_BUFFER, PALUBO);
         glBufferSubData(
                 GL_UNIFORM_BUFFER,
                 range.min,
                 range.max + 4 - range.min,
-                PALBuffer[DrawFrame][scanline]
+                &PALBuffer[DrawFrame][scanline][range.min]
         );
         // reset range data
         Memory->PALUpdate = { .min = sizeof(PALMEM), .max = 0 };
@@ -237,7 +252,7 @@ void GBAPPU::DrawScanLine(u32 scanline) const {
                 GL_SHADER_STORAGE_BUFFER,
                 range.min,
                 range.max + 4 - range.min,
-                VRAMBuffer[DrawFrame][scanline]
+                &VRAMBuffer[DrawFrame][scanline][range.min]
         );
         // reset range data
         Memory->VRAMUpdate = { .min = sizeof(VRAMMEM), .max = 0 };
@@ -251,13 +266,20 @@ void GBAPPU::DrawScanLine(u32 scanline) const {
                 GL_UNIFORM_BUFFER,
                 range.min,
                 range.max + 4 - range.min,
-                OAMBuffer[DrawFrame][scanline]
+                &OAMBuffer[DrawFrame][scanline][range.min]
         );
         // reset range data
         Memory->OAMUpdate = { .min = sizeof(OAMMEM), .max = 0 };
     }
 
-    // todo: buffer IO (every frame, it's only 0x54 bytes)
+    // buffer IO (every frame, it's only 0x54 bytes)
+    glBindBuffer(GL_UNIFORM_BUFFER, IOUBO);
+    glBufferSubData(
+            GL_UNIFORM_BUFFER,
+            0,
+            sizeof(LCDIO),
+            LCDIOBuffer[DrawFrame][scanline]
+    );
 
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);

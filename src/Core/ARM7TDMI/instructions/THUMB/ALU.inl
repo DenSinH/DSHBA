@@ -237,6 +237,47 @@ void HiRegOps_BX(u16 instruction) {
     }
 }
 
+template<u8 Op, u8 Offs5>
+void MoveShifted(u16 instruction) {
+    log_cpu_verbose("MOV SHFT Op=%d, Offs5=%x", Op, Offs5);
+    u8 rd = (instruction & 7);
+    u32 Rs = Registers[(instruction & 0x0038) >> 3];
+
+    Registers[rd] = DoShift<true, Op>(Rs, Offs5);
+    SetNZ(Registers[rd]);
+
+    // internal cycle
+    timer++;
+}
+
+template<u8 Op, u8 rd>
+void ALUImmediate(u16 instruction) {
+    log_cpu_verbose("ALU IMM Op=%d, rd=%d", Op, rd);
+    u8 offs8 = (u8)instruction;
+    u32 result;
+    switch (Op) {
+        case 0b00:  // MOV
+            result = offs8;
+            Registers[rd] = result;
+            break;
+        case 0b01:  // CMP
+            result = subs_cv(Registers[rd], offs8);
+            break;
+        case 0b10:  // ADD
+            result = adds_cv(Registers[rd], offs8);
+            Registers[rd] = result;
+            break;
+        case 0b11:  // SUB
+            result = subs_cv(Registers[rd], offs8);
+            Registers[rd] = result;
+            break;
+    }
+    SetNZ(result);
+
+    // internal cycle
+    timer++;
+}
+
 #ifndef INLINED_INCLUDES
 };
 #endif

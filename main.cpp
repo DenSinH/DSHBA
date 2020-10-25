@@ -55,14 +55,14 @@ int main() {
 #endif
 
 #ifdef DO_BREAKPOINTS
-    gba->Paused = true;
+    gba->Paused = false;
 #endif
 
     atexit(exception_handler);
 
     std::thread ui_thread(ui_run);
 
-    gba->Memory.LoadROM(ROM_FILE);
+    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/armwrestler.gba");
     gba->Run();
 
     ui_thread.join();

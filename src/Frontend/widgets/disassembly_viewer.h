@@ -80,6 +80,8 @@ struct DisassemblyViewer
             address -= (INSTRS_BEFORE_PC << 2);
         }
 
+        address &= ~3;  // word align
+
 #ifdef DO_CAPSTONE
 
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));

@@ -123,9 +123,14 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
     // When the I bit is 0
     u32 shift_amount;
     u32 Rm;
-    if (unlikely((instruction & 0xf) == 15)) {
-        // account for PC offset, should be 12, is 8
-        Rm = pc + 4;
+    if constexpr(!shift_imm) {
+        if (unlikely((instruction & 0xf) == 15)) {
+            // account for PC offset, should be 12, is 8
+            Rm = pc + 4;
+        }
+        else {
+            Rm = Registers[instruction & 0xf];
+        }
     }
     else {
         Rm = Registers[instruction & 0xf];
@@ -172,11 +177,16 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
     return DoShift<S, shift_type>(Rm, shift_amount);
 }
 
-template<u8 opcode, bool S>
+template<u8 opcode, bool S, bool shift_imm>
 inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32 op2) {
     u32 op1;
-    if (unlikely(((instruction & 0x000f0000) >> 16) == 15)) {
-        op1 = pc + 4;  // account for extra offset, same as before
+    if constexpr(!shift_imm) {
+        if (unlikely(((instruction & 0x000f0000) >> 16) == 15)) {
+            op1 = pc + 4;  // account for extra offset, same as before
+        }
+        else {
+            op1 = Registers[(instruction & 0x000f0000) >> 16];
+        }
     }
     else {
         op1 = Registers[(instruction & 0x000f0000) >> 16];
@@ -349,14 +359,16 @@ void DataProcessing(u32 instruction) {
 
     if (unlikely(rd == 15)) {
         // don't set flags if rd == 15
-        DoDataProcessing<opcode, false>(instruction, op2);
+        DoDataProcessing<opcode, false, shift_imm>(instruction, op2);
         if constexpr(S) {
             // SPSR transfer
             this->CPSR = this->SPSR;
         }
+
+        FakePipelineFlush();
     }
     else {
-        DoDataProcessing<opcode, S>(instruction, op2);
+        DoDataProcessing<opcode, S, shift_imm>(instruction, op2);
     }
 
     if constexpr(I) {

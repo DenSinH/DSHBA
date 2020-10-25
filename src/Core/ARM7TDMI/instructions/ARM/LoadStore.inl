@@ -42,7 +42,7 @@ void SingleDataTransfer(u32 instruction) {
     }
 
     if constexpr(L) {
-        log_cpu_verbose("LDR%c r%d, [r%d, #%x]%c", B ? 'B' : ' ', Rd, Rn, offset, W ? '!' : ' ');
+        log_cpu_verbose("LDR%c r%d, [r%d, #%x]%c", B ? 'B' : ' ', rd, rn, offset, W ? '!' : ' ');
         if constexpr(B) {
             Registers[rd] = Memory->Mem::Read<u8, true>(address);
         }
@@ -62,7 +62,7 @@ void SingleDataTransfer(u32 instruction) {
         }
     }
     else {
-        log_cpu_verbose("STR%c r%d, [r%d, #%x]%c", B ? 'B' : ' ', Rd, Rn, offset, W ? '!' : ' ');
+        log_cpu_verbose("STR%c r%d, [r%d, #%x]%c", B ? 'B' : ' ', rd, rn, offset, W ? '!' : ' ');
         u32 value = Registers[rd];
 
         if (unlikely(rd == 15)) {
@@ -160,7 +160,7 @@ void HalfwordDataTransfer(u32 instruction) {
         if constexpr(H) {
             // unsigned halfwords
             if constexpr(L) {
-                log_cpu_verbose("LDRH r%d, [r%d, #%x]%c", Rd, Rn, offset, W ? '!' : '\0');
+                log_cpu_verbose("LDRH r%d, [r%d, #%x]%c", rd, rn, offset, W ? '!' : '\0');
                 if (unlikely(address & 1)) {
                     // misaligned
                     u32 loaded = Memory->Mem::Read<u16, true>(address);
@@ -171,7 +171,7 @@ void HalfwordDataTransfer(u32 instruction) {
                 }
             }
             else {
-                log_cpu_verbose("STRH r%d, [r%d, #%x]%c", Rd, Rn, offset, W ? '!' : '\0');
+                log_cpu_verbose("STRH r%d, [r%d, #%x]%c", rd, rn, offset, W ? '!' : '\0');
                 Memory->Mem::Write<u16, true, true>(address, (u16)Registers[rd]);
             }
         }

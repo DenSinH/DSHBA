@@ -40,6 +40,7 @@ typedef struct s_UpdateRange {
 typedef u8 PALMEM[0x400];
 typedef u8 OAMMEM[0x400];
 typedef u8 VRAMMEM[0x1'8000];
+typedef u8 LCDIO[0x54];
 
 class Mem {
 public:
@@ -62,6 +63,7 @@ private:
     u8 BIOS  [0x4000]        = {};
     u8 eWRAM [0x4'0000]      = {};
     u8 iWRAM [0x8000]        = {};
+    u8 IO    [0x400]         = {};
     PALMEM PAL               = {};
     s_UpdateRange PALUpdate  = {};
     VRAMMEM VRAM             = {};
@@ -85,8 +87,16 @@ T Mem::Read(u32 address) {
         case MemoryRegion::iWRAM:
             return ReadArray<T>(iWRAM, address & 0x7fff);
         case MemoryRegion::IO:
-            // log_warn("IO read @0x%08x", address);
-            return 0;// stubber ^= 0xffff'ffff;
+            if ((address & 0x00ff'ffff) > 0x3ff) {
+                return 0;
+            }
+            // todo: read pre-calls
+            if (address == 0x0400'0004) {
+                // stub DISPSTAT
+                return (T)(stubber ^= 0xffff'ffff);
+            }
+
+            return 0xffff'ffff;// ReadArray<T>(IO, address & 0x3ff);
         case MemoryRegion::PAL:
             return ReadArray<T>(PAL, address & 0x3ff);
         case MemoryRegion::VRAM:
@@ -129,6 +139,7 @@ template<typename T, bool count, bool do_reflush>
 void Mem::Write(u32 address, T value) {
     // We only want to re-flush the ARM7TDMI pipeline if we are in an instruction when it happens
     // DMAs, we assume that PC is not in the DMA-ed part of the code
+#define NEAR_PC(mask) ((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & (mask)) <= 8)
 
     switch (static_cast<MemoryRegion>(address >> 24)) {
         case MemoryRegion::BIOS:
@@ -137,7 +148,7 @@ void Mem::Write(u32 address, T value) {
             return;
         case MemoryRegion::eWRAM:
             if constexpr(do_reflush) {
-                if (unlikely(((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & 0x3'ffff) <= 8))) {
+                if (unlikely(NEAR_PC(0x3'ffff))) {
                     Reflush();
                 }
             }
@@ -145,7 +156,7 @@ void Mem::Write(u32 address, T value) {
             return;
         case MemoryRegion::iWRAM:
             if constexpr(do_reflush) {
-                if (unlikely(((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & 0x7fff) <= 8))) {
+                if (unlikely(NEAR_PC(0x7fff))) {
                     Reflush();
                 }
             }
@@ -154,17 +165,21 @@ void Mem::Write(u32 address, T value) {
         case MemoryRegion::IO:
 #ifdef CHECK_INVALID_REFLUSHES
             if constexpr(do_reflush) {
-                if (unlikely(((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & 0x3ff) <= 8))) {
+                if (unlikely(NEAR_PC(0x3ff))) {
                     log_fatal("Code was being ran from IO and manipulated");
                 }
             }
 #endif
-            // log_warn("IO write @0x%08x", address);
+            if ((address & 0x00ff'ffff) > 0x3ff) {
+                return ;
+            }
+            // todo: read pre-calls
+            WriteArray<T>(IO, address & 0x3ff, value);
             return;
         case MemoryRegion::PAL:
 #ifdef CHECK_INVALID_REFLUSHES
             if constexpr(do_reflush) {
-                if (unlikely(((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & 0x3ff) <= 8))) {
+                if (unlikely(NEAR_PC(0x3ff))) {
                     log_fatal("Code was being ran from PAL and manipulated");
                 }
             }
@@ -177,7 +192,7 @@ void Mem::Write(u32 address, T value) {
             if constexpr(do_reflush) {
                 // this address is actually not quite right, but we are doing this as check anyway
                 // I doubt many games will actually run code from VRAM AND manipulate the code right in front of PC
-                if (unlikely(((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & 0xffff) <= 8))) {
+                if (unlikely(NEAR_PC(0xffff))) {
                     log_fatal("Code was being ran from VRAM and manipulated");
                 }
             }
@@ -195,7 +210,7 @@ void Mem::Write(u32 address, T value) {
         case MemoryRegion::OAM:
 #ifdef CHECK_INVALID_REFLUSHES
             if constexpr(do_reflush) {
-                if (unlikely(((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & 0x3ff) <= 8))) {
+                if (unlikely(NEAR_PC(0x3ff))) {
                     log_fatal("Code was being ran from OAM and manipulated");
                 }
             }

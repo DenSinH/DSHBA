@@ -117,11 +117,23 @@ static constexpr ARMInstructionPtr GetARMInstruction() {
 
 template<u16 instruction>
 static constexpr THUMBInstructionPtr GetTHUMBInstruction() {
-    if constexpr((instruction & ARM7TDMI::THUMBHash(0xf800)) == ARM7TDMI::THUMBHash(0x1800)) {
-        const bool I  = (instruction & ARM7TDMI::THUMBHash(0x0400)) != 0;
-        const bool Op = (instruction & ARM7TDMI::THUMBHash(0x0200)) != 0;
-        const u8 RnOff3 = (instruction & 0x7);
-        return &ARM7TDMI::AddSubtract<I, Op, RnOff3>;
+    if constexpr((instruction & ARM7TDMI::THUMBHash(0xe000)) == ARM7TDMI::THUMBHash(0x0000)) {
+        if constexpr((instruction & ARM7TDMI::THUMBHash(0xf800)) != ARM7TDMI::THUMBHash(0x1800)) {
+            const u8 Op = instruction >> 5;
+            const u8 Offs5 = instruction & 0x1f;
+            return &ARM7TDMI::MoveShifted<Op, Offs5>;
+        }
+        else {
+            const bool I  = (instruction & ARM7TDMI::THUMBHash(0x0400)) != 0;
+            const bool Op = (instruction & ARM7TDMI::THUMBHash(0x0200)) != 0;
+            const u8 RnOff3 = (instruction & 0x7);
+            return &ARM7TDMI::AddSubtract<I, Op, RnOff3>;
+        }
+    }
+    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xe000)) == ARM7TDMI::THUMBHash(0x2000)) {
+        const u8 Op = (instruction >> 5) & 0x3;
+        const u8 rd = (instruction >> 2) & 0x7;
+        return &ARM7TDMI::ALUImmediate<Op, rd>;
     }
     else if constexpr((instruction & ARM7TDMI::THUMBHash(0xfc00)) == ARM7TDMI::THUMBHash(0x4000)) {
         const u8 opcode = (instruction & 0xf);
@@ -159,6 +171,28 @@ static constexpr THUMBInstructionPtr GetTHUMBInstruction() {
         const bool L = (instruction & ARM7TDMI::THUMBHash(0x0800)) != 0;
         const bool R = (instruction & ARM7TDMI::THUMBHash(0x0100)) != 0;
         return &ARM7TDMI::PushPop<L, R>;
+    }
+    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xf800)) == ARM7TDMI::THUMBHash(0x4800)) {
+        const u8 rd = (instruction >> 2) & 7;
+        return &ARM7TDMI::PCRelativeLoad<rd>;
+    }
+    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xf000)) == ARM7TDMI::THUMBHash(0xd000)) {
+        if constexpr((instruction & ARM7TDMI::THUMBHash(0xff00)) == ARM7TDMI::THUMBHash(0xdf00)) {
+            // SWI
+        }
+        else {
+            const u8 cond = (instruction >> 2) & 0xf;
+            return &ARM7TDMI::ConditionalBranch<cond>;
+        }
+    }
+    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xf000)) == ARM7TDMI::THUMBHash(0xf000)) {
+        const bool H = (instruction & ARM7TDMI::THUMBHash(0x0800)) != 0;
+        return &ARM7TDMI::LongBranchLink<H>;
+    }
+    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xf000)) == ARM7TDMI::THUMBHash(0xc000)) {
+        const bool L = (instruction & ARM7TDMI::THUMBHash(0x0800)) != 0;
+        const u8 rb = (instruction >> 2) & 7;
+        return &ARM7TDMI::MultipleLoadStore<L, rb>;
     }
 
     return &ARM7TDMI::THUMBUnimplemented;

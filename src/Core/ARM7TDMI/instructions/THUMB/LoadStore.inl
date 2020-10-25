@@ -14,6 +14,7 @@ class ARM7TDMI_INL : ARM7TDMI {
 
 template<bool L, u8 Offs5>
 void LoadStoreHalfword(u16 instruction) {
+    log_cpu_verbose("L/SH L=%d, Offs5=%x", L, Offs5);
     u8 rd = (instruction & 0x7);
     u8 rb = (instruction & 0x38) >> 3;
 
@@ -73,6 +74,7 @@ template<bool L, bool B, u8 ro>
 void LoadStoreRegOffs(u16 instruction) {
     u8 rd = (instruction & 0x7);
     u8 rb = (instruction & 0x38) >> 3;
+    log_cpu_verbose("L/SH [r%d, r%d] L=%d, B=%d", rb, ro, L, B);
 
     u32 address = Registers[rb] + Registers[ro];
 
@@ -83,6 +85,7 @@ template<bool B, bool L, u8 Offs5>
 void LoadStoreImmOffs(u16 instruction) {
     u8 rd = (instruction & 0x7);
     u8 rb = (instruction & 0x38) >> 3;
+    log_cpu_verbose("L/SH [r%d, #%x] B=%d, L=%d", rb, Offs5, B, L);
 
     u32 address;
     if constexpr(B) {
@@ -99,6 +102,7 @@ template<bool H, bool S, u8 ro>
 void LoadStoreSEBH(u16 instruction) {
     u8 rd = (instruction & 0x7);
     u8 rb = (instruction & 0x38) >> 3;
+    log_cpu_verbose("L/SSB/H ro=%d H=%d, S=%d", ro, H, S);
 
     u32 address = Registers[rb] + Registers[ro];
 
@@ -145,6 +149,7 @@ void LoadStoreSEBH(u16 instruction) {
 template<bool L, bool R>
 void PushPop(u16 instruction) {
     u16 rlist = instruction & 0xff;
+    log_cpu_verbose("Push/Pop L=%d, R=%d pc=%x", L, R, pc);
 
     if constexpr(L) {
         // pop
@@ -172,7 +177,6 @@ void PushPop(u16 instruction) {
             // push LR
             sp -= 4;
             Memory->Mem::Write<u32, true, true>(sp, lr);
-            FakePipelineFlush();
         }
 
         for (int i = 7; i >= 0; i--) {
@@ -182,6 +186,79 @@ void PushPop(u16 instruction) {
             }
         }
     }
+}
+
+template<bool L, u8 rb>
+void MultipleLoadStore(u16 instruction) {
+    u8 rlist = (u8)instruction;
+    u32 address = Registers[rb];
+    log_cpu_verbose("LDM L=%d, rb=%d", L, rb);
+
+    if (unlikely(!rlist)) {
+        // invalid register list
+        if constexpr(L) {
+            pc = Memory->Mem::Read<u32, true>(address);
+
+            // internal cycle
+            timer++;
+        }
+        else {
+            Memory->Mem::Write<u32, true, true>(address, pc + 2);  // PC is 4 ahead, should be 6
+        }
+
+        Registers[rb] += 0x40;
+        return;
+    }
+
+    if constexpr(L) {
+        for (size_t i = 0; i < 8; i++) {
+            if (rlist & (1 << i)) {
+                Registers[i] = Memory->Mem::Read<u32, true>(address);
+                address += 4;
+            }
+        }
+        Registers[rb] = address;
+
+        // internal cycle
+        timer++;
+    }
+    else {
+        // Writeback with Rb in RList:
+        // Store OLD base if Rb is FIRST entry in Rlist, otherwise store NEW base (STM/ARMv4)
+        if (unlikely(cttz(rlist) == rb - 1)) {
+            // This is only the case if rn is the first register to be stored.
+            // e.g.: if rn is 4 and the Rlist ends in 0b11110000, we have
+            // 0b11110000 & ((1 << 5) - 1) = 0b11110000 & (0b100000 - 1) =
+            // 0b11110000 & 0b011111 = 0b00010000 = 1 << 4
+
+            Memory->Mem::Write<u32, true, true>(address, Registers[rb]);
+            address += 4;
+
+            // we already stored this one now
+            rlist &= ~(1 << rb);
+        }
+
+        Registers[rb] = (address + (popcount(rlist) << 2));
+
+        for (size_t i = 0; i < 8; i++) {
+            if (rlist & (1 << i)) {
+                Memory->Mem::Write<u32, true, true>(address, Registers[i]);
+                address += 4;
+            }
+        }
+    }
+}
+
+template<u8 rd>
+void PCRelativeLoad(u16 instruction) {
+    log_cpu_verbose("PCREL rd=%d", rd);
+    u32 address = (pc & ~3) + ((instruction & 0xff) << 2);
+
+    // loads this way will always be word aligned
+    Registers[rd] = Memory->Mem::Read<u32, true>(address);
+
+    // internal cycle
+    timer++;
 }
 
 #ifndef INLINED_INCLUDES

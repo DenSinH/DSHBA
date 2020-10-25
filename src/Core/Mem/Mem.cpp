@@ -31,5 +31,5 @@ void Mem::LoadROM(const std::string& file_path) {
 }
 
 void Mem::LoadBIOS(const std::string& file_path) {
-    LoadFileTo(reinterpret_cast<char *>(BIOS), file_path, 0x0000'4000);
+    // LoadFileTo(reinterpret_cast<char *>(BIOS), file_path, 0x0000'4000);
 }

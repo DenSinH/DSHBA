@@ -17,7 +17,7 @@ void Multiply(u32 instruction) {
     u8 rd = (instruction & 0x000f'0000) >> 16;
     u32 Rn = Registers[(instruction & 0xf000) >> 12];
     u32 Rs = Registers[(instruction & 0x0f00) >> 8];
-    u32 Rm = Registers[(instruction & 0x000f) >> 8];
+    u32 Rm = Registers[instruction & 0x000f];
 
     if constexpr(A) {
         Registers[rd] = Rm * Rs + Rn;
