@@ -2,10 +2,10 @@
 #define GC__GX_CONSTANTS_H
 
 enum class BufferBindings : unsigned int {
-    PALUBO   = 3,
-    OAMUBO   = 4,
-    IOUBO    = 5,
-    VRAMSSBO = 6,
+    PALUBO   = 1,
+    OAMUBO   = 2,
+    IOUBO    = 3,
+    VRAMSSBO = 4,
 };
 
 enum class VMEMSizes : unsigned int {

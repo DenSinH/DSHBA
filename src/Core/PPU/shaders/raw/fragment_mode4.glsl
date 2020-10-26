@@ -2,20 +2,17 @@
 
 #version 430 core
 
-layout (std140, binding = ++PALUBO++) uniform PAL
+layout (std430, binding = ++PALUBO++) readonly buffer PAL
 {
     uint PALdata[++PALSize++ >> 2];
 };
 
-layout (std140, binding = ++OAMUBO++) uniform OAM
+layout (std430, binding = ++OAMUBO++) readonly buffer OAM
 {
     uint OAMdata[++OAMSize++ >> 2];
 };
 
-layout (std140, binding = ++IOUBO++) uniform IO
-{
-    uint IOdata[++IOSize++ >> 2];
-};
+uniform uint IOdata[++IOSize++ >> 2];
 
 layout (std430, binding = ++VRAMSSBO++) readonly buffer VRAMSSBO
 {
@@ -26,7 +23,7 @@ vec4 mode4(vec2 texCoord) {
     uint x = uint(round(texCoord.x * ++VISIBLE_SCREEN_WIDTH++)) - 1;
     uint y = uint(round(texCoord.y * ++VISIBLE_SCREEN_HEIGHT++)) - 1;
 
-    uint DISPCNT = IOdata[++DISPCNT++];
+    uint DISPCNT = IOdata[0];
     if ((DISPCNT & ++DisplayBG2++) == 0) {
         // background 2 is disabled
         discard;
@@ -45,25 +42,6 @@ vec4 mode4(vec2 texCoord) {
     uint PaletteIndex = VRAM[VRAMAddr >> 2];
     PaletteIndex = (PaletteIndex) >> (Alignment << 3u);
     PaletteIndex &= 0xffu;
-
-    if (PaletteIndex != 0) {
-        if (PALdata[1] == 0x7fff0018u) {
-            return vec4(0.0, 1.0, 0, 1);
-        }
-//        if (PALdata[0] == 0x03000000u) {
-//            return vec4(1, 0, 1, 1);
-//        }
-        for (int i = 1; i < 0x400 >> 2; i++) {
-            if (PALdata[i] != 0) {
-                return vec4(1, 1, 1, 1);
-            }
-        }
-        if (PALdata[1] == 0 && PALdata[2] == 0) {
-            return vec4(0, 0, 1, 1);
-        }
-        return vec4(float(PaletteIndex) / 5.0, 1, 1, 1);
-    }
-    discard;
 
     // PaletteIndex should actually be multiplied by 2, but since we store bytes in uints, we divide by 4 right after
     uint BitColor = PALdata[PaletteIndex >> 1];

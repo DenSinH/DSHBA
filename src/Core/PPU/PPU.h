@@ -7,6 +7,8 @@
 
 #include "default.h"
 
+#include <mutex>
+
 class GBAPPU {
 
 public:
@@ -38,11 +40,15 @@ private:
     s_scheduler* Scheduler;
     s_event BufferScanline;
 
+    std::mutex DrawMutex = std::mutex();
+
     // programs for each draw program
     unsigned int Program;
     unsigned int Framebuffer;
 
-    unsigned int PALUBO, OAMUBO, IOUBO;
+    unsigned int PALSSBO, OAMSSBO;
+    unsigned int IOLocation;
+
     // unsigned int PALBinding, OAMBinding, IOBinding;
     unsigned int VRAMSSBO;
     unsigned int VAO;
@@ -53,5 +59,5 @@ private:
     void InitFramebuffers();
     void InitPrograms();
     void InitBuffers();
-    void DrawScanLine(u32 scanline) const;
+    void DrawScanLine(u32 scanline);
 };
