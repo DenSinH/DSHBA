@@ -15,8 +15,6 @@ extern "C" {
 
     typedef struct s_framebuffer {
         unsigned int id;
-        void (*draw_overlay)(void* caller, const float x, const float y, const float width, const float height);
-        void* caller;
         size_t src_width, src_height;
         size_t dest_width, dest_height;
     } s_framebuffer;

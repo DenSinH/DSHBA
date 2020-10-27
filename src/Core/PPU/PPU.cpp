@@ -83,7 +83,6 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
 
     ppu->BufferScanlineCount++;
     ppu->DrawMutex.lock();
-    // next time: update whatever was new last scanline, plus what gets drawn next
     if (unlikely(ppu->BufferScanlineCount == VISIBLE_SCREEN_HEIGHT)) {
         ppu->BufferScanlineCount = 0;
         ppu->Frame++;
@@ -99,6 +98,7 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
         event->time += CYCLES_PER_SCANLINE;
     }
 
+    // next time: update whatever was new last scanline, plus what gets drawn next
     ppu->Memory->VRAMUpdate = ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount];
     ppu->DrawMutex.unlock();
 
@@ -110,7 +110,7 @@ void GBAPPU::InitFramebuffers() {
     glGenFramebuffers(1, &Framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
 
-    GLuint rendered_texture, depth_buffer;
+    GLuint rendered_texture;
     // create a texture to render to and fill it with 0 (also set filtering to low)
     glGenTextures(1, &rendered_texture);
     glBindTexture(GL_TEXTURE_2D, rendered_texture);
@@ -118,12 +118,6 @@ void GBAPPU::InitFramebuffers() {
                  0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-    // add depth buffer
-    glGenRenderbuffers(1, &depth_buffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, depth_buffer);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_buffer);
 
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, rendered_texture, 0);
     GLenum draw_buffers[1] = { GL_COLOR_ATTACHMENT0 };
@@ -192,13 +186,11 @@ void GBAPPU::InitBuffers() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    log_debug("OpenGL error: %x", glGetError());
     // dimensions need to be a power of 2. Since VISIBLE_SCREEN_HEIGHT is not, we have to pick the next highest one
     // OAM holds 4 shorts per "index", so we store those in vec4s
     // therefore, the dimension should be sizeof(OAMMEM) / (2 * 4 bytes per OAM entry)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16UI, sizeof(OAMMEM) >> 3, 256, 0, GL_RGBA_INTEGER,
                  GL_UNSIGNED_SHORT, nullptr);
-    log_debug("OpenGL error: %x", glGetError());
 
     OAMLocation = glGetUniformLocation(Program, "OAM");
 
@@ -218,12 +210,11 @@ void GBAPPU::InitBuffers() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    log_debug("OpenGL error: %x", glGetError());
     // dimensions need to be a power of 2. Since VISIBLE_SCREEN_HEIGHT is not, we have to pick the next highest one
     // each relevant register is 16bit, so we store them in ushorts
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, sizeof(LCDIO) >> 1, 256, 0, GL_RED_INTEGER,
+    // again, since LCDIO is not of a size that is a power of 2, we use the next best one instead
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, 0x40, 256, 0, GL_RED_INTEGER,
                  GL_UNSIGNED_SHORT, nullptr);
-    log_debug("OpenGL error: %x", glGetError());
 
     IOLocation = glGetUniformLocation(Program, "IO");
 
@@ -244,7 +235,7 @@ void GBAPPU::InitBuffers() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    log_debug("OpenGL error: %x", glGetError());
+    log_debug("OpenGL error after initialization: %x", glGetError());
 }
 
 void GBAPPU::VideoInit() {
@@ -290,13 +281,12 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     const float quad[8] = {
-            -1.0, (float)scanline,            // top left
-            1.0, (float)scanline,             // top right
-            1.0, (float)(scanline + amount),  // bottom right
+            -1.0, (float) scanline,            // top left
+             1.0, (float) scanline,            // top right
+             1.0, (float)(scanline + amount),  // bottom right
             -1.0, (float)(scanline + amount),  // bottom left
     };
     glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), quad, GL_STATIC_DRAW);
-
     glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
 
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -313,7 +303,7 @@ struct s_framebuffer GBAPPU::Render() {
 
     // todo: backdrop color
     glClearColor(0, 0, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT);
 
     // draw scanlines that are available
     DrawMutex.lock();
@@ -357,8 +347,6 @@ struct s_framebuffer GBAPPU::Render() {
 
     return (s_framebuffer) {
             .id = Framebuffer,
-            .draw_overlay = nullptr,
-            .caller = nullptr,
             .src_width = INTERNAL_FRAMEBUFFER_WIDTH,
             .src_height = INTERNAL_FRAMEBUFFER_HEIGHT,
             .dest_width = VISIBLE_SCREEN_WIDTH,

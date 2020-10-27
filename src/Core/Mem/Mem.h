@@ -166,7 +166,8 @@ void Mem::Write(u32 address, T value) {
 #ifdef CHECK_INVALID_REFLUSHES
             if constexpr(do_reflush) {
                 if (unlikely(NEAR_PC(0x3ff))) {
-                    log_fatal("Code was being ran from IO and manipulated");
+                    log_warn("Code was being ran from IO and manipulated");
+                    Reflush();
                 }
             }
 #endif
@@ -192,7 +193,8 @@ void Mem::Write(u32 address, T value) {
                 // this address is actually not quite right, but we are doing this as check anyway
                 // I doubt many games will actually run code from VRAM AND manipulate the code right in front of PC
                 if (unlikely(NEAR_PC(0xffff))) {
-                    log_fatal("Code was being ran from VRAM and manipulated");
+                    log_warn("Code was being ran from VRAM and manipulated");
+                    Reflush();
                 }
             }
 #endif
@@ -210,8 +212,9 @@ void Mem::Write(u32 address, T value) {
 #ifdef CHECK_INVALID_REFLUSHES
             if constexpr(do_reflush) {
                 if (unlikely(NEAR_PC(0x3ff))) {
-                    log_fatal("Code was being ran from OAM and manipulated");
+                    log_warn("Code was being ran from OAM and manipulated");
                 }
+                Reflush();
             }
 #endif
             WriteArray<T>(OAM, address & 0x3ff, value);

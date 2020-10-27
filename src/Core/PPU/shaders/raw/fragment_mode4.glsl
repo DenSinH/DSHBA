@@ -6,11 +6,6 @@ uniform sampler2D PAL;
 uniform usampler2D OAM;
 uniform usampler2D IO;
 
-layout (std430, binding = ++VRAMSSBO++) readonly buffer VRAMSSBO
-{
-    uint VRAM[++VRAMSize++ >> 2];
-};
-
 uint readVRAM8(uint address);
 uint readVRAM16(uint address);
 uint readVRAM32(uint address);

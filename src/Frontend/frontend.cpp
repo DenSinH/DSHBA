@@ -199,9 +199,7 @@ int ui_run() {
         // render actual emulation
         s_framebuffer emu_framebuffer = {
                 .id = 0,
-                .draw_overlay = nullptr
         };
-
 
         if (Frontend.render) {
             emu_framebuffer = Frontend.render();
@@ -216,11 +214,6 @@ int ui_run() {
 
         auto offsx = (unsigned)((WINDOW_WIDTH - scale * emu_framebuffer.dest_width) / 2);
         auto offsy = (unsigned)((WINDOW_HEIGHT - scale * emu_framebuffer.dest_height) / 2);
-
-        float x_start = -1.0 + 2.0 * offsx / (float)WINDOW_WIDTH;
-        float y_start = -1.0 + 2.0 * offsy / (float)WINDOW_HEIGHT;
-        float dest_width = -2 * x_start;
-        float dest_height = -2 * y_start;
 
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, emu_framebuffer.id);
