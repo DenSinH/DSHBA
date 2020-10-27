@@ -19,7 +19,7 @@ const char* FragmentShaderSource =
 ;
 
 
-// FragmentShaderMode4Source (from fragment_mode4.glsl, lines 2 to 58)
+// FragmentShaderMode4Source (from fragment_mode4.glsl, lines 2 to 49)
 const char* FragmentShaderMode4Source = 
 "#version 430 core\n"  // l:1
 "\n"  // l:2
@@ -45,38 +45,29 @@ const char* FragmentShaderMode4Source =
 "        discard;\n"  // l:22
 "    }\n"  // l:23
 "\n"  // l:24
-"//    {\n"  // l:25
-"//        vec4 Color = texelFetch(\n"  // l:26
-"//        PAL, ivec2(y, x), 0\n"  // l:27
-"//        );\n"  // l:28
-"//        if (Color == vec4(0, 0, 0, 0)) {\n"  // l:29
-"//            return vec4(1.0, 0, 0, 1.0);\n"  // l:30
-"//        }\n"  // l:31
-"//    }\n"  // l:32
-"\n"  // l:33
-"    // offset is specified in DISPCNT\n"  // l:34
-"    uint Offset = 0;\n"  // l:35
-"    if ((DISPCNT & 0x0010u) != 0) {\n"  // l:36
-"        // offset\n"  // l:37
-"        Offset = 0xa000u;\n"  // l:38
-"    }\n"  // l:39
-"\n"  // l:40
-"    uint VRAMAddr = (240 * y + x);\n"  // l:41
-"    VRAMAddr += Offset;\n"  // l:42
-"    uint Alignment = VRAMAddr & 3u;\n"  // l:43
-"    uint PaletteIndex = VRAM[VRAMAddr >> 2];\n"  // l:44
-"    PaletteIndex = (PaletteIndex) >> (Alignment << 3u);\n"  // l:45
-"    PaletteIndex &= 0xffu;\n"  // l:46
+"    // offset is specified in DISPCNT\n"  // l:25
+"    uint Offset = 0;\n"  // l:26
+"    if ((DISPCNT & 0x0010u) != 0) {\n"  // l:27
+"        // offset\n"  // l:28
+"        Offset = 0xa000u;\n"  // l:29
+"    }\n"  // l:30
+"\n"  // l:31
+"    uint VRAMAddr = (240 * y + x);\n"  // l:32
+"    VRAMAddr += Offset;\n"  // l:33
+"    uint Alignment = VRAMAddr & 3u;\n"  // l:34
+"    uint PaletteIndex = VRAM[VRAMAddr >> 2];\n"  // l:35
+"    PaletteIndex = (PaletteIndex) >> (Alignment << 3u);\n"  // l:36
+"    PaletteIndex &= 0xffu;\n"  // l:37
+"\n"  // l:38
+"    // PaletteIndex should actually be multiplied by 2, but since we store bytes in uints, we divide by 4 right after\n"  // l:39
+"    vec4 Color = texelFetch(\n"  // l:40
+"        PAL, ivec2(PaletteIndex, y), 0\n"  // l:41
+"    );\n"  // l:42
+"\n"  // l:43
+"    // We already converted to BGR when buffering data\n"  // l:44
+"    return vec4(Color.rgb, 1.0);\n"  // l:45
+"}\n"  // l:46
 "\n"  // l:47
-"    // PaletteIndex should actually be multiplied by 2, but since we store bytes in uints, we divide by 4 right after\n"  // l:48
-"    vec4 Color = texelFetch(\n"  // l:49
-"        PAL, ivec2(PaletteIndex, y), 0\n"  // l:50
-"    );\n"  // l:51
-"\n"  // l:52
-"    // We already converted to BGR\n"  // l:53
-"    return vec4(Color.rgb, 1.0);\n"  // l:54
-"}\n"  // l:55
-"\n"  // l:56
 ;
 
 

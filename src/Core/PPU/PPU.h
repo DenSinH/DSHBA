@@ -33,8 +33,8 @@ private:
     s_UpdateRange VRAMRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
     VRAMMEM OAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
 
-//    u32 ScanlineBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
-//    u32 CurrentScanlineBatch = 0;
+    u32 ScanlineBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
+    u32 CurrentScanlineBatch = 0;
 
     LCDIO LCDIOBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
 
@@ -61,5 +61,5 @@ private:
     void InitFramebuffers();
     void InitPrograms();
     void InitBuffers();
-    void DrawScanLine(u32 scanline);
+    void DrawScanlines(u32 scanline, u32 amount);
 };

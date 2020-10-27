@@ -22,6 +22,7 @@
 #define DO_DEBUGGER
 #define DO_BREAKPOINTS
 #define CHECK_INVALID_REFLUSHES
+#define CHECK_SCANLINE_BATCH_ACCUM
 
 // optimizations
 #define DIRTY_MEMORY_ACCESS

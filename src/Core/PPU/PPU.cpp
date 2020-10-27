@@ -14,8 +14,6 @@
 #define INTERNAL_FRAMEBUFFER_WIDTH 480
 #define INTERNAL_FRAMEBUFFER_HEIGHT 320
 
-static float QuadData[VISIBLE_SCREEN_HEIGHT][8];
-
 GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
     Scheduler = scheduler;
     Memory = memory;
@@ -28,27 +26,19 @@ GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
 
     add_event(scheduler, &BufferScanline);
 
+    // prevent possible race condition:
+    /*
+     * (In theory, if the frontend started up really quickly, the first frame could be drawn when ScanlineBatchSizes
+     * was still all 0s, causing it to get stuck in an infinite loop)
+     * */
+    for (int i = 0; i < VISIBLE_SCREEN_HEIGHT; i++) {
+        ScanlineBatchSizes[0][i] = ScanlineBatchSizes[1][i] = 1;
+    }
+    ScanlineBatchSizes[1][0] = 160;
+
     // initially, VRAM is not updated at all
     for (int i = 0; i < VISIBLE_SCREEN_HEIGHT; i++) {
-        VRAMRanges[0][i] = { .min=sizeof(VRAMMEM), .max=0 };
-        VRAMRanges[1][i] = { .min=sizeof(VRAMMEM), .max=0 };
-    }
-
-    for (int i = 0; i < VISIBLE_SCREEN_HEIGHT; i++) {
-        // y is converted to [-1, 1] in the shader
-
-        // top left point:
-        QuadData[i][0] = -1.0;
-        QuadData[i][1] = (float)i;
-        // top right point:
-        QuadData[i][2] = 1.0;
-        QuadData[i][3] = (float)i;
-        // bottom right point
-        QuadData[i][4] = 1.0;
-        QuadData[i][5] = (float)i + 1;
-        // bottom left point
-        QuadData[i][0] = -1.0;
-        QuadData[i][1] = (float)i + 1;
+        VRAMRanges[0][i] = VRAMRanges[1][i] = { .min=sizeof(VRAMMEM), .max=0 };
     }
 }
 
@@ -72,14 +62,14 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
                 range.max - range.min
         );
 
-//        // go to next batch
-//        ppu->CurrentScanlineBatch = ppu->BufferScanlineCount;
-//        ppu->ScanlineBatchSizes[ppu->BufferFrame][ppu->CurrentScanlineBatch] = 1;
+        // go to next batch
+        ppu->CurrentScanlineBatch = ppu->BufferScanlineCount;
+        ppu->ScanlineBatchSizes[ppu->BufferFrame][ppu->CurrentScanlineBatch] = 1;
     }
-//    else {
-//        // we can use the same batch of scanlines since VRAM was not updated
-//        ppu->ScanlineBatchSizes[ppu->BufferFrame][ppu->CurrentScanlineBatch]++;
-//    }
+    else {
+        // we can use the same batch of scanlines since VRAM was not updated
+        ppu->ScanlineBatchSizes[ppu->BufferFrame][ppu->CurrentScanlineBatch]++;
+    }
     memcpy(
         ppu->OAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
         ppu->Memory->OAM,
@@ -99,9 +89,9 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
         ppu->Frame++;
         ppu->BufferFrame ^= 1;
 
-//        // reset scanline batching
-//        ppu->CurrentScanlineBatch = 0;  // reset batch
-//        ppu->ScanlineBatchSizes[ppu->BufferFrame][0] = 1;
+        // reset scanline batching
+        ppu->CurrentScanlineBatch = 0;  // reset batch
+        ppu->ScanlineBatchSizes[ppu->BufferFrame][0] = 0;
 
         event->time += (TOTAL_SCREEN_HEIGHT - VISIBLE_SCREEN_HEIGHT) * CYCLES_PER_SCANLINE;
     }
@@ -248,8 +238,7 @@ void GBAPPU::InitBuffers() {
     glUniform1i(PALLocation, static_cast<u32>(BufferBindings::PAL));
     glUniform1i(OAMLocation, static_cast<u32>(BufferBindings::OAM));
     glUniform1i(IOLocation, static_cast<u32>(BufferBindings::LCDIO));
-
-
+    
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -264,13 +253,9 @@ void GBAPPU::VideoInit() {
     InitBuffers();
 
     glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
-//    glEnable(GL_DEPTH_TEST);
-//    glDepthFunc(GL_LEQUAL);
-//    glEnable(GL_BLEND);
-//    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void GBAPPU::DrawScanLine(u32 scanline) {
+void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     s_UpdateRange range;
     u8 DrawFrame = BufferFrame ^ 1;
     glBindVertexArray(VAO);
@@ -304,7 +289,13 @@ void GBAPPU::DrawScanLine(u32 scanline) {
     glBindTexture(GL_TEXTURE_2D, IOTexture);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), QuadData[scanline], GL_STATIC_DRAW);
+    const float quad[8] = {
+            -1.0, (float)scanline,            // top left
+            1.0, (float)scanline,             // top right
+            1.0, (float)(scanline + amount),  // bottom right
+            -1.0, (float)(scanline + amount),  // bottom left
+    };
+    glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), quad, GL_STATIC_DRAW);
 
     glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
 
@@ -346,13 +337,20 @@ struct s_framebuffer GBAPPU::Render() {
     glBindTexture(GL_TEXTURE_2D, 0);
 
     size_t scanline = 0;
-//    while (scanline < (VISIBLE_SCREEN_HEIGHT - 1)) {
-//        u32 batch_size = ScanlineBatchSizes[BufferFrame ^ 1][scanline];
-//        log_debug("%d scanlines batched", batch_size);
-//    }
-    for (int i = 0; i < VISIBLE_SCREEN_HEIGHT; i++) {
-        DrawScanLine(i);
+    do {
+        u32 batch_size = ScanlineBatchSizes[BufferFrame ^ 1][scanline];
+        DrawScanlines(scanline, batch_size);
+        scanline += batch_size;
+        log_ppu("%d scanlines batched (accum %d)", batch_size, scanline);
+        // should actually be !=, but just to be sure we don't ever get stuck
+    } while (scanline < VISIBLE_SCREEN_HEIGHT);
+
+#ifdef CHECK_SCANLINE_BATCH_ACCUM
+    if (scanline != VISIBLE_SCREEN_HEIGHT) {
+        log_warn("Something went wrong in batching scanlines: expected %d, got %d", VISIBLE_SCREEN_HEIGHT, scanline);
     }
+#endif
+
     DrawMutex.unlock();
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

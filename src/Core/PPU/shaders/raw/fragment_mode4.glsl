@@ -24,15 +24,6 @@ vec4 mode4(vec2 texCoord) {
         discard;
     }
 
-//    {
-//        vec4 Color = texelFetch(
-//        PAL, ivec2(y, x), 0
-//        );
-//        if (Color == vec4(0, 0, 0, 0)) {
-//            return vec4(1.0, 0, 0, 1.0);
-//        }
-//    }
-
     // offset is specified in DISPCNT
     uint Offset = 0;
     if ((DISPCNT & ++DPFrameSelect++) != 0) {
@@ -52,7 +43,7 @@ vec4 mode4(vec2 texCoord) {
         PAL, ivec2(PaletteIndex, y), 0
     );
 
-    // We already converted to BGR
+    // We already converted to BGR when buffering data
     return vec4(Color.rgb, 1.0);
 }
 
