@@ -312,7 +312,7 @@ struct s_framebuffer GBAPPU::Render() {
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glBindTexture(GL_TEXTURE_2D, PALTexture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeof(PALMEM) >> 1, VISIBLE_SCREEN_HEIGHT,
-                    GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, PALBuffer[BufferFrame ^ 1]);
+                    GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, PALBuffer[BufferFrame ^ 1]);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));

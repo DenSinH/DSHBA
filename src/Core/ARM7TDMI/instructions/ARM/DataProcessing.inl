@@ -118,6 +118,36 @@ ALWAYS_INLINE u32 DoShift(u32 Rm, u32 shift_amount) {
     }
 }
 
+template<bool S, u8 shift_type>
+inline __attribute__((always_inline)) u32 ShiftByImmediate(u32 Rm, u32 shift_amount) {
+    if (!shift_amount) {
+        switch (static_cast<ShiftType>(shift_type)) {
+            case ShiftType::LSL:  // no shift
+                return Rm;
+            case ShiftType::LSR:  // LSR #32
+            case ShiftType::ASR:  // ASR #32
+                shift_amount = 32;
+                break;
+            case ShiftType::ROR: {// RRX #1
+                const u32 carry = (CPSR & static_cast<u32>(CPSRFlags::C)) ? 1 : 0;
+                if constexpr(S) {
+                    u32 new_carry = Rm & 1;
+                    Rm = (Rm >> 1) | (carry << 31);
+                    CPSR &= ~(static_cast<u32>(CPSRFlags::C));
+                    CPSR |= new_carry ? static_cast<u32>(CPSRFlags::C) : 0;
+                    return Rm;
+                }
+                else {
+                    return (Rm >> 1) | (carry << 31);
+                }
+            }
+            default: UNREACHABLE
+                log_fatal("Invalid shift type: %d for shifting operand", shift_type);
+        }
+    }
+    return DoShift<S, shift_type>(Rm, shift_amount);
+}
+
 template<bool S, u8 shift_type, bool shift_imm>
 inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
     // When the I bit is 0
@@ -140,31 +170,7 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
         // xSS0 pattern, bit 4 is 0
         shift_amount = (instruction & 0x0f80) >> 7;
 
-        if (!shift_amount) {
-            switch (static_cast<ShiftType>(shift_type)) {
-                case ShiftType::LSL:  // no shift
-                    return Rm;
-                case ShiftType::LSR:  // LSR #32
-                case ShiftType::ASR:  // ASR #32
-                    shift_amount = 32;
-                    break;
-                case ShiftType::ROR: {// RRX #1
-                    const u32 carry = (CPSR & static_cast<u32>(CPSRFlags::C)) ? 1 : 0;
-                    if constexpr(S) {
-                        u32 new_carry = Rm & 1;
-                        Rm = (Rm >> 1) | (carry << 31);
-                        CPSR &= ~(static_cast<u32>(CPSRFlags::C));
-                        CPSR |= new_carry ? static_cast<u32>(CPSRFlags::C) : 0;
-                        return Rm;
-                    }
-                    else {
-                        return (Rm >> 1) | (carry << 31);
-                    }
-                }
-                default: UNREACHABLE
-                    log_fatal("Invalid shift type: %d for shifting operand", shift_type);
-            }
-        }
+        return ShiftByImmediate<S, shift_type>(Rm, shift_amount);
     }
     else {
         shift_amount = Registers[(instruction & 0x0f00) >> 8];
@@ -172,9 +178,8 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
             // no special case shifting in this case
             return Rm;
         }
+        return DoShift<S, shift_type>(Rm, shift_amount);
     }
-
-    return DoShift<S, shift_type>(Rm, shift_amount);
 }
 
 template<u8 opcode, bool S, bool shift_imm>

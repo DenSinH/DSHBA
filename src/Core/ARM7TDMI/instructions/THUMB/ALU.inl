@@ -80,6 +80,7 @@ void ALUOperations(u16 instruction) {
                 result = op1;
             }
             this->Registers[rd] = result;
+            log_debug("%08x ASR %08x -> R%d [%x] @%x", op1, op2, rd, result, pc);
             break;
         case ALUOperationsOpcode::ADC:
             log_cpu_verbose("%08x ADC %08x -> R%d", op1, op2, rd);
@@ -109,6 +110,7 @@ void ALUOperations(u16 instruction) {
         case ALUOperationsOpcode::NEG:
             log_cpu_verbose("     ROR %08x -> R%d", op2, rd);
             result = subs_cv(0, op2);
+            this->Registers[rd] = result;
             break;
         case ALUOperationsOpcode::CMP:
             log_cpu_verbose("%08x CMP %08x (SUB, no store)", op1, op2);
@@ -161,7 +163,7 @@ void AddSubtract(u16 instruction) {
         operand = Registers[RnOff3];
     }
 
-    if (Op) {
+    if constexpr(Op) {
         // subtract
         Registers[rd] = subs_cv(Registers[rs], operand);
     }
@@ -243,7 +245,8 @@ void MoveShifted(u16 instruction) {
     u8 rd = (instruction & 7);
     u32 Rs = Registers[(instruction & 0x0038) >> 3];
 
-    Registers[rd] = DoShift<true, Op>(Rs, Offs5);
+    // fake an immediate shifted data processing operation
+    Registers[rd] = ShiftByImmediate<true, Op>(Rs, Offs5);
     SetNZ(Registers[rd]);
 
     // internal cycle
