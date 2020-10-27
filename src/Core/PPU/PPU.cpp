@@ -1,7 +1,9 @@
 #include "PPU.h"
 
-#include "GXHelpers.h"
+#include "../IO/MMIO.h"
+#include "../Mem/Mem.h"
 
+#include "GXHelpers.h"
 #include "shaders/shaders.h"
 
 #include "../../Frontend/interface.h"
@@ -77,7 +79,7 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
     );
     memcpy(
         ppu->LCDIOBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
-        ppu->Memory->IO,
+        ppu->Memory->IO->Registers,
         sizeof(LCDIO)
     );
 
@@ -216,7 +218,7 @@ void GBAPPU::InitBuffers() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, 0x40, 256, 0, GL_RED_INTEGER,
                  GL_UNSIGNED_SHORT, nullptr);
 
-    IOLocation = glGetUniformLocation(Program, "IO");
+    IOLocation = glGetUniformLocation(Program, "MMIO");
 
     glGenBuffers(1, &VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -248,10 +250,9 @@ void GBAPPU::VideoInit() {
 
 void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     s_UpdateRange range;
-    u8 DrawFrame = BufferFrame ^ 1;
     glBindVertexArray(VAO);
 
-    range = VRAMRanges[DrawFrame][scanline];
+    range = VRAMRanges[BufferFrame ^ 1][scanline];
     if (range.min <= range.max) {
         log_ppu("Buffering %x bytes of VRAM data (%x -> %x)", range.max + 4 - range.min, range.min, range.max);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
@@ -259,10 +260,10 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
                 GL_SHADER_STORAGE_BUFFER,
                 range.min,
                 range.max - range.min,
-                &VRAMBuffer[DrawFrame][scanline][range.min]
+                &VRAMBuffer[BufferFrame ^ 1][scanline][range.min]
         );
         // reset range data
-        VRAMRanges[DrawFrame][scanline] = { .min = sizeof(VRAMMEM), .max = 0 };
+        VRAMRanges[BufferFrame ^ 1][scanline] = { .min = sizeof(VRAMMEM), .max = 0 };
     }
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);

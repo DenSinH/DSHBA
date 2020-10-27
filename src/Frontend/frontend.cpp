@@ -224,15 +224,6 @@ int ui_run() {
                           GL_COLOR_BUFFER_BIT, GL_NEAREST
         );
 
-        // blit the overlay
-//        if (emu_framebuffer.draw_overlay) {
-//            emu_framebuffer.draw_overlay(
-//                emu_framebuffer.caller,
-//                x_start, y_start,
-//                dest_width, dest_height
-//            );
-//        }
-
         // then draw the imGui stuff over it
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

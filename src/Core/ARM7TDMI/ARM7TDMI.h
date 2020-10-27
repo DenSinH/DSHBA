@@ -69,13 +69,16 @@ public:
     void PipelineReflush();
 
 private:
+    friend class MMIO;  // IO needs control over the CPU
+    friend class GBA;   // mostly for debugging
     friend class Initializer;
-    friend class GBA;
 
     // this is to hack CLion into thinking we can access everything
     friend class ARM7TDMI_INL;
 
+#ifdef BENCHMARKING
     friend void benchmark();
+#endif
 
     enum class State : u8 {
         ARM   = 0,

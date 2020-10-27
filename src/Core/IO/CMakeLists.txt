@@ -1,0 +1,12 @@
+add_library(IO STATIC
+        MMIO.h
+        MMIO.cpp
+)
+
+# for logging / stuff I want to use in all files
+include_directories(
+        ${PROJECT_SOURCE_DIR}/include
+        ../include
+)
+
+target_include_directories(IO PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

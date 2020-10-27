@@ -12,7 +12,7 @@ enum class VMEMSizes : unsigned int {
     PALSize = 0x400u,
     OAMSize = 0x400u,
     VRAMSize = 0x18000u,
-    // todo: only display IO
+    // todo: only display MMIO
     IOSize = 0x54u
 };
 

@@ -9,10 +9,11 @@
  * the `count` bool in the templates it so we can count cycles conditionally
  * */
 
-Mem::Mem(u32* pc_ptr, std::function<void(void)> reflush) {
+Mem::Mem(MMIO* IO, u32* pc_ptr, std::function<void(void)> reflush) {
     this->pc_ptr = pc_ptr;
     this->Reflush = std::move(reflush);
 
+    this->IO = IO;
     memset(BIOS, 0, sizeof(BIOS));
     memset(eWRAM, 0, sizeof(eWRAM));
     memset(iWRAM, 0, sizeof(iWRAM));

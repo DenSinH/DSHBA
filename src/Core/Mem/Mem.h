@@ -1,11 +1,11 @@
 #pragma once
 
+#include "../IO/MMIO.h"
+
 #include "default.h"
 #include "helpers.h"
 #include "flags.h"
 #include "MemoryHelpers.h"
-
-#include <math.h>
 
 #include <string>
 #include <functional>
@@ -29,22 +29,9 @@ enum class MemoryRegion {
     SRAM   = 0x0e
 };
 
-/*
- * Every time we draw a scanline, we buffer the video memory data to a separate array, to be read in another thread
- * */
-typedef struct s_UpdateRange {
-    u32 min;
-    u32 max;
-} s_UpdateRange;
-
-typedef u8 PALMEM[0x400];
-typedef u8 OAMMEM[0x400];
-typedef u8 VRAMMEM[0x1'8000];
-typedef u8 LCDIO[0x54];
-
 class Mem {
 public:
-    Mem(u32* pc_ptr, std::function<void(void)> reflush);
+    Mem(MMIO* IO, u32* pc_ptr, std::function<void(void)> reflush);
     ~Mem();
 
     template<typename T, bool count> T Read(u32 address);
@@ -56,8 +43,8 @@ public:
     void LoadBIOS(const std::string& file_path);
 
 private:
+    friend class GBAPPU;  // allow VMEM to be buffered
     friend class Initializer;
-    friend class GBAPPU;
 
     u32* pc_ptr;
     std::function<void(void)> Reflush;
@@ -65,7 +52,7 @@ private:
     u8 BIOS  [0x4000]        = {};
     u8 eWRAM [0x4'0000]      = {};
     u8 iWRAM [0x8000]        = {};
-    u8 IO    [0x400]         = {};
+    MMIO* IO;
     PALMEM PAL               = {};
     VRAMMEM VRAM             = {};
     s_UpdateRange VRAMUpdate = { .min=sizeof(VRAMMEM), .max=0 };
@@ -90,13 +77,7 @@ T Mem::Read(u32 address) {
             if ((address & 0x00ff'ffff) > 0x3ff) {
                 return 0;
             }
-            // todo: read pre-calls
-            if (address == 0x0400'0004) {
-                // stub DISPSTAT
-                return (T)(stubber ^= 0xffff'ffff);
-            }
-
-            return (T)0xffff'ffff;// ReadArray<T>(IO, address & 0x3ff);
+            return IO->Read<T>(address & 0x3ff);
         case MemoryRegion::PAL:
             return ReadArray<T>(PAL, address & 0x3ff);
         case MemoryRegion::VRAM:
@@ -166,16 +147,12 @@ void Mem::Write(u32 address, T value) {
 #ifdef CHECK_INVALID_REFLUSHES
             if constexpr(do_reflush) {
                 if (unlikely(NEAR_PC(0x3ff))) {
-                    log_warn("Code was being ran from IO and manipulated");
+                    log_warn("Code was being ran from MMIO and manipulated");
                     Reflush();
                 }
             }
 #endif
-            if ((address & 0x00ff'ffff) > 0x3ff) {
-                return ;
-            }
-            // todo: read pre-calls
-            WriteArray<T>(IO, address & 0x3ff, value);
+            IO->Write<T>(address & 0x3ff, value);
             return;
         case MemoryRegion::PAL:
 #ifdef CHECK_INVALID_REFLUSHES

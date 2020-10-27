@@ -5,6 +5,19 @@
 
 #include <type_traits>
 
+typedef u8 PALMEM[0x400];
+typedef u8 OAMMEM[0x400];
+typedef u8 VRAMMEM[0x1'8000];
+typedef u8 LCDIO[0x54];
+
+/*
+ * Every time we draw a scanline, we buffer the video memory data to a separate array, to be read in another thread
+ * */
+typedef struct s_UpdateRange {
+    u32 min;
+    u32 max;
+} s_UpdateRange;
+
 template<typename T>
 static ALWAYS_INLINE T ReadArray(const u8 array[], u32 address);
 

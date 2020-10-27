@@ -62,7 +62,7 @@ int main() {
 
     std::thread ui_thread(ui_run);
 
-    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/armwrestler.gba");
+    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/FuzzARM.gba");
     gba->Run();
 
     ui_thread.join();

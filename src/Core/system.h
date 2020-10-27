@@ -4,6 +4,7 @@
 #include "Mem/Mem.h"
 #include "ARM7TDMI/ARM7TDMI.h"
 #include "PPU/PPU.h"
+#include "IO/MMIO.h"
 
 #include "default.h"
 #include "flags.h"
@@ -31,7 +32,8 @@ public:
     s_scheduler Scheduler = {};
     bool Shutdown = false;
 
-    Mem Memory = Mem(&CPU.pc, [&cpu = CPU]() -> void {
+    MMIO IO = MMIO(&PPU, &CPU);
+    Mem Memory = Mem(&IO, &CPU.pc, [&cpu = CPU]() -> void {
         cpu.PipelineReflush();
     });
     ARM7TDMI CPU = ARM7TDMI(&Scheduler, &Memory);

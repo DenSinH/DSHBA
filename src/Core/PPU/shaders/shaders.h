@@ -50,7 +50,7 @@ const char* FragmentShaderMode4Source =
 "\n"  // l:2
 "uniform sampler2D PAL;\n"  // l:3
 "uniform usampler2D OAM;\n"  // l:4
-"uniform usampler2D IO;\n"  // l:5
+"uniform usampler2D MMIO;\n"  // l:5
 "\n"  // l:6
 "uint readVRAM8(uint address);\n"  // l:7
 "uint readVRAM16(uint address);\n"  // l:8
@@ -61,7 +61,7 @@ const char* FragmentShaderMode4Source =
 "    uint y = uint(round(texCoord.y * 160)) - 1;\n"  // l:13
 "\n"  // l:14
 "    uint DISPCNT = texelFetch(\n"  // l:15
-"        IO, ivec2(0, y), 0\n"  // l:16
+"        MMIO, ivec2(0, y), 0\n"  // l:16
 "    ).r;\n"  // l:17
 "\n"  // l:18
 "    if ((DISPCNT & 0x0400u) == 0) {\n"  // l:19

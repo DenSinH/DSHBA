@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Mem/Mem.h"
+#include "../Mem/MemoryHelpers.h"
 #include "../Scheduler/scheduler.h"
 
 #include "shaders/GX_constants.h"
@@ -9,18 +9,21 @@
 
 #include <mutex>
 
+class Mem;
+
 class GBAPPU {
 
 public:
     u32 Frame = 0;
 
-    explicit GBAPPU(s_scheduler* scheduler, Mem *memory);
+    explicit GBAPPU(s_scheduler* scheduler, Mem* memory);
     ~GBAPPU() { };
 
     void VideoInit();
     struct s_framebuffer Render();
 
 private:
+    friend class MMIO;  // IO needs full control over the PPU
     friend class Initializer;
 
     Mem *Memory;
