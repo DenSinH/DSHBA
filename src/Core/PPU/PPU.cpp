@@ -14,7 +14,7 @@
 #define INTERNAL_FRAMEBUFFER_WIDTH 480
 #define INTERNAL_FRAMEBUFFER_HEIGHT 320
 
-static float QuadData[VISIBLE_SCREEN_HEIGHT][12];
+static float QuadData[VISIBLE_SCREEN_HEIGHT][8];
 
 GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
     Scheduler = scheduler;
@@ -28,38 +28,27 @@ GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
 
     add_event(scheduler, &BufferScanline);
 
+    // initially, VRAM is not updated at all
     for (int i = 0; i < VISIBLE_SCREEN_HEIGHT; i++) {
+        VRAMRanges[0][i] = { .min=sizeof(VRAMMEM), .max=0 };
+        VRAMRanges[1][i] = { .min=sizeof(VRAMMEM), .max=0 };
+    }
+
+    for (int i = 0; i < VISIBLE_SCREEN_HEIGHT; i++) {
+        // y is converted to [-1, 1] in the shader
+
         // top left point:
         QuadData[i][0] = -1.0;
-        QuadData[i][1] = static_cast<float>(-1.0 + 2.0 * (float)i / (float)VISIBLE_SCREEN_HEIGHT);
+        QuadData[i][1] = (float)i;
         // top right point:
         QuadData[i][2] = 1.0;
-        QuadData[i][3] = static_cast<float>(-1.0 + 2.0 * (float)i / (float)VISIBLE_SCREEN_HEIGHT);
+        QuadData[i][3] = (float)i;
         // bottom right point
         QuadData[i][4] = 1.0;
-        QuadData[i][5] = static_cast<float>(-1.0 + 2.0 * (float)(i + 1) / (float)VISIBLE_SCREEN_HEIGHT);
-        // top left point:
-        QuadData[i][6] = QuadData[i][0];
-        QuadData[i][7] = QuadData[i][1];
-        // bottom right point
-        QuadData[i][8] = QuadData[i][4];
-        QuadData[i][9] = QuadData[i][5];
+        QuadData[i][5] = (float)i + 1;
         // bottom left point
         QuadData[i][0] = -1.0;
-        QuadData[i][1] = static_cast<float>(-1.0 + 2.0 * (float)(i + 1) / (float)VISIBLE_SCREEN_HEIGHT);
-    }
-}
-
-static ALWAYS_INLINE void ConditionalBuffer(s_UpdateRange* range, u8* dest, u8* src) {
-    range->min &= ~3;
-    range->max = (range->max + 3) & ~3;
-
-    if (range->min <= range->max) {
-        memcpy(
-            dest + range->min,
-            src + range->min,
-            range->max + 4 - range->min
-        );
+        QuadData[i][1] = (float)i + 1;
     }
 }
 
@@ -68,7 +57,6 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
 
     // copy over range data
     ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount] = ppu->Memory->VRAMUpdate;
-    ppu->OAMRanges [ppu->BufferFrame][ppu->BufferScanlineCount] = ppu->Memory->OAMUpdate;
 
     // copy over actual new data
     memcpy(
@@ -76,11 +64,22 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
         ppu->Memory->PAL,
         sizeof(PALMEM)
     );
-    ConditionalBuffer(
-            &ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount],
-            ppu->VRAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
-            ppu->Memory->VRAM
-    );
+    s_UpdateRange range = ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount];
+    if (range.min <= range.max) {
+        memcpy(
+                ppu->VRAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount] + range.min,
+                ppu->Memory->VRAM + range.min,
+                range.max - range.min
+        );
+
+//        // go to next batch
+//        ppu->CurrentScanlineBatch = ppu->BufferScanlineCount;
+//        ppu->ScanlineBatchSizes[ppu->BufferFrame][ppu->CurrentScanlineBatch] = 1;
+    }
+//    else {
+//        // we can use the same batch of scanlines since VRAM was not updated
+//        ppu->ScanlineBatchSizes[ppu->BufferFrame][ppu->CurrentScanlineBatch]++;
+//    }
     memcpy(
         ppu->OAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
         ppu->Memory->OAM,
@@ -99,6 +98,11 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
         ppu->BufferScanlineCount = 0;
         ppu->Frame++;
         ppu->BufferFrame ^= 1;
+
+//        // reset scanline batching
+//        ppu->CurrentScanlineBatch = 0;  // reset batch
+//        ppu->ScanlineBatchSizes[ppu->BufferFrame][0] = 1;
+
         event->time += (TOTAL_SCREEN_HEIGHT - VISIBLE_SCREEN_HEIGHT) * CYCLES_PER_SCANLINE;
     }
     else {
@@ -106,9 +110,7 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
     }
 
     ppu->Memory->VRAMUpdate = ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount];
-    ppu->Memory->OAMUpdate  = ppu->OAMRanges [ppu->BufferFrame][ppu->BufferScanlineCount];
     ppu->DrawMutex.unlock();
-    // log_debug("from last time: %x -> %x (%d, %d)", ppu->Memory->VRAMUpdate.min, ppu->Memory->VRAMUpdate.max, ppu->BufferFrame, ppu->BufferScanlineCount);
 
     add_event(scheduler, event);
 }
@@ -280,7 +282,7 @@ void GBAPPU::DrawScanLine(u32 scanline) {
         glBufferSubData(
                 GL_SHADER_STORAGE_BUFFER,
                 range.min,
-                range.max + 4 - range.min,
+                range.max - range.min,
                 &VRAMBuffer[DrawFrame][scanline][range.min]
         );
         // reset range data
@@ -302,9 +304,9 @@ void GBAPPU::DrawScanLine(u32 scanline) {
     glBindTexture(GL_TEXTURE_2D, IOTexture);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(float), QuadData[scanline], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), QuadData[scanline], GL_STATIC_DRAW);
 
-    glDrawArrays(GL_TRIANGLES, 0, 12);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
@@ -343,6 +345,11 @@ struct s_framebuffer GBAPPU::Render() {
                     GL_RED_INTEGER, GL_UNSIGNED_SHORT, LCDIOBuffer[BufferFrame ^ 1]);
     glBindTexture(GL_TEXTURE_2D, 0);
 
+    size_t scanline = 0;
+//    while (scanline < (VISIBLE_SCREEN_HEIGHT - 1)) {
+//        u32 batch_size = ScanlineBatchSizes[BufferFrame ^ 1][scanline];
+//        log_debug("%d scanlines batched", batch_size);
+//    }
     for (int i = 0; i < VISIBLE_SCREEN_HEIGHT; i++) {
         DrawScanLine(i);
     }

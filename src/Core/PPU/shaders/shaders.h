@@ -5,8 +5,8 @@
 const char* FragmentShaderSource = 
 "#version 430 core\n"  // l:1
 "\n"  // l:2
-"in vec2 texCoord;\n"  // l:3
-"\n"  // l:4
+"\n"  // l:3
+"in vec2 texCoord;\n"  // l:4
 "\n"  // l:5
 "out vec4 FragColor;\n"  // l:6
 "\n"  // l:7
@@ -89,10 +89,10 @@ const char* VertexShaderSource =
 "out vec2 texCoord;\n"  // l:5
 "\n"  // l:6
 "void main() {\n"  // l:7
-"    gl_Position = vec4(position, 0.0, 1.0);\n"  // l:8
+"    gl_Position = vec4(position.x, 1.0 - 2 * position.y / 160, 0, 1);\n"  // l:8
 "\n"  // l:9
 "    // flip vertically\n"  // l:10
-"    texCoord = vec2((1.0 + position.x) / 2.0, (1.0 - position.y) / 2.0);\n"  // l:11
+"    texCoord = vec2((1.0 + position.x) / 2.0, position.y / 160);\n"  // l:11
 "}\n"  // l:12
 "\n"  // l:13
 ;

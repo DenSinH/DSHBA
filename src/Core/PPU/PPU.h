@@ -29,11 +29,12 @@ private:
     u32 BufferFrame = 0;
 
     PALMEM PALBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
-    s_UpdateRange PALRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
     VRAMMEM VRAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
     s_UpdateRange VRAMRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
     VRAMMEM OAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
-    s_UpdateRange OAMRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
+
+//    u32 ScanlineBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
+//    u32 CurrentScanlineBatch = 0;
 
     LCDIO LCDIOBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
 

@@ -49,6 +49,8 @@ public:
 
     template<typename T, bool count> T Read(u32 address);
     template<typename T, bool count, bool do_reflush> void Write(u32 address, T value);
+    template<typename T>
+    ALWAYS_INLINE void WriteVRAM(u32 address, u32 mask, T value);
 
     void LoadROM(const std::string& file_path);
     void LoadBIOS(const std::string& file_path);
@@ -65,11 +67,9 @@ private:
     u8 iWRAM [0x8000]        = {};
     u8 IO    [0x400]         = {};
     PALMEM PAL               = {};
-    s_UpdateRange PALUpdate  = {};
     VRAMMEM VRAM             = {};
-    s_UpdateRange VRAMUpdate = {};
+    s_UpdateRange VRAMUpdate = { .min=sizeof(VRAMMEM), .max=0 };
     OAMMEM OAM               = {};
-    s_UpdateRange OAMUpdate  = {};
     u8 ROM   [0x0200'0000]   = {};
 };
 
@@ -96,7 +96,7 @@ T Mem::Read(u32 address) {
                 return (T)(stubber ^= 0xffff'ffff);
             }
 
-            return 0xffff'ffff;// ReadArray<T>(IO, address & 0x3ff);
+            return (T)0xffff'ffff;// ReadArray<T>(IO, address & 0x3ff);
         case MemoryRegion::PAL:
             return ReadArray<T>(PAL, address & 0x3ff);
         case MemoryRegion::VRAM:
@@ -124,13 +124,13 @@ T Mem::Read(u32 address) {
 }
 
 template<typename T>
-static ALWAYS_INLINE void UpdateRange(s_UpdateRange* range, u8* array, u32 address, u32 mask, T value) {
-    if (ReadArray<T>(array, address & mask) != value) {
-        if ((address & mask) > range->max) {
-            range->max = (address & mask);
+ALWAYS_INLINE void Mem::WriteVRAM(u32 address, u32 mask, T value) {
+    if (ReadArray<T>(VRAM, address & mask) != value) {
+        if ((address & mask) > VRAMUpdate.max) {
+            VRAMUpdate.max = (address & mask);
         }
-        if ((address & mask) < range->min) {
-            range->min = (address & mask);
+        if (((address + sizeof(T)) & mask) < VRAMUpdate.min) {
+            VRAMUpdate.min = ((address + sizeof(T)) & mask);
         }
     }
 }
@@ -184,7 +184,6 @@ void Mem::Write(u32 address, T value) {
                 }
             }
 #endif
-            UpdateRange<T>(&PALUpdate, PAL, address, 0x3ff, value);
             WriteArray<T>(PAL, address & 0x3ff, value);
             return;
         case MemoryRegion::VRAM:
@@ -198,12 +197,12 @@ void Mem::Write(u32 address, T value) {
             }
 #endif
             if ((address & 0x1'ffff) < 0x1'0000) {
-                UpdateRange<T>(&VRAMUpdate, VRAM, address, 0xffff, value);
+                WriteVRAM<T>(address, 0xffff, value);
                 WriteArray<T>(VRAM, address & 0xffff, value);
             }
             else {
                 // address is already corrected for
-                UpdateRange<T>(&VRAMUpdate, VRAM,  0x1'0000 | (address & 0x7fff), 0xffffffff, value);
+                WriteVRAM<T>(0x1'0000 | (address & 0x7fff), 0xffffffff, value);
                 WriteArray<T>(VRAM, 0x1'0000 | (address & 0x7fff), value);
             }
             return;
@@ -215,7 +214,6 @@ void Mem::Write(u32 address, T value) {
                 }
             }
 #endif
-            UpdateRange<T>(&OAMUpdate, OAM, address, 0x3ff, value);
             WriteArray<T>(OAM, address & 0x3ff, value);
             return;
         case MemoryRegion::ROM_L1:
