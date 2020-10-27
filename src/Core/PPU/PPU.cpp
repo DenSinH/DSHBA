@@ -67,30 +67,29 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
     auto ppu = (GBAPPU*)caller;
 
     // copy over range data
-    ppu->PALRanges [ppu->BufferFrame][ppu->BufferScanlineCount] = ppu->Memory->PALUpdate;
     ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount] = ppu->Memory->VRAMUpdate;
     ppu->OAMRanges [ppu->BufferFrame][ppu->BufferScanlineCount] = ppu->Memory->OAMUpdate;
 
     // copy over actual new data
-    ConditionalBuffer(
-            &ppu->PALRanges[ppu->BufferFrame][ppu->BufferScanlineCount],
-            ppu->PALBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
-            ppu->Memory->PAL
+    memcpy(
+        ppu->PALBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
+        ppu->Memory->PAL,
+        sizeof(PALMEM)
     );
     ConditionalBuffer(
             &ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount],
             ppu->VRAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
             ppu->Memory->VRAM
     );
-    ConditionalBuffer(
-            &ppu->OAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount],
-            ppu->OAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
-            ppu->Memory->OAM
+    memcpy(
+        ppu->OAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
+        ppu->Memory->OAM,
+        sizeof(OAMMEM)
     );
     memcpy(
-            &ppu->LCDIOBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
-            ppu->Memory->IO,
-            sizeof(LCDIO)
+        ppu->LCDIOBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
+        ppu->Memory->IO,
+        sizeof(LCDIO)
     );
 
     ppu->BufferScanlineCount++;
@@ -106,7 +105,6 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
         event->time += CYCLES_PER_SCANLINE;
     }
 
-    ppu->Memory->PALUpdate  = ppu->PALRanges [ppu->BufferFrame][ppu->BufferScanlineCount];
     ppu->Memory->VRAMUpdate = ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount];
     ppu->Memory->OAMUpdate  = ppu->OAMRanges [ppu->BufferFrame][ppu->BufferScanlineCount];
     ppu->DrawMutex.unlock();
@@ -124,7 +122,8 @@ void GBAPPU::InitFramebuffers() {
     // create a texture to render to and fill it with 0 (also set filtering to low)
     glGenTextures(1, &rendered_texture);
     glBindTexture(GL_TEXTURE_2D, rendered_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT,
+                 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
@@ -178,21 +177,41 @@ void GBAPPU::InitPrograms() {
 }
 
 void GBAPPU::InitBuffers() {
-    glGenBuffers(1, &PALSSBO);
-    glGenBuffers(1, &OAMSSBO);
-    glGenBuffers(1, &VRAMSSBO);
 
     // Setup VAO to bind the buffers to
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
 
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
+    glGenTextures(1, &PALTexture);
+    glBindTexture(GL_TEXTURE_2D, PALTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    // dimensions need to be a power of 2. Since VISIBLE_SCREEN_HEIGHT is not, we have to pick the next highest one
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sizeof(PALMEM) >> 1, 256, 0, GL_BGRA,
+                 GL_UNSIGNED_SHORT_1_5_5_5_REV, nullptr);
+
+    PALLocation = glGetUniformLocation(Program, "PAL");
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
+    glGenTextures(1, &OAMTexture);
+    glBindTexture(GL_TEXTURE_2D, OAMTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    log_debug("OpenGL error: %x", glGetError());
+    // dimensions need to be a power of 2. Since VISIBLE_SCREEN_HEIGHT is not, we have to pick the next highest one
+    // OAM holds 4 shorts per "index", so we store those in vec4s
+    // therefore, the dimension should be sizeof(OAMMEM) / (2 * 4 bytes per OAM entry)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16UI, sizeof(OAMMEM) >> 3, 256, 0, GL_RGBA_INTEGER,
+                 GL_UNSIGNED_SHORT, nullptr);
+    log_debug("OpenGL error: %x", glGetError());
+
+    OAMLocation = glGetUniformLocation(Program, "OAM");
+
     // Initially buffer the buffers with some data so we don't have to reallocate memory every time
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, PALSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, static_cast<unsigned int>(BufferBindings::PALUBO), PALSSBO);
-    glBufferData(
-            GL_SHADER_STORAGE_BUFFER, sizeof(PALMEM),
-            PALBuffer[0][0], GL_STREAM_DRAW
-    );
+    glGenBuffers(1, &VRAMSSBO);
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, static_cast<unsigned int>(BufferBindings::VRAMSSBO), VRAMSSBO);
@@ -201,14 +220,20 @@ void GBAPPU::InitBuffers() {
             VRAMBuffer[0][0], GL_STREAM_DRAW
     );
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, OAMSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, static_cast<unsigned int>(BufferBindings::OAMUBO), OAMSSBO);
-    glBufferData(
-            GL_SHADER_STORAGE_BUFFER, sizeof(OAMMEM),
-            OAMBuffer[0][0], GL_STREAM_DRAW
-    );
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
+    glGenTextures(1, &IOTexture);
+    glBindTexture(GL_TEXTURE_2D, IOTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    IOLocation = glGetUniformLocation(Program, "IOdata");
+    log_debug("OpenGL error: %x", glGetError());
+    // dimensions need to be a power of 2. Since VISIBLE_SCREEN_HEIGHT is not, we have to pick the next highest one
+    // each relevant register is 16bit, so we store them in ushorts
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, sizeof(LCDIO) >> 1, 256, 0, GL_RED_INTEGER,
+                 GL_UNSIGNED_SHORT, nullptr);
+    log_debug("OpenGL error: %x", glGetError());
+
+    IOLocation = glGetUniformLocation(Program, "IO");
 
     glGenBuffers(1, &VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -217,10 +242,18 @@ void GBAPPU::InitBuffers() {
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
+    glUseProgram(Program);
+    glUniform1i(PALLocation, static_cast<u32>(BufferBindings::PAL));
+    glUniform1i(OAMLocation, static_cast<u32>(BufferBindings::OAM));
+    glUniform1i(IOLocation, static_cast<u32>(BufferBindings::LCDIO));
+
+
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+
+    log_debug("OpenGL error: %x", glGetError());
 }
 
 void GBAPPU::VideoInit() {
@@ -240,20 +273,6 @@ void GBAPPU::DrawScanLine(u32 scanline) {
     u8 DrawFrame = BufferFrame ^ 1;
     glBindVertexArray(VAO);
 
-    range = PALRanges[DrawFrame][scanline];
-    if (range.min <= range.max) {
-        log_ppu("Buffering %x bytes of PAL data (%x -> %x)", range.max + 4 - range.min, range.min, range.max);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, PALSSBO);
-        glBufferSubData(
-                GL_SHADER_STORAGE_BUFFER,
-                range.min,
-                range.max + 4 - range.min,
-                &PALBuffer[DrawFrame][scanline][range.min]
-        );
-        // reset range data
-        PALRanges[DrawFrame][scanline] = { .min = sizeof(PALMEM), .max = 0 };
-    }
-
     range = VRAMRanges[DrawFrame][scanline];
     if (range.min <= range.max) {
         log_ppu("Buffering %x bytes of VRAM data (%x -> %x)", range.max + 4 - range.min, range.min, range.max);
@@ -268,33 +287,26 @@ void GBAPPU::DrawScanLine(u32 scanline) {
         VRAMRanges[DrawFrame][scanline] = { .min = sizeof(VRAMMEM), .max = 0 };
     }
 
-    range = OAMRanges[DrawFrame][scanline];
-    if (range.min <= range.max) {
-        log_ppu("Buffering %x bytes of OAM data (%x -> %x)", range.max + 4 - range.min, range.min, range.max);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, OAMSSBO);
-        glBufferSubData(
-                GL_SHADER_STORAGE_BUFFER,
-                range.min,
-                range.max + 4 - range.min,
-                &OAMBuffer[DrawFrame][scanline][range.min]
-        );
-        // reset range data
-        OAMRanges[DrawFrame][scanline] = { .min = sizeof(OAMMEM), .max = 0 };
-    }
-
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     glUseProgram(Program);
     glBindVertexArray(VAO);
 
-    // buffer IO (every line, it's only 0x54 bytes)
-    glUniform1uiv(IOLocation, sizeof(LCDIO) >> 2, (GLuint*)LCDIOBuffer[DrawFrame][scanline]);
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
+    glBindTexture(GL_TEXTURE_2D, PALTexture);
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
+    glBindTexture(GL_TEXTURE_2D, OAMTexture);
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
+    glBindTexture(GL_TEXTURE_2D, IOTexture);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(float), QuadData[scanline], GL_STATIC_DRAW);
 
     glDrawArrays(GL_TRIANGLES, 0, 12);
 
+    glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
     glUseProgram(0);
 }
@@ -312,6 +324,25 @@ struct s_framebuffer GBAPPU::Render() {
 
     // draw scanlines that are available
     DrawMutex.lock();
+    // bind PAL texture
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
+    glBindTexture(GL_TEXTURE_2D, PALTexture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeof(PALMEM) >> 1, VISIBLE_SCREEN_HEIGHT,
+                    GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, PALBuffer[BufferFrame ^ 1]);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
+    glBindTexture(GL_TEXTURE_2D, OAMTexture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeof(OAMMEM) >> 3, VISIBLE_SCREEN_HEIGHT,
+                    GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, OAMBuffer[BufferFrame ^ 1]);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
+    glBindTexture(GL_TEXTURE_2D, IOTexture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeof(LCDIO) >> 1, VISIBLE_SCREEN_HEIGHT,
+                    GL_RED_INTEGER, GL_UNSIGNED_SHORT, LCDIOBuffer[BufferFrame ^ 1]);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     for (int i = 0; i < VISIBLE_SCREEN_HEIGHT; i++) {
         DrawScanLine(i);
     }

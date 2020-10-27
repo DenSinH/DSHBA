@@ -2,9 +2,9 @@
 #define GC__GX_CONSTANTS_H
 
 enum class BufferBindings : unsigned int {
-    PALUBO   = 1,
-    OAMUBO   = 2,
-    IOUBO    = 3,
+    PAL      = 1,
+    OAM      = 2,
+    LCDIO    = 3,
     VRAMSSBO = 4,
 };
 

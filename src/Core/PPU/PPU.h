@@ -46,8 +46,9 @@ private:
     unsigned int Program;
     unsigned int Framebuffer;
 
-    unsigned int PALSSBO, OAMSSBO;
-    unsigned int IOLocation;
+    unsigned int IOTexture, IOLocation;
+    unsigned int OAMTexture, OAMLocation;
+    unsigned int PALTexture, PALLocation;
 
     // unsigned int PALBinding, OAMBinding, IOBinding;
     unsigned int VRAMSSBO;
