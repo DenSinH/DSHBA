@@ -11,6 +11,10 @@ layout (std430, binding = ++VRAMSSBO++) readonly buffer VRAMSSBO
     uint VRAM[++VRAMSize++ >> 2];
 };
 
+uint readVRAM8(uint address);
+uint readVRAM16(uint address);
+uint readVRAM32(uint address);
+
 vec4 mode4(vec2 texCoord) {
     uint x = uint(round(texCoord.x * ++VISIBLE_SCREEN_WIDTH++)) - 1;
     uint y = uint(round(texCoord.y * ++VISIBLE_SCREEN_HEIGHT++)) - 1;
@@ -33,12 +37,9 @@ vec4 mode4(vec2 texCoord) {
 
     uint VRAMAddr = (++VISIBLE_SCREEN_WIDTH++ * y + x);
     VRAMAddr += Offset;
-    uint Alignment = VRAMAddr & 3u;
-    uint PaletteIndex = VRAM[VRAMAddr >> 2];
-    PaletteIndex = (PaletteIndex) >> (Alignment << 3u);
-    PaletteIndex &= 0xffu;
+    uint PaletteIndex = readVRAM8(VRAMAddr);
 
-    // PaletteIndex should actually be multiplied by 2, but since we store bytes in uints, we divide by 4 right after
+    // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:
     vec4 Color = texelFetch(
         PAL, ivec2(PaletteIndex, y), 0
     );
