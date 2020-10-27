@@ -32,7 +32,7 @@ public:
     s_scheduler Scheduler = {};
     bool Shutdown = false;
 
-    MMIO IO = MMIO(&PPU, &CPU);
+    MMIO IO = MMIO(&PPU, &CPU, &Scheduler);
     Mem Memory = Mem(&IO, &CPU.pc, [&cpu = CPU]() -> void {
         cpu.PipelineReflush();
     });

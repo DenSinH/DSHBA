@@ -122,27 +122,29 @@ static void set_input(std::map<T, e_controller_input>& map, e_scan_types type, c
     // printf("Set mapping for key %s to %d\n", button.c_str(), key);
 
     if (type == BUTTON) {
-        if (button == "A") map[key] = cinp_A;
-        else if (button == "B") map[key] = cinp_B;
-        else if (button == "X") map[key] = cinp_X;
-        else if (button == "Y") map[key] = cinp_Y;
-        else if (button == "UP") map[key] = cinp_up;
-        else if (button == "DOWN") map[key] = cinp_down;
-        else if (button == "LEFT") map[key] = cinp_left;
-        else if (button == "RIGHT") map[key] = cinp_right;
-        else if (button == "L") map[key] = cinp_L;
-        else if (button == "R") map[key] = cinp_R;
+        if (button == "A")           map[key] = cinp_A;
+        else if (button == "B")      map[key] = cinp_B;
+        else if (button == "X")      map[key] = cinp_X;
+        else if (button == "Y")      map[key] = cinp_Y;
+        else if (button == "UP")     map[key] = cinp_up;
+        else if (button == "DOWN")   map[key] = cinp_down;
+        else if (button == "LEFT")   map[key] = cinp_left;
+        else if (button == "RIGHT")  map[key] = cinp_right;
+        else if (button == "L")      map[key] = cinp_L;
+        else if (button == "R")      map[key] = cinp_R;
+        else if (button == "START")  map[key] = cinp_start;
+        else if (button == "SELECT") map[key] = cinp_select;
         else printf("Invalid button name for button: %s\n", button.c_str());
     }
     else {
         // axes
-        if (button == "LEFT_X") map[key] = cinp_left_x;
-        else if (button == "LEFT_X_NEG") map[key] = cinp_left_x_neg;
-        else if (button == "LEFT_Y") map[key] = cinp_left_y;
-        else if (button == "LEFT_Y_NEG") map[key] = cinp_left_y_neg;
-        else if (button == "RIGHT_X") map[key] = cinp_right_x;
+        if (button == "LEFT_X")           map[key] = cinp_left_x;
+        else if (button == "LEFT_X_NEG")  map[key] = cinp_left_x_neg;
+        else if (button == "LEFT_Y")      map[key] = cinp_left_y;
+        else if (button == "LEFT_Y_NEG")  map[key] = cinp_left_y_neg;
+        else if (button == "RIGHT_X")     map[key] = cinp_right_x;
         else if (button == "RIGHT_X_NEG") map[key] = cinp_right_x_neg;
-        else if (button == "RIGHT_Y") map[key] = cinp_right_y;
+        else if (button == "RIGHT_Y")     map[key] = cinp_right_y;
         else if (button == "RIGHT_Y_NEG") map[key] = cinp_right_y_neg;
         else printf("Invalid axis name for button: %s\n", button.c_str());
     }

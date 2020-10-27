@@ -1,6 +1,8 @@
 add_library(IO STATIC
         MMIO.h
         MMIO.cpp
+        Registers.h
+        IOFlags.h
 )
 
 # for logging / stuff I want to use in all files

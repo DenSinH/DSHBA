@@ -104,7 +104,7 @@ u8* Initializer::ValidAddressMask(u32 address) {
         case MemoryRegion::iWRAM:
             return &gba->Memory.iWRAM[address & 0x7fff];
         case MemoryRegion::IO:
-            return nullptr;
+            return &gba->IO.Registers[address & 0x3ff];
         case MemoryRegion::PAL:
             return &gba->Memory.PAL[address & 0x3ff];
         case MemoryRegion::VRAM:
@@ -125,6 +125,23 @@ u8* Initializer::ValidAddressMask(u32 address) {
         default:
             return nullptr;
     }
+}
+
+static void ParseInput(struct s_controller* controller) {
+    u16 KEYINPUT = 0;
+    if (controller->A)      KEYINPUT |= static_cast<u16>(KeypadButton::A);
+    if (controller->B)      KEYINPUT |= static_cast<u16>(KeypadButton::B);
+    if (controller->start)  KEYINPUT |= static_cast<u16>(KeypadButton::Start);
+    if (controller->select) KEYINPUT |= static_cast<u16>(KeypadButton::Select);
+    if (controller->left)   KEYINPUT |= static_cast<u16>(KeypadButton::Left);
+    if (controller->right)  KEYINPUT |= static_cast<u16>(KeypadButton::Right);
+    if (controller->down)   KEYINPUT |= static_cast<u16>(KeypadButton::Down);
+    if (controller->up)     KEYINPUT |= static_cast<u16>(KeypadButton::Up);
+    if (controller->L)      KEYINPUT |= static_cast<u16>(KeypadButton::L);
+    if (controller->R)      KEYINPUT |= static_cast<u16>(KeypadButton::R);
+
+    // bits are flipped
+    gba->IO.KEYINPUT = ~KEYINPUT;
 }
 
 bool Initializer::ARMMode() {
@@ -152,7 +169,7 @@ GBA* Initializer::init() {
             0x1'0000'0000ULL,
             ValidAddressMask,
             ReadByte,
-            nullptr,
+            ParseInput,
             ARMMode
     );
 
@@ -184,6 +201,11 @@ GBA* Initializer::init() {
     add_register_data("", nullptr, 8, cpu_tab);
 
     add_register_data("Time", &gba->CPU.timer, 8, cpu_tab);
+
+    int IO_tab = add_register_tab("MMIO");
+
+    add_register_data("DISPSTAT", &gba->IO.DISPSTAT, 2, IO_tab);
+    add_register_data("KEYINPUT", &gba->IO.KEYINPUT, 2, IO_tab);
 
     // add_command("RESET", "Resets the system. Add 'pause/freeze/break' to freeze on reload.", reset_system);
     add_command("PAUSE", "Pauses the system.", pause_system);
