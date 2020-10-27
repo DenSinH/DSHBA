@@ -36,8 +36,6 @@ public:
 
     template<typename T, bool count> T Read(u32 address);
     template<typename T, bool count, bool do_reflush> void Write(u32 address, T value);
-    template<typename T>
-    ALWAYS_INLINE void WriteVRAM(u32 address, u32 mask, T value);
 
     void LoadROM(const std::string& file_path);
     void LoadBIOS(const std::string& file_path);
@@ -45,6 +43,8 @@ public:
 private:
     friend class GBAPPU;  // allow VMEM to be buffered
     friend class Initializer;
+
+    template<typename T> ALWAYS_INLINE void WriteVRAM(u32 address, T value);
 
     u32* pc_ptr;
     std::function<void(void)> Reflush;
@@ -105,13 +105,14 @@ T Mem::Read(u32 address) {
 }
 
 template<typename T>
-ALWAYS_INLINE void Mem::WriteVRAM(u32 address, u32 mask, T value) {
-    if (ReadArray<T>(VRAM, address & mask) != value) {
-        if ((address & mask) > VRAMUpdate.max) {
-            VRAMUpdate.max = (address & mask);
+ALWAYS_INLINE void Mem::WriteVRAM(u32 address, T value) {
+    // on writes, I guess it's actually pretty likely the old value gets overwritten
+    if (likely(ReadArray<T>(VRAM, address) != value)) {
+        if ((address + sizeof(T)) > VRAMUpdate.max) {
+            VRAMUpdate.max = address + sizeof(T);
         }
-        if (((address + sizeof(T)) & mask) < VRAMUpdate.min) {
-            VRAMUpdate.min = ((address + sizeof(T)) & mask);
+        if (address < VRAMUpdate.min) {
+            VRAMUpdate.min = address;
         }
     }
 }
@@ -176,12 +177,12 @@ void Mem::Write(u32 address, T value) {
             }
 #endif
             if ((address & 0x1'ffff) < 0x1'0000) {
-                WriteVRAM<T>(address, 0xffff, value);
+                WriteVRAM<T>(address & 0xffff, value);
                 WriteArray<T>(VRAM, address & 0xffff, value);
             }
             else {
                 // address is already corrected for
-                WriteVRAM<T>(0x1'0000 | (address & 0x7fff), 0xffffffff, value);
+                WriteVRAM<T>(0x1'0000 | (address & 0x7fff), value);
                 WriteArray<T>(VRAM, 0x1'0000 | (address & 0x7fff), value);
             }
             return;

@@ -3,11 +3,13 @@
 #include "Pipeline.h"
 
 #include "../Mem/Mem.h"
+
 #include "../Scheduler/scheduler.h"
 
 #include "default.h"
 #include "helpers.h"
 #include "flags.h"
+#include "log.h"
 
 class ARM7TDMI;
 
@@ -95,10 +97,11 @@ private:
         System      = 0b11111,
     };
 
-    u32 CPSR         = {};
-    u32 SPSR         = {};
-    u32 SPSRBank[16] = {};
+    u32 CPSR            = {};
+    u32 SPSR            = {};
+    u32 SPSRBank[16]    = {};
     u32 SPLRBank[16][2] = {};
+    u32 FIQBank[8]      = {};
     u32 Registers[16]   = {};
 
     // todo: only buffer pipeline on STR(|H|B) instructions near PC
@@ -154,10 +157,21 @@ private:
             }
             /*
              * FIQ mode is not used in the GBA in general.
-             * However, I know that JSMolka's GBA suite (used to) change into FIQ mode, so I keep a bank for that anyway
+             * However, I know that JSMolka's GBA suite (or used to), and ARMWrestler change into FIQ mode,
+             * so I keep a bank for that anyway
              *
              * Top mode flag is always 1, so just check the other 4
              * */
+            if (unlikely(NewMode == Mode::FIQ)) {
+                // bank FIQ registers (registers r8-r12)
+                memcpy(FIQBank, &Registers[8], 5 * sizeof(u32));
+                // other 2 registers are just banked as normal
+            }
+            else if (unlikely(static_cast<Mode>(this->CPSR & static_cast<u32>(CPSRFlags::Mode)) == Mode::FIQ)) {
+                // coming from FIQ mode, exact same thing in reverse
+                memcpy(&Registers[8], FIQBank, 5 * sizeof(u32));
+            }
+
             this->SPLRBank[this->CPSR & 0xf][0] = this->sp;
             this->SPLRBank[this->CPSR & 0xf][1] = this->lr;
             this->SPSRBank[this->CPSR & 0xf]    = this->SPSR;

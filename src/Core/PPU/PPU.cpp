@@ -332,12 +332,12 @@ struct s_framebuffer GBAPPU::Render() {
         u32 batch_size = ScanlineBatchSizes[BufferFrame ^ 1][scanline];
         DrawScanlines(scanline, batch_size);
         scanline += batch_size;
-        log_ppu("%d scanlines batched (accum %d)", batch_size, scanline);
+        // log_ppu("%d scanlines batched (accum %d)", batch_size, scanline);
         // should actually be !=, but just to be sure we don't ever get stuck
     } while (scanline < VISIBLE_SCREEN_HEIGHT);
 
 #ifdef CHECK_SCANLINE_BATCH_ACCUM
-    if (scanline != VISIBLE_SCREEN_HEIGHT) {
+    if (unlikely(scanline != VISIBLE_SCREEN_HEIGHT)) {
         log_warn("Something went wrong in batching scanlines: expected %d, got %d", VISIBLE_SCREEN_HEIGHT, scanline);
     }
 #endif

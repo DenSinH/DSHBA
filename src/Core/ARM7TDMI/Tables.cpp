@@ -194,6 +194,14 @@ static constexpr THUMBInstructionPtr GetTHUMBInstruction() {
         const u8 rb = (instruction >> 2) & 7;
         return &ARM7TDMI::MultipleLoadStore<L, rb>;
     }
+    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xf800)) == ARM7TDMI::THUMBHash(0xe000)) {
+        return &ARM7TDMI::UnconditionalBranch;
+    }
+    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xf000)) == ARM7TDMI::THUMBHash(0xa000)) {
+        const bool SP = (instruction & ARM7TDMI::THUMBHash(0x0800)) != 0;
+        const u8 rd = (instruction >> 2) & 7;
+        return &ARM7TDMI::LoadAddress<SP, rd>;
+    }
 
     return &ARM7TDMI::THUMBUnimplemented;
 }

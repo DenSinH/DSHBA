@@ -162,7 +162,7 @@ void PushPop(u16 instruction) {
 
         if constexpr(R) {
             // load PC/LR
-            pc = Memory->Mem::Read<u32, true>(sp);
+            pc = Memory->Mem::Read<u32, true>(sp) & ~1;  // make sure it's aligned
             sp += 4;
             FakePipelineFlush();
         }
@@ -259,6 +259,18 @@ void PCRelativeLoad(u16 instruction) {
 
     // internal cycle
     timer++;
+}
+
+template<bool SP, u8 rd>
+void LoadAddress(u16 instruction) {
+    u32 word8 = (u8)instruction;
+
+    if constexpr(SP) {
+        Registers[rd] = sp + word8;
+    }
+    else {
+        Registers[rd] = (pc & ~3) + word8;
+    }
 }
 
 #ifndef INLINED_INCLUDES

@@ -2,6 +2,8 @@
 
 void ARM7TDMI::Step() {
     u32 instruction;
+//    u32 old_pc = pc;
+
     bool ARMMode = !(CPSR & static_cast<u32>(CPSRFlags::T));
     if (unlikely(Pipeline.Count)) {
         // we only have stuff in the pipeline if writes near PC happened
@@ -36,6 +38,10 @@ void ARM7TDMI::Step() {
         pc += 2;
         log_cpu_verbose("PC post t: %x", pc);
     }
+
+//    if (pc & 1) {
+//        log_fatal("Odd pc: %x -> %x", old_pc, pc);
+//    }
 
     // for now, tick every instruction
     // todo: proper timings (in memory accesses)

@@ -19,7 +19,7 @@ void ConditionalBranch(u16 instruction) {
 
 #ifdef BASIC_IDLE_DETECTION
         if (unlikely(offset == -4)) {
-            // We know we are in ARM mode
+            // We know we are in THUMB mode
             Idle();
         }
 #endif
@@ -43,11 +43,25 @@ void LongBranchLink(u16 instruction) {
         // Second Instruction - PC = LR + (nn SHL 1), and LR = PC+2 OR 1
         u32 old_pc = pc - 2;  // correct for pipeline effects
         pc = lr + (offset << 1);
-        // todo: idle loop detection
+        // todo: idle loop detection?
 
         lr = old_pc | 1;
         FakePipelineFlush();
     }
+}
+
+void UnconditionalBranch(u16 instruction) {
+    i32 offs11 = (instruction & 0x7ff);
+    offs11 = (offs11 << 22) >> 21;  // sign extend and shift by 1
+
+    pc += offs11;
+    FakePipelineFlush();
+#ifdef BASIC_IDLE_DETECTION
+    if (unlikely(offs11 == -4)) {
+        // We know we are in THUMB mode
+        Idle();
+    }
+#endif
 }
 
 #ifndef INLINED_INCLUDES

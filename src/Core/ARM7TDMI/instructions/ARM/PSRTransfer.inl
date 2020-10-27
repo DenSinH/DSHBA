@@ -51,7 +51,7 @@ void MSR(u32 instruction) {
     if constexpr(I) {
         // immediate value
         u32 imm = instruction & 0xff;
-        u32 rot = (instruction & 0x0f00) >> 8;
+        u32 rot = (instruction & 0x0f00) >> 7;
         operand = ROTR32(imm, rot);
         log_cpu_verbose("MSR %cPSR, #%x", Pd ? 'S' : 'C', operand);
     }

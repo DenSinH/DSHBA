@@ -72,7 +72,7 @@ void BlockDataTransfer(u32 instruction) {
             // Writeback with Rb included in Rlist: Store OLD base if Rb is FIRST entry in Rlist,
             // otherwise store NEW base (STM/ARMv4)
             // (GBATek)
-            if (unlikely(cttz(register_list) == rn - 1)) {
+            if (unlikely(cttz(register_list) == rn)) {
                 // This is only the case if rn is the first register to be stored.
                 // e.g.: if rn is 4 and the Rlist ends in 0b11110000, we have
                 // 0b11110000 & ((1 << 5) - 1) = 0b11110000 & (0b100000 - 1) =

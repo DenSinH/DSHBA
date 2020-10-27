@@ -142,18 +142,18 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
 
         if (!shift_amount) {
             switch (static_cast<ShiftType>(shift_type)) {
-                case ShiftType::LSL:
+                case ShiftType::LSL:  // no shift
                     return Rm;
-                case ShiftType::LSR:
-                case ShiftType::ASR:
+                case ShiftType::LSR:  // LSR #32
+                case ShiftType::ASR:  // ASR #32
                     shift_amount = 32;
                     break;
-                case ShiftType::ROR: {
+                case ShiftType::ROR: {// RRX #1
                     const u32 carry = (CPSR & static_cast<u32>(CPSRFlags::C)) ? 1 : 0;
-                    // RRX
                     if constexpr(S) {
                         u32 new_carry = Rm & 1;
                         Rm = (Rm >> 1) | (carry << 31);
+                        CPSR &= ~(static_cast<u32>(CPSRFlags::C));
                         CPSR |= new_carry ? static_cast<u32>(CPSRFlags::C) : 0;
                         return Rm;
                     }
