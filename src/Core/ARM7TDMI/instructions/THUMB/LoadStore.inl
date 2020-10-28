@@ -266,10 +266,10 @@ void LoadAddress(u16 instruction) {
     u32 word8 = (u8)instruction;
 
     if constexpr(SP) {
-        Registers[rd] = sp + word8;
+        Registers[rd] = sp + (word8 << 2);
     }
     else {
-        Registers[rd] = (pc & ~3) + word8;
+        Registers[rd] = (pc & ~3) + (word8 << 2);
     }
 }
 
