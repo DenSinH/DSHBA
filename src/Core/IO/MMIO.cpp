@@ -30,6 +30,7 @@ MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, s_scheduler* scheduler) {
 
     ReadPrecall[static_cast<u32>(IORegister::DISPSTAT) >> 1]   = &MMIO::ReadDISPSTAT;
     WriteCallback[static_cast<u32>(IORegister::DISPSTAT) >> 1] = &MMIO::WriteDISPSTAT;
+    ReadPrecall[static_cast<u32>(IORegister::VCOUNT) >> 1]   = &MMIO::ReadVCount;
 
     ReadPrecall[static_cast<u32>(IORegister::KEYINPUT) >> 1]   = &MMIO::ReadKEYINPUT;
 }
@@ -50,6 +51,13 @@ SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
     else {
         // HBlank was cleared, clear after 1006 cycles
         event->time += 1006;
+
+        // increment VCount
+        IO->VCount++;
+
+        if (IO->VCount == TOTAL_SCREEN_HEIGHT) {
+            IO->VCount = 0;
+        }
     }
 
     add_event(scheduler, event);
@@ -81,6 +89,10 @@ READ_PRECALL(MMIO::ReadDISPSTAT) {
 WRITE_CALLBACK(MMIO::WriteDISPSTAT) {
     // VBlank/HBlank/VCount flags can not be written to
     DISPSTAT = (DISPSTAT &  ~0x7) | (value & 0x7);
+}
+
+READ_PRECALL(MMIO::ReadVCount) {
+    return VCount;
 }
 
 u16 MMIO::ReadKEYINPUT() {

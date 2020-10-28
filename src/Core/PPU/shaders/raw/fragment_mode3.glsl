@@ -26,11 +26,11 @@ vec4 mode3(uint x, uint y) {
     vec4 Color = vec4(0, 0, 0, 32);  // to be scaled later
 
     // BGR format
-    Color.b = PackedColor & 0x1fu;
+    Color.r = PackedColor & 0x1fu;
     PackedColor >>= 5u;
     Color.g = PackedColor & 0x1fu;
     PackedColor >>= 5u;
-    Color.r = PackedColor & 0x1fu;
+    Color.b = PackedColor & 0x1fu;
 
     return Color / 32.0;
 }

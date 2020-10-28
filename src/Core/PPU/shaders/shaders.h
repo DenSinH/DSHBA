@@ -114,11 +114,11 @@ const char* FragmentShaderMode3Source =
 "    vec4 Color = vec4(0, 0, 0, 32);  // to be scaled later\n"  // l:24
 "\n"  // l:25
 "    // BGR format\n"  // l:26
-"    Color.b = PackedColor & 0x1fu;\n"  // l:27
+"    Color.r = PackedColor & 0x1fu;\n"  // l:27
 "    PackedColor >>= 5u;\n"  // l:28
 "    Color.g = PackedColor & 0x1fu;\n"  // l:29
 "    PackedColor >>= 5u;\n"  // l:30
-"    Color.r = PackedColor & 0x1fu;\n"  // l:31
+"    Color.b = PackedColor & 0x1fu;\n"  // l:31
 "\n"  // l:32
 "    return Color / 32.0;\n"  // l:33
 "}\n"  // l:34

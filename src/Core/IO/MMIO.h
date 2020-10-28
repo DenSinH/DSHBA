@@ -53,11 +53,13 @@ class MMIO {
         static SCHEDULER_EVENT(VBlankFlagEvent);
         s_event VBlankFlag = {};
 
-        READ_PRECALL(ReadKEYINPUT);
         READ_PRECALL(ReadDISPSTAT);
         WRITE_CALLBACK(WriteDISPSTAT);
+        READ_PRECALL(ReadVCount);
+        READ_PRECALL(ReadKEYINPUT);
 
         u16 DISPSTAT = 0;
+        u16 VCount   = 0;
         u16 KEYINPUT = 0xffff;  // flipped
 
         ARM7TDMI* CPU;
