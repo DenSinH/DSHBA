@@ -153,7 +153,11 @@ void PushPop(u16 instruction) {
 
     if constexpr(L) {
         // pop
-        for (u32 i = 0; i < 8; i++) {
+#ifndef HAS_CTTZ
+        for (unsigned i = 0; i < 8; i++) {
+#else
+        for (unsigned i = cttz(rlist); i < 8; i++) {
+#endif
             if (rlist & (1 << i)) {
                 Registers[i] = Memory->Mem::Read<u32, true>(sp);
                 sp += 4;
@@ -179,7 +183,12 @@ void PushPop(u16 instruction) {
             Memory->Mem::Write<u32, true, true>(sp, lr);
         }
 
+#if !defined(CTTZ_LDM_STM_LOOP_BASE) || !defined(HAS_CTTZ)
         for (int i = 7; i >= 0; i--) {
+#else
+        const int base = cttz(rlist);
+        for (int i = 7; i >= base; i--) {
+#endif
             if (rlist & (1 << i)) {
                 sp -= 4;
                 Memory->Mem::Write<u32, true, true>(sp, Registers[i]);
@@ -212,7 +221,11 @@ void MultipleLoadStore(u16 instruction) {
     }
 
     if constexpr(L) {
-        for (size_t i = 0; i < 8; i++) {
+#if !defined(CTTZ_LDM_STM_LOOP_BASE) || !defined(HAS_CTTZ)
+        for (unsigned i = 0; i < 8; i++) {
+#else
+        for (unsigned i = cttz(rlist); i < 8; i++) {
+#endif
             if (rlist & (1 << i)) {
                 Registers[i] = Memory->Mem::Read<u32, true>(address);
                 address += 4;
@@ -242,7 +255,11 @@ void MultipleLoadStore(u16 instruction) {
         // new base:
         Registers[rb] = (address + (popcount(rlist) << 2));
 
-        for (size_t i = 0; i < 8; i++) {
+#if !defined(CTTZ_LDM_STM_LOOP_BASE) || !defined(HAS_CTTZ)
+        for (unsigned i = 0; i < 8; i++) {
+#else
+        for (unsigned i = cttz(rlist); i < 8; i++) {
+#endif
             if (rlist & (1 << i)) {
                 Memory->Mem::Write<u32, true, true>(address, Registers[i]);
                 address += 4;

@@ -101,7 +101,11 @@ void BlockDataTransfer(u32 instruction) {
             Registers[rn] = U ? (original_address + (rcount << 2)) : (original_address - (rcount << 2));
         }
 
+#if !defined(CTTZ_LDM_STM_LOOP_BASE) || !defined(HAS_CTTZ)
         for (unsigned i = 0; i < 16; i++) {
+#else
+        for (unsigned i = cttz(register_list); i < 16; i++) {
+#endif
             if (register_list & (1 << i)) {
                 if constexpr(P ^ !U) {
                     // "Pre-index"

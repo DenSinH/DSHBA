@@ -62,7 +62,8 @@ int main() {
 
     std::thread ui_thread(ui_run);
 
-    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/thumb.gba");
+    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/tonc/second.gba");
+    // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/thumb.gba");
     gba->Run();
 
     ui_thread.join();

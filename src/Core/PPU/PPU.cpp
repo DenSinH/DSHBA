@@ -147,6 +147,10 @@ void GBAPPU::InitPrograms() {
     glShaderSource(fragmentShader, 1, &FragmentShaderSource, nullptr);
     CompileShader(fragmentShader, "fragmentShader");
 
+    modeShaders[3] = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(modeShaders[3], 1, &FragmentShaderMode3Source, nullptr);
+    CompileShader(modeShaders[3], "modeShaders[3]");
+
     modeShaders[4] = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(modeShaders[4], 1, &FragmentShaderMode4Source, nullptr);
     CompileShader(modeShaders[4], "modeShaders[4]");
@@ -155,12 +159,14 @@ void GBAPPU::InitPrograms() {
     Program = glCreateProgram();
     glAttachShader(Program, vertexShader);
     glAttachShader(Program, fragmentShader);
+    glAttachShader(Program, modeShaders[3]);
     glAttachShader(Program, modeShaders[4]);
     LinkProgram(Program);
 
     // dump shaders
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
+    glDeleteShader(modeShaders[3]);
     glDeleteShader(modeShaders[4]);
 }
 

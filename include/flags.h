@@ -28,6 +28,7 @@
 #define DIRTY_MEMORY_ACCESS
 #define FAST_ADD_SUB
 #define BASIC_IDLE_DETECTION
+#define CTTZ_LDM_STM_LOOP_BASE  // not sure if this is worth it (loop unrolling might be faster)
 
 #else
 #define VERBOSITY VERBOSITY_MAX
@@ -35,6 +36,7 @@
 #define DIRTY_MEMORY_ACCESS
 #define FAST_ADD_SUB
 #define BASIC_IDLE_DETECTION
+#define CTTZ_LDM_STM_LOOP_BASE
 
 #endif
 
