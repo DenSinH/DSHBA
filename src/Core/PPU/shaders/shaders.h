@@ -76,7 +76,7 @@ const char* FragmentShaderSource =
 "            outColor = mode4(x, y);\n"  // l:71
 "            break;\n"  // l:72
 "        default:\n"  // l:73
-"            outColor = mode3(x, y);\n"  // l:74
+"            outColor = vec4(1, 0, 0, 1); // mode3(x, y);\n"  // l:74
 "            break;\n"  // l:75
 "    }\n"  // l:76
 "\n"  // l:77
@@ -100,12 +100,12 @@ const char* FragmentShaderMode3Source =
 "\n"  // l:10
 "\n"  // l:11
 "vec4 mode3(uint x, uint y) {\n"  // l:12
-"//    uint DISPCNT = readIOreg(0, y);\n"  // l:13
-"//\n"  // l:14
-"//    if ((DISPCNT & 0x0400u) == 0) {\n"  // l:15
-"//        // background 2 is disabled\n"  // l:16
-"//        discard;\n"  // l:17
-"//    }\n"  // l:18
+"    uint DISPCNT = readIOreg(0, y);\n"  // l:13
+"\n"  // l:14
+"    if ((DISPCNT & 0x0400u) == 0) {\n"  // l:15
+"        // background 2 is disabled\n"  // l:16
+"        discard;\n"  // l:17
+"    }\n"  // l:18
 "\n"  // l:19
 "    uint VRAMAddr = (240 * y + x) << 1;  // 16bpp\n"  // l:20
 "\n"  // l:21
@@ -140,19 +140,19 @@ const char* FragmentShaderMode4Source =
 "\n"  // l:10
 "vec4 mode4(uint x, uint y) {\n"  // l:11
 "\n"  // l:12
-"//    uint DISPCNT = readIOreg(0, y);\n"  // l:13
-"//\n"  // l:14
-"//    if ((DISPCNT & 0x0400u) == 0) {\n"  // l:15
-"//        // background 2 is disabled\n"  // l:16
-"//        discard;\n"  // l:17
-"//    }\n"  // l:18
+"    uint DISPCNT = readIOreg(0, y);\n"  // l:13
+"\n"  // l:14
+"    if ((DISPCNT & 0x0400u) == 0) {\n"  // l:15
+"        // background 2 is disabled\n"  // l:16
+"        discard;\n"  // l:17
+"    }\n"  // l:18
 "\n"  // l:19
 "    // offset is specified in DISPCNT\n"  // l:20
 "    uint Offset = 0;\n"  // l:21
-"//    if ((DISPCNT & 0x0010u) != 0) {\n"  // l:22
-"//        // offset\n"  // l:23
-"//        Offset = 0xa000u;\n"  // l:24
-"//    }\n"  // l:25
+"    if ((DISPCNT & 0x0010u) != 0) {\n"  // l:22
+"        // offset\n"  // l:23
+"        Offset = 0xa000u;\n"  // l:24
+"    }\n"  // l:25
 "\n"  // l:26
 "    uint VRAMAddr = (240 * y + x);\n"  // l:27
 "    VRAMAddr += Offset;\n"  // l:28

@@ -224,7 +224,7 @@ void GBAPPU::InitBuffers() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, 0x40, 256, 0, GL_RED_INTEGER,
                  GL_UNSIGNED_SHORT, nullptr);
 
-    IOLocation = glGetUniformLocation(Program, "MMIO");
+    IOLocation = glGetUniformLocation(Program, "IO");
 
     glGenBuffers(1, &VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);

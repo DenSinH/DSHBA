@@ -73,7 +73,7 @@ void main() {
             outColor = mode4(x, y);
             break;
         default:
-            outColor = mode3(x, y);
+            outColor = vec4(1, 0, 0, 1); // mode3(x, y);
             break;
     }
 

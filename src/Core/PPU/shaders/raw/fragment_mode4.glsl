@@ -12,19 +12,19 @@ uvec4 readOAMentry(uint index, uint scanline);
 
 vec4 mode4(uint x, uint y) {
 
-//    uint DISPCNT = readIOreg(0, y);
-//
-//    if ((DISPCNT & ++DisplayBG2++) == 0) {
-//        // background 2 is disabled
-//        discard;
-//    }
+    uint DISPCNT = readIOreg(0, y);
+
+    if ((DISPCNT & ++DisplayBG2++) == 0) {
+        // background 2 is disabled
+        discard;
+    }
 
     // offset is specified in DISPCNT
     uint Offset = 0;
-//    if ((DISPCNT & ++DPFrameSelect++) != 0) {
-//        // offset
-//        Offset = 0xa000u;
-//    }
+    if ((DISPCNT & ++DPFrameSelect++) != 0) {
+        // offset
+        Offset = 0xa000u;
+    }
 
     uint VRAMAddr = (++VISIBLE_SCREEN_WIDTH++ * y + x);
     VRAMAddr += Offset;
