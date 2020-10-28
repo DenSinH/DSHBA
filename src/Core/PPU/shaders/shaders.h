@@ -6,7 +6,7 @@ const char* FragmentShaderSource =
 "#version 430 core\n"  // l:1
 "\n"  // l:2
 "\n"  // l:3
-"in vec2 texCoord;\n"  // l:4
+"in vec2 screenCoord;\n"  // l:4
 "\n"  // l:5
 "out vec4 FragColor;\n"  // l:6
 "\n"  // l:7
@@ -28,9 +28,9 @@ const char* FragmentShaderSource =
 "}\n"  // l:23
 "\n"  // l:24
 "uint readVRAM16(uint address) {\n"  // l:25
-"    uint alignment = address & 1u;\n"  // l:26
+"    uint alignment = address & 2u;\n"  // l:26
 "    uint value = VRAM[address >> 2];\n"  // l:27
-"    value = (value) >> (alignment << 4u);\n"  // l:28
+"    value = (value) >> (alignment << 3u);\n"  // l:28
 "    value &= 0xffffu;\n"  // l:29
 "    return value;\n"  // l:30
 "}\n"  // l:31
@@ -62,8 +62,8 @@ const char* FragmentShaderSource =
 "vec4 mode4(uint, uint);\n"  // l:57
 "\n"  // l:58
 "void main() {\n"  // l:59
-"    uint x = uint(round(texCoord.x * (240 - 1)));\n"  // l:60
-"    uint y = uint(round(texCoord.y * (160 - 1)));\n"  // l:61
+"    uint x = uint(screenCoord.x);\n"  // l:60
+"    uint y = uint(screenCoord.y);\n"  // l:61
 "\n"  // l:62
 "    uint DISPCNT = readIOreg(0, y);\n"  // l:63
 "\n"  // l:64
@@ -167,22 +167,27 @@ const char* FragmentShaderMode4Source =
 ;
 
 
-// VertexShaderSource (from vertex.glsl, lines 2 to 16)
+// VertexShaderSource (from vertex.glsl, lines 2 to 21)
 const char* VertexShaderSource = 
 "#version 430 core\n"  // l:1
 "\n"  // l:2
 "layout (location = 0) in vec2 position;\n"  // l:3
 "\n"  // l:4
-"out vec2 texCoord;\n"  // l:5
+"out vec2 screenCoord;\n"  // l:5
 "\n"  // l:6
 "void main() {\n"  // l:7
 "    // convert y coordinate from scanline to screen coordinate\n"  // l:8
-"    gl_Position = vec4(position.x, 1.0 - 2 * position.y / 160, 0, 1);\n"  // l:9
-"\n"  // l:10
-"    // flip vertically\n"  // l:11
-"    texCoord = vec2((1.0 + position.x) / 2.0, position.y / 160);\n"  // l:12
-"}\n"  // l:13
-"\n"  // l:14
+"    gl_Position = vec4(\n"  // l:9
+"        position.x,\n"  // l:10
+"        1.0 - (2.0 * position.y) / float(160), 0, 1\n"  // l:11
+"    );\n"  // l:12
+"\n"  // l:13
+"    screenCoord = vec2(\n"  // l:14
+"        float(240) * float((1.0 + position.x)) / 2.0,\n"  // l:15
+"        position.y\n"  // l:16
+"    );\n"  // l:17
+"}\n"  // l:18
+"\n"  // l:19
 ;
 
 #endif  // GC__SHADER_H

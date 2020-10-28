@@ -2,6 +2,9 @@
 
 #include "CoreUtils.h"
 
+#ifdef DUMP_MEM
+#include <fstream>
+#endif
 
 /*
  * Reads/writes are always aligned, we handle this in the read handlers
@@ -25,6 +28,20 @@ Mem::Mem(MMIO* IO, u32* pc_ptr, std::function<void(void)> reflush) {
 
 Mem::~Mem() {
 
+#ifdef DUMP_MEM
+    std::ofstream file;
+    log_debug("Dumping memory region " str(DUMP_MEM) "...");
+
+    file.open("./files/" str(DUMP_MEM) , std::fstream::binary);
+
+    if (!file) {
+        log_warn("Could not open dump file");
+    }
+    else {
+        file.write((char*)DUMP_MEM, sizeof(DUMP_MEM));
+        file.close();
+    }
+#endif
 }
 
 void Mem::LoadROM(const std::string& file_path) {

@@ -68,5 +68,6 @@ int main() {
 
     ui_thread.join();
 
+    // delete &gba->Memory;
     return 0;
 }

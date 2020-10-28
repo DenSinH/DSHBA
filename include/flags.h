@@ -18,6 +18,11 @@
 #define VERBOSITY VERBOSITY_DEBUG
 #define COMPONENT_FLAGS (0)
 
+// very intense testing variables:
+#undef TRACE_LOG
+#undef FULL_VRAM_BUFFER
+#undef DUMP_MEM // VRAM
+
 // checks
 #define DO_DEBUGGER
 #define DO_BREAKPOINTS

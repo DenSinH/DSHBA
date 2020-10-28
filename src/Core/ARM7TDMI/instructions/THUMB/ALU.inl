@@ -294,7 +294,7 @@ void LoadAddress(u16 instruction) {
 
 template<bool S>
 void AddOffsToSP(u16 instruction) {
-    if constexpr(S) {
+    if constexpr(!S) {
         sp += (instruction & 0x007f) << 2;
     }
     else {

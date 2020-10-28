@@ -1,8 +1,16 @@
 #include "ARM7TDMI.h"
 
+#ifdef TRACE_LOG
+#include <iomanip>
+#endif
+
 void ARM7TDMI::Step() {
     u32 instruction;
 //    u32 old_pc = pc;
+
+#ifdef TRACE_LOG
+    LogState();
+#endif
 
     bool ARMMode = !(CPSR & static_cast<u32>(CPSRFlags::T));
     if (unlikely(Pipeline.Count)) {
@@ -20,7 +28,6 @@ void ARM7TDMI::Step() {
 
     if (ARMMode) {
         // ARM mode
-        log_cpu_verbose("PC pre: %x", pc);
         if (CheckCondition(instruction >> 28)) {
             (this->*ARMInstructions[ARMHash(instruction)])(instruction);
         }
@@ -28,20 +35,13 @@ void ARM7TDMI::Step() {
         // we handle mode changes in the BX instruction by correcting PC for it there
         // this saves us from doing another check after every instruction
         pc += 4;
-        log_cpu_verbose("PC post: %x", pc);
     }
     else {
         // THUMB mode
-        log_cpu_verbose("PC pre t: %x", pc);
         (this->*THUMBInstructions[THUMBHash((u16)instruction)])((u16)instruction);
         // same here
         pc += 2;
-        log_cpu_verbose("PC post t: %x", pc);
     }
-
-//    if (pc & 1) {
-//        log_fatal("Odd pc: %x -> %x", old_pc, pc);
-//    }
 
     // for now, tick every instruction
     // todo: proper timings (in memory accesses)
@@ -79,3 +79,26 @@ void ARM7TDMI::PipelineReflush() {
         this->Pipeline.Enqueue(this->Memory->Mem::Read<u16, true>(this->pc));
     }
 }
+
+#ifdef TRACE_LOG
+void ARM7TDMI::LogState() {
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[0] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[1] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[2] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[3] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[4] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[5] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[6] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[7] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[8] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[9] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[10] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[11] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[12] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[13] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[14] << " ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[15] - ((CPSR & static_cast<u32>(CPSRFlags::T)) ? 2 : 4) << " ";
+    trace << "cpsr: ";
+    trace << std::setfill('0') << std::setw(8) << std::hex << CPSR << std::endl;
+}
+#endif

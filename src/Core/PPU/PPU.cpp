@@ -13,8 +13,8 @@
 #include "log.h"
 #include "const.h"
 
-#define INTERNAL_FRAMEBUFFER_WIDTH 480
-#define INTERNAL_FRAMEBUFFER_HEIGHT 320
+#define INTERNAL_FRAMEBUFFER_WIDTH 1280
+#define INTERNAL_FRAMEBUFFER_HEIGHT 720
 
 GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
     Scheduler = scheduler;
@@ -56,6 +56,7 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
         ppu->Memory->PAL,
         sizeof(PALMEM)
     );
+#ifndef FULL_VRAM_BUFFER
     s_UpdateRange range = ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount];
     if (range.min <= range.max) {
         memcpy(
@@ -72,6 +73,15 @@ SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
         // we can use the same batch of scanlines since VRAM was not updated
         ppu->ScanlineBatchSizes[ppu->BufferFrame][ppu->CurrentScanlineBatch]++;
     }
+#else
+    memcpy(
+        ppu->VRAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
+        ppu->Memory->VRAM,
+        sizeof(VRAMMEM)
+    );
+    ppu->CurrentScanlineBatch = ppu->BufferScanlineCount;
+    ppu->ScanlineBatchSizes[ppu->BufferFrame][ppu->CurrentScanlineBatch] = 1;
+#endif
     memcpy(
         ppu->OAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
         ppu->Memory->OAM,
@@ -258,6 +268,7 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     s_UpdateRange range;
     glBindVertexArray(VAO);
 
+#ifndef FULL_VRAM_BUFFER
     range = VRAMRanges[BufferFrame ^ 1][scanline];
     if (range.min <= range.max) {
         log_ppu("Buffering %x bytes of VRAM data (%x -> %x)", range.max + 4 - range.min, range.min, range.max);
@@ -271,6 +282,15 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
         // reset range data
         VRAMRanges[BufferFrame ^ 1][scanline] = { .min = sizeof(VRAMMEM), .max = 0 };
     }
+#else
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
+    glBufferSubData(
+            GL_SHADER_STORAGE_BUFFER,
+            0,
+            sizeof(VRAMMEM),
+            &VRAMBuffer[BufferFrame ^ 1][scanline][0]
+    );
+#endif
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
@@ -338,7 +358,7 @@ struct s_framebuffer GBAPPU::Render() {
         u32 batch_size = ScanlineBatchSizes[BufferFrame ^ 1][scanline];
         DrawScanlines(scanline, batch_size);
         scanline += batch_size;
-        // log_ppu("%d scanlines batched (accum %d)", batch_size, scanline);
+        log_ppu("%d scanlines batched (accum %d)", batch_size, scanline);
         // should actually be !=, but just to be sure we don't ever get stuck
     } while (scanline < VISIBLE_SCREEN_HEIGHT);
 

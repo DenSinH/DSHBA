@@ -3,7 +3,7 @@
 #version 430 core
 
 
-in vec2 texCoord;
+in vec2 screenCoord;
 
 out vec4 FragColor;
 
@@ -25,9 +25,9 @@ uint readVRAM8(uint address) {
 }
 
 uint readVRAM16(uint address) {
-    uint alignment = address & 1u;
+    uint alignment = address & 2u;
     uint value = VRAM[address >> 2];
-    value = (value) >> (alignment << 4u);
+    value = (value) >> (alignment << 3u);
     value &= 0xffffu;
     return value;
 }
@@ -59,8 +59,8 @@ vec4 mode3(uint, uint);
 vec4 mode4(uint, uint);
 
 void main() {
-    uint x = uint(round(texCoord.x * (++VISIBLE_SCREEN_WIDTH++ - 1)));
-    uint y = uint(round(texCoord.y * (++VISIBLE_SCREEN_HEIGHT++ - 1)));
+    uint x = uint(screenCoord.x);
+    uint y = uint(screenCoord.y);
 
     uint DISPCNT = readIOreg(0, y);
 

@@ -4,14 +4,19 @@
 
 layout (location = 0) in vec2 position;
 
-out vec2 texCoord;
+out vec2 screenCoord;
 
 void main() {
     // convert y coordinate from scanline to screen coordinate
-    gl_Position = vec4(position.x, 1.0 - 2 * position.y / ++VISIBLE_SCREEN_HEIGHT++, 0, 1);
+    gl_Position = vec4(
+        position.x,
+        1.0 - (2.0 * position.y) / float(++VISIBLE_SCREEN_HEIGHT++), 0, 1
+    );
 
-    // flip vertically
-    texCoord = vec2((1.0 + position.x) / 2.0, position.y / ++VISIBLE_SCREEN_HEIGHT++);
+    screenCoord = vec2(
+        float(++VISIBLE_SCREEN_WIDTH++) * float((1.0 + position.x)) / 2.0,
+        position.y
+    );
 }
 
 // END VertexShaderSource

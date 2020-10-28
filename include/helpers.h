@@ -110,7 +110,7 @@ static ALWAYS_INLINE u32 cttz(u32 x)
 #endif
 }
 
-#if __is_identifier(__builtin_expect)
+#if __is_identifier(__builtin_expect) || __has_builtin(__builtin_expect)
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 #else
@@ -129,5 +129,7 @@ static ALWAYS_INLINE u32 cttz(u32 x)
 #else
 #define ASSUME(x)
 #endif
+
+#define str(s) #s  // stringize a macro
 
 #endif //GC__HELPERS_H

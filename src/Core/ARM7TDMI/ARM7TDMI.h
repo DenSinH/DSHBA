@@ -11,6 +11,10 @@
 #include "flags.h"
 #include "log.h"
 
+#ifdef TRACE_LOG
+#include <fstream>
+#endif
+
 class ARM7TDMI;
 
 #define sp Registers[13]
@@ -49,8 +53,16 @@ public:
 
         this->BuildARMTable();
         this->BuildTHUMBTable();
+
+#ifdef TRACE_LOG
+        trace.open("DSHBA.log", std::fstream::out | std::fstream::app);
+#endif
     }
     ~ARM7TDMI() {
+
+#ifdef TRACE_LOG
+        trace.close();
+#endif
 
     };
 
@@ -85,6 +97,11 @@ private:
 
 #ifdef BENCHMARKING
     friend void benchmark();
+#endif
+
+#ifdef TRACE_LOG
+    std::fstream trace;
+    void LogState();
 #endif
 
     enum class State : u8 {
