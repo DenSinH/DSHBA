@@ -68,7 +68,7 @@
 #if COMPONENT_FLAGS & COMPONENT_SCHEDULER
 #define log_sched(message, ...) do {                        \
         CONSOLE_BLUE();                                \
-        fprintf(stdout, "[SCHEDULER]: "message "\n",  ##__VA_ARGS__); \
+        fprintf(stdout, "[SCHEDULER]: " message "\n",  ##__VA_ARGS__); \
         CONSOLE_RESTORE();                             \
     } while(0)
 #else

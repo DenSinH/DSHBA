@@ -206,6 +206,9 @@ GBA* Initializer::init() {
 
     add_register_data("DISPSTAT", &gba->IO.DISPSTAT, 2, IO_tab);
     add_register_data("KEYINPUT", &gba->IO.KEYINPUT, 2, IO_tab);
+    add_register_data("IME", &gba->CPU.IME, 2, IO_tab);
+    add_register_data("IE", &gba->CPU.IE, 2, IO_tab);
+    add_register_data("IF", &gba->CPU.IF, 2, IO_tab);
 
     // add_command("RESET", "Resets the system. Add 'pause/freeze/break' to freeze on reload.", reset_system);
     add_command("PAUSE", "Pauses the system.", pause_system);

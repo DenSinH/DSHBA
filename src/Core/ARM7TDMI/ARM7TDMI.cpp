@@ -4,6 +4,24 @@
 #include <iomanip>
 #endif
 
+ARM7TDMI::ARM7TDMI(s_scheduler *scheduler, Mem *memory)  {
+    Scheduler = scheduler;
+    Memory = memory;
+
+    BuildARMTable();
+    BuildTHUMBTable();
+
+    InterruptPoll = (s_event) {
+        .callback = &ARM7TDMI::InterruptPollEvent,
+        .caller = this,
+        .active = false,
+    };
+
+#ifdef TRACE_LOG
+    trace.open("DSHBA.log", std::fstream::out | std::fstream::app);
+#endif
+}
+
 void ARM7TDMI::Step() {
     u32 instruction;
 //    u32 old_pc = pc;
@@ -66,7 +84,7 @@ void ARM7TDMI::PipelineReflush() {
     this->Pipeline.Clear();
     // if instructions that should be in the pipeline get written to
     // PC is in an instruction when this happens (marked by a bool in the template)
-    log_warn("Reflush for write near PC");
+    log_warn("Reflush for write near PC (%x)", pc);
 
     if (!(CPSR & static_cast<u32>(CPSRFlags::T))) {
         // ARM mode
@@ -80,25 +98,60 @@ void ARM7TDMI::PipelineReflush() {
     }
 }
 
+SCHEDULER_EVENT(ARM7TDMI::InterruptPollEvent) {
+    auto cpu = (ARM7TDMI*)caller;
+
+    if (cpu->IF & cpu->IE) {
+        // disable halt state
+        log_debug("Interrupt requested and in IE");
+        if (cpu->IME && !(cpu->CPSR & static_cast<u32>(CPSRFlags::I))) {
+            log_debug("Interrupt!");
+            // actually do interrupt
+            cpu->SPSRBank[static_cast<u8>(Mode::IRQ) & 0xf] = cpu->CPSR;
+            cpu->CPSR |= static_cast<u32>(CPSRFlags::I);
+
+            // todo: set memory BIOS readstate
+
+            // address of instruction that did not get executed + 4
+            cpu->lr = cpu->pc - ((cpu->CPSR & static_cast<u32>(CPSRFlags::T)) ? 2 : 4);
+            cpu->CPSR &= ~static_cast<u32>(CPSRFlags::T);  // enter ARM mode
+
+            cpu->pc = static_cast<u32>(ExceptionVector::IRQ);
+            cpu->FakePipelineFlush();
+            cpu->pc += 4;  // get ready to receive next instruction
+        }
+    }
+}
+
+void ARM7TDMI::ScheduleInterruptPoll() {
+    if (!InterruptPoll.active) {
+        // schedule immediately
+        InterruptPoll.time = *Scheduler->timer;
+        add_event(Scheduler, &InterruptPoll);
+    }
+}
+
 #ifdef TRACE_LOG
 void ARM7TDMI::LogState() {
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[0] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[1] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[2] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[3] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[4] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[5] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[6] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[7] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[8] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[9] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[10] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[11] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[12] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[13] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[14] << " ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << Registers[15] - ((CPSR & static_cast<u32>(CPSRFlags::T)) ? 2 : 4) << " ";
-    trace << "cpsr: ";
-    trace << std::setfill('0') << std::setw(8) << std::hex << CPSR << std::endl;
+    if (true || static_cast<Mode>(CPSR & static_cast<u32>(CPSRFlags::Mode)) != Mode::Supervisor) {
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[0] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[1] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[2] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[3] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[4] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[5] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[6] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[7] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[8] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[9] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[10] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[11] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[12] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[13] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[14] << " ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << Registers[15] - ((CPSR & static_cast<u32>(CPSRFlags::T)) ? 2 : 4) << " ";
+        trace << "cpsr: ";
+        trace << std::setfill('0') << std::setw(8) << std::hex << CPSR << std::endl;
+    }
 }
 #endif

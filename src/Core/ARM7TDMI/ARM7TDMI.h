@@ -35,9 +35,10 @@ enum class CPSRFlags : u32 {
     Mode = 0x0000'001f,
 };
 
-enum class ExceptionVectors : u32 {
+enum class ExceptionVector : u32 {
     Reset = 0x0000'0000,
     SWI   = 0x0000'0008,
+    IRQ   = 0x0000'0018,
 };
 
 typedef void (ARM7TDMI::*ARMInstructionPtr)(u32 instruction);
@@ -47,17 +48,7 @@ class ARM7TDMI {
 public:
     u64 timer = 0;
 
-    explicit ARM7TDMI(s_scheduler* scheduler, Mem* memory) {
-        this->Scheduler = scheduler;
-        this->Memory = memory;
-
-        this->BuildARMTable();
-        this->BuildTHUMBTable();
-
-#ifdef TRACE_LOG
-        trace.open("DSHBA.log", std::fstream::out | std::fstream::app);
-#endif
-    }
+    ARM7TDMI(s_scheduler* scheduler, Mem* memory);
     ~ARM7TDMI() {
 
 #ifdef TRACE_LOG
@@ -126,12 +117,26 @@ private:
     u32 FIQBank[2][5]   = {};  // store user mode registers into 0, FIQ registers into 1
     u32 Registers[16]   = {};
 
+    // Manipulated by MMIO
+    // the CPU should be able to check for interrupts on its own though, so we need to keep these in here
+    // mostly, interrupts will be raised through MMIO
+    u16 IME      = 0;
+    u16 IF       = 0;
+    u16 IE       = 0;
+
     // todo: only buffer pipeline on STR(|H|B) instructions near PC
     // we still keep PC ahead of course
     s_Pipeline Pipeline;
 
     Mem* Memory;
     s_scheduler* Scheduler;
+
+    // We want to make this an event that will always be scheduled right away, so that we don't have to think about
+    // whether we are in an instruction or not, cause we will never be in this case, and we will always be 4/8 ahead
+    // of the next instruction to be executed
+    s_event InterruptPoll;
+    static SCHEDULER_EVENT(InterruptPollEvent);
+    void ScheduleInterruptPoll();
 
     // bits 27-20 and 7-4 for ARM instructions
     ARMInstructionPtr ARMInstructions[ARMInstructionTableSize] = {};
@@ -205,6 +210,7 @@ private:
             this->SPSR = this->SPSRBank[static_cast<u8>(NewMode) & 0xf];
 
             this->CPSR = (this->CPSR & ~static_cast<u32>(CPSRFlags::Mode)) | static_cast<u8>(NewMode);
+            ScheduleInterruptPoll();
         }
 
     void ARMUnimplemented(u32 instruction) {

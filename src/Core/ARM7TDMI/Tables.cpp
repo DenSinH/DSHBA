@@ -179,6 +179,7 @@ static constexpr THUMBInstructionPtr GetTHUMBInstruction() {
     else if constexpr((instruction & ARM7TDMI::THUMBHash(0xf000)) == ARM7TDMI::THUMBHash(0xd000)) {
         if constexpr((instruction & ARM7TDMI::THUMBHash(0xff00)) == ARM7TDMI::THUMBHash(0xdf00)) {
             // SWI
+            return &ARM7TDMI::SWI<u16>;
         }
         else {
             const u8 cond = (instruction >> 2) & 0xf;
@@ -201,9 +202,6 @@ static constexpr THUMBInstructionPtr GetTHUMBInstruction() {
         const bool SP = (instruction & ARM7TDMI::THUMBHash(0x0800)) != 0;
         const u8 rd = (instruction >> 2) & 7;
         return &ARM7TDMI::LoadAddress<SP, rd>;
-    }
-    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xff00)) == ARM7TDMI::THUMBHash(0xdf00)) {
-        return &ARM7TDMI::SWI<u16>;
     }
     else if constexpr((instruction & ARM7TDMI::THUMBHash(0xff00)) == ARM7TDMI::THUMBHash(0xb000)) {
         const bool S = (instruction & ARM7TDMI::THUMBHash(0x0080)) != 0;

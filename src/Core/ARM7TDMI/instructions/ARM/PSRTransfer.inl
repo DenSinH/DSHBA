@@ -70,6 +70,9 @@ void MSR(u32 instruction) {
             ChangeMode(static_cast<Mode>(operand & static_cast<u32>(CPSRFlags::Mode)));
         }
         CPSR = (CPSR & ~mask[flags]) | (operand & mask[flags]);
+
+        // I flag might have been set
+        ScheduleInterruptPoll();
     }
 }
 

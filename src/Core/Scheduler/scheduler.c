@@ -1,10 +1,15 @@
 #include "scheduler.h"
 #include "log.h"
 
+#ifdef CHECK_EVENT_ACTIVE
+#include <assert.h>
+#endif
+
 #define LEFT(index) (((index) << 1) + 1)
 #define RIGHT(index) (((index) << 1) + 2)
 #define PARENT(index) ((index) >> 1)
 #define ROOT 0
+
 
 static inline void swap(s_event* pointers[], size_t i, size_t j) {
     void* temp = pointers[i];
@@ -44,6 +49,9 @@ void trickle_down(s_scheduler* scheduler, size_t index) {
 
 void add_event(s_scheduler* scheduler, s_event* event) {
     log_sched("add event at time %lld (now %d events in queue)", event->time, scheduler->count);
+#ifdef CHECK_EVENT_ACTIVE
+    assert(!event->active);
+#endif
     scheduler->events[scheduler->count] = event;
     event->active = true;
     trickle_up(scheduler, scheduler->count++);
@@ -174,10 +182,13 @@ void do_events(s_scheduler* scheduler) {
     s_event* first = scheduler->events[ROOT];
     while (scheduler->count > 0 && first->time < *scheduler->timer) {
         first->active = false;
-        first->callback(first->caller, first, scheduler);
 
         scheduler->events[ROOT] = scheduler->events[--scheduler->count];
         trickle_down(scheduler, ROOT);
+
+        first->callback(first->caller, first, scheduler);
+
+        log_sched("Doing event at time %llx, now %x events in queue", first->time, scheduler->count);
 
         // new first element
         first = scheduler->events[ROOT];

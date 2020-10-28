@@ -32,51 +32,57 @@ typedef u16 (MMIO::*IOReadPrecall)();
 
 class MMIO {
 
-    public:
+public:
 
-        MMIO(GBAPPU* ppu, ARM7TDMI* cpu, s_scheduler* scheduler);
-        ~MMIO() {};
+    MMIO(GBAPPU* ppu, ARM7TDMI* cpu, s_scheduler* scheduler);
+    ~MMIO() {};
 
-        // expect masked address:
-        template<typename T>
-        inline T Read(u32 address);
-        template<typename T>
-        inline void Write(u32 address, T value);
+    // expect masked address:
+    template<typename T> inline T Read(u32 address);
+    template<typename T> inline void Write(u32 address, T value);
 
-    private:
-        friend SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent); // allow registers to be buffered
-        friend void ParseInput(struct s_controller* controller);   // joypad input
-        friend class Initializer;
+private:
+    friend SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent); // allow registers to be buffered
+    friend void ParseInput(struct s_controller* controller);   // joypad input
+    friend class Initializer;
 
-        static SCHEDULER_EVENT(HBlankFlagEvent);
-        s_event HBlankFlag = {};
-        static SCHEDULER_EVENT(VBlankFlagEvent);
-        s_event VBlankFlag = {};
+    void CheckVCountMatch();
 
-        READ_PRECALL(ReadDISPSTAT);
-        WRITE_CALLBACK(WriteDISPSTAT);
-        READ_PRECALL(ReadVCount);
-        READ_PRECALL(ReadKEYINPUT);
+    static SCHEDULER_EVENT(HBlankFlagEvent);
+    s_event HBlankFlag = {};
+    static SCHEDULER_EVENT(VBlankFlagEvent);
+    s_event VBlankFlag = {};
 
-        u16 DISPSTAT = 0;
-        u16 VCount   = 0;
-        u16 KEYINPUT = 0xffff;  // flipped
+    READ_PRECALL(ReadDISPSTAT);
+    WRITE_CALLBACK(WriteDISPSTAT);
+    READ_PRECALL(ReadVCount);
+    READ_PRECALL(ReadKEYINPUT);
 
-        ARM7TDMI* CPU;
-        GBAPPU* PPU;
-        s_scheduler* Scheduler;
+    // IE/IME we won't read back, data can't be changed externally
+    WRITE_CALLBACK(WriteIME);
+    WRITE_CALLBACK(WriteIE);
+    WRITE_CALLBACK(WriteIF);  // IF has special writes
+    READ_PRECALL(ReadIF);     // and can be changed externally
 
-        u8 Registers[0x400] = {};
+    u16 DISPSTAT = 0;
+    u16 VCount   = 0;
+    u16 KEYINPUT = 0xffff;  // flipped
 
-        /*
-         * In general, registers wont have a callback
-         * Mostly registers like IE (causing interrupt polling), and joypad registers need it
-         *
-         * Readonly registers, we should only define a ReadPrecall for, not having a WriteCallback will just mean
-         * it won't do anything when written to then.
-         * */
-        IOWriteCallback WriteCallback[0x400 >> 1] = {};
-        IOReadPrecall ReadPrecall[0x400 >> 1]     = {};
+    ARM7TDMI* CPU;
+    GBAPPU* PPU;
+    s_scheduler* Scheduler;
+
+    u8 Registers[0x400] = {};
+
+    /*
+     * In general, registers wont have a callback
+     * Mostly registers like IE (causing interrupt polling), and joypad registers need it
+     *
+     * Readonly registers, we should only define a ReadPrecall for, not having a WriteCallback will just mean
+     * it won't do anything when written to then.
+     * */
+    IOWriteCallback WriteCallback[0x400 >> 1] = {};
+    IOReadPrecall ReadPrecall[0x400 >> 1]     = {};
 };
 
 template<>
@@ -114,11 +120,21 @@ inline void MMIO::Write<u32>(u32 address, u32 value) {
     }
 }
 
-template<typename T>
-void MMIO::Write(u32 address, T value) {
-    WriteArray<T>(Registers, address, value);
+template<>
+inline void MMIO::Write<u16>(u32 address, u16 value) {
+    WriteArray<u16>(Registers, address, value);
 
-    if (unlikely(ReadPrecall[address >> 1])) {
-        WriteArray<u16>(Registers, address, (this->*ReadPrecall[address >> 1])());
+    if (unlikely(WriteCallback[address >> 1])) {
+        (this->*WriteCallback[address >> 1])(value);
+    }
+}
+
+template<>
+inline void MMIO::Write<u8>(u32 address, u8 value) {
+    WriteArray<u8>(Registers, address, value);
+
+    if (unlikely(WriteCallback[address >> 1])) {
+        // We have to be careful with this:
+        (this->*WriteCallback[address >> 1])(ReadArray<u16>(Registers, address));
     }
 }

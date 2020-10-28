@@ -9,6 +9,8 @@ extern "C" {
 #include "flags.h"
 #include <stdbool.h>
 
+#undef CHECK_EVENT_ACTIVE
+
 #define SCHEDULER_MAX_EVENTS 64
 
 typedef struct s_scheduler {
@@ -21,11 +23,11 @@ typedef struct s_scheduler {
 #define SCHEDULER_EVENT(name) void name(void* caller, struct s_event* event, s_scheduler* scheduler)
 
 typedef struct s_event {
-    bool active;   // signifies if event is in the scheduler or not
     SCHEDULER_EVENT((*callback));
 
     void *caller;
     u64 time;
+    bool active;   // signifies if event is in the scheduler or not
 } s_event;
 
 /*

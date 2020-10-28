@@ -132,6 +132,7 @@ void Mem::Write(u32 address, T value) {
         case MemoryRegion::eWRAM:
             if constexpr(do_reflush) {
                 if (unlikely(NEAR_PC(0x3'ffff))) {
+//                    log_debug("%x near %x, distance %x", address >> 24, *pc_ptr >> 24, std::abs(int(address - *pc_ptr)) & (0x3'ffff));
                     Reflush();
                 }
             }
@@ -140,6 +141,7 @@ void Mem::Write(u32 address, T value) {
         case MemoryRegion::iWRAM:
             if constexpr(do_reflush) {
                 if (unlikely(NEAR_PC(0x7fff))) {
+//                    log_debug("%x near %x, distance %x", address >> 24, *pc_ptr >> 24, std::abs(int(address - *pc_ptr)) & (0x3'ffff));
                     Reflush();
                 }
             }
@@ -160,7 +162,8 @@ void Mem::Write(u32 address, T value) {
 #ifdef CHECK_INVALID_REFLUSHES
             if constexpr(do_reflush) {
                 if (unlikely(NEAR_PC(0x3ff))) {
-                    log_fatal("Code was being ran from PAL and manipulated");
+                    log_warn("Code was being ran from PAL and manipulated");
+                    Reflush();
                 }
             }
 #endif
@@ -192,8 +195,8 @@ void Mem::Write(u32 address, T value) {
             if constexpr(do_reflush) {
                 if (unlikely(NEAR_PC(0x3ff))) {
                     log_warn("Code was being ran from OAM and manipulated");
+                    Reflush();
                 }
-                Reflush();
             }
 #endif
             WriteArray<T>(OAM, address & 0x3ff, value);
