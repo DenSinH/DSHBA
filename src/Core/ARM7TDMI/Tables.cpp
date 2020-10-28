@@ -107,8 +107,8 @@ static constexpr ARMInstructionPtr GetARMInstruction() {
                 return &ARM7TDMI::BlockDataTransfer<P, U, S, W, L>;
             }
         case 0b11:
-            // todo: SWI
-            break;
+            // actually should also hold coprocessor stuff, but that doesnt exist anyway
+            return &ARM7TDMI::SWI<u32>;
         default:
             break;
     }
@@ -201,6 +201,9 @@ static constexpr THUMBInstructionPtr GetTHUMBInstruction() {
         const bool SP = (instruction & ARM7TDMI::THUMBHash(0x0800)) != 0;
         const u8 rd = (instruction >> 2) & 7;
         return &ARM7TDMI::LoadAddress<SP, rd>;
+    }
+    else if constexpr((instruction & ARM7TDMI::THUMBHash(0xff00)) == ARM7TDMI::THUMBHash(0xdf00)) {
+        return &ARM7TDMI::SWI<u16>;
     }
 
     return &ARM7TDMI::THUMBUnimplemented;

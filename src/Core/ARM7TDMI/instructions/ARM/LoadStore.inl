@@ -55,10 +55,10 @@ void SingleDataTransfer(u32 instruction) {
             }
 
             Registers[rd] = loaded;
+        }
 
-            if (unlikely(rd == 15)) {
-                FakePipelineFlush();
-            }
+        if (unlikely(rd == 15)) {
+            FakePipelineFlush();
         }
     }
     else {
@@ -183,7 +183,7 @@ void HalfwordDataTransfer(u32 instruction) {
 
     if constexpr((W || !P)) {
         // writeback (post indexing is always written back)
-        if (!(rn == rd && L)) {
+        if (!((rn == rd) && L)) {
             if constexpr(!P) {
                 // Post-indexed
                 if constexpr(U) {

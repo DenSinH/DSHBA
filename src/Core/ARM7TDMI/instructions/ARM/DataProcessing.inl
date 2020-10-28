@@ -173,7 +173,7 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
         return ShiftByImmediate<S, shift_type>(Rm, shift_amount);
     }
     else {
-        shift_amount = Registers[(instruction & 0x0f00) >> 8];
+        shift_amount = Registers[(instruction & 0x0f00) >> 8] & 0xff;
         if (shift_amount == 0) {
             // no special case shifting in this case
             return Rm;
@@ -182,10 +182,10 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
     }
 }
 
-template<u8 opcode, bool S, bool shift_imm>
+template<u8 opcode, bool S, bool I_OR_shift_imm>
 inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32 op2) {
     u32 op1;
-    if constexpr(!shift_imm) {
+    if constexpr(!I_OR_shift_imm) {
         if (unlikely(((instruction & 0x000f0000) >> 16) == 15)) {
             op1 = pc + 4;  // account for extra offset, same as before
         }
@@ -337,7 +337,11 @@ void DataProcessing(u32 instruction) {
         u32 rot = (instruction & 0xf00) >> 7; // rotated right by twice the value
         op2 = ROTR32(imm, rot);
 
-        if constexpr(S) {
+        if constexpr(S &&
+                static_cast<DataProcessingOpcode>(opcode) != DataProcessingOpcode::ADC &&
+                static_cast<DataProcessingOpcode>(opcode) != DataProcessingOpcode::SBC &&
+                static_cast<DataProcessingOpcode>(opcode) != DataProcessingOpcode::RSC
+                ) {
             CPSR &= ~(static_cast<u32>(CPSRFlags::C));
             CPSR |= (op2 & 0x8000'0000) ? static_cast<u32>(CPSRFlags::C) : 0;
         }
@@ -364,16 +368,19 @@ void DataProcessing(u32 instruction) {
 
     if (unlikely(rd == 15)) {
         // don't set flags if rd == 15
-        DoDataProcessing<opcode, false, shift_imm>(instruction, op2);
+        DoDataProcessing<opcode, false, I || shift_imm>(instruction, op2);
         if constexpr(S) {
             // SPSR transfer
-            this->CPSR = this->SPSR;
+            // ChangeMode banks the SPSR, so we have to store SPSR and then transfer it
+            u32 spsr = SPSR;
+            ChangeMode(static_cast<Mode>(SPSR & static_cast<u32>(CPSRFlags::Mode)));
+            CPSR = spsr;
         }
 
         FakePipelineFlush();
     }
     else {
-        DoDataProcessing<opcode, S, shift_imm>(instruction, op2);
+        DoDataProcessing<opcode, S, I || shift_imm>(instruction, op2);
     }
 
     if constexpr(I) {

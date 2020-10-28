@@ -30,8 +30,10 @@ void BlockDataTransfer(u32 instruction) {
     Mode old_mode = static_cast<Mode>(CPSR & static_cast<u32>(CPSRFlags::Mode));
     if constexpr(S) {
         // PSR & force user
+        log_debug("PSR force user from %x", CPSR & static_cast<u32>(CPSRFlags::Mode));
         ChangeMode(Mode::User);
     }
+
     if (unlikely(!register_list)) {
         // invalid register lists
         if constexpr(L) {
@@ -135,6 +137,7 @@ void BlockDataTransfer(u32 instruction) {
 
     if constexpr(S) {
         // PSR & force user
+        log_debug("Changing back to %x", old_mode);
         ChangeMode(old_mode);
     }
 

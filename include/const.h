@@ -1,7 +1,7 @@
 #ifndef GC__CONST_H
 #define GC__CONST_H
 
-#define BIOS_FILE "./files/gba_bios.bin"
+#define BIOS_FILE "D:/Data/CProjects/DSHBA/files/gba_bios.bin"
 
 // from Tonc:
 #define CYCLES_PER_FRAME 280896

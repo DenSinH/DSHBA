@@ -261,18 +261,6 @@ void PCRelativeLoad(u16 instruction) {
     timer++;
 }
 
-template<bool SP, u8 rd>
-void LoadAddress(u16 instruction) {
-    u32 word8 = (u8)instruction;
-
-    if constexpr(SP) {
-        Registers[rd] = sp + (word8 << 2);
-    }
-    else {
-        Registers[rd] = (pc & ~3) + (word8 << 2);
-    }
-}
-
 #ifndef INLINED_INCLUDES
 };
 #endif

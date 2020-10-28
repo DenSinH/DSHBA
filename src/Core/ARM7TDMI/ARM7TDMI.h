@@ -31,6 +31,11 @@ enum class CPSRFlags : u32 {
     Mode = 0x0000'001f,
 };
 
+enum class ExceptionVectors : u32 {
+    Reset = 0x0000'0000,
+    SWI   = 0x0000'0008,
+};
+
 typedef void (ARM7TDMI::*ARMInstructionPtr)(u32 instruction);
 typedef void (ARM7TDMI::*THUMBInstructionPtr)(u16 instruction);
 
@@ -101,7 +106,7 @@ private:
     u32 SPSR            = {};
     u32 SPSRBank[16]    = {};
     u32 SPLRBank[16][2] = {};
-    u32 FIQBank[8]      = {};
+    u32 FIQBank[2][5]   = {};  // store user mode registers into 0, FIQ registers into 1
     u32 Registers[16]   = {};
 
     // todo: only buffer pipeline on STR(|H|B) instructions near PC
@@ -164,12 +169,14 @@ private:
              * */
             if (unlikely(NewMode == Mode::FIQ)) {
                 // bank FIQ registers (registers r8-r12)
-                memcpy(FIQBank, &Registers[8], 5 * sizeof(u32));
+                memcpy(FIQBank[0], &Registers[8], 5 * sizeof(u32));
+                memcpy( &Registers[8], FIQBank[1], 5 * sizeof(u32));
                 // other 2 registers are just banked as normal
             }
             else if (unlikely(static_cast<Mode>(this->CPSR & static_cast<u32>(CPSRFlags::Mode)) == Mode::FIQ)) {
                 // coming from FIQ mode, exact same thing in reverse
-                memcpy(&Registers[8], FIQBank, 5 * sizeof(u32));
+                memcpy(FIQBank[1], &Registers[8], 5 * sizeof(u32));
+                memcpy( &Registers[8], FIQBank[0], 5 * sizeof(u32));
             }
 
             this->SPLRBank[this->CPSR & 0xf][0] = this->sp;
@@ -201,6 +208,8 @@ private:
 #include "instructions/THUMB/ALU.inl"
 #include "instructions/THUMB/Branch.inl"
 #include "instructions/THUMB/LoadStore.inl"
+
+#include "instructions/SWI.inl"
 #undef INLINED_INCLUDES
 };
 

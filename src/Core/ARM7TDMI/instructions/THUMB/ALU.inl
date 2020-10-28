@@ -54,7 +54,7 @@ void ALUOperations(u16 instruction) {
         case ALUOperationsOpcode::LSL:
             log_cpu_verbose("%08x LSL %08x -> R%d", op1, op2, rd);
             if (likely(op2)) {
-                result = DoShift<true, static_cast<u8>(ShiftType::LSL)>(op1, op2);
+                result = DoShift<true, static_cast<u8>(ShiftType::LSL)>(op1, (u8)op2);
             }
             else {
                 result = op1;
@@ -64,7 +64,7 @@ void ALUOperations(u16 instruction) {
         case ALUOperationsOpcode::LSR:
             log_cpu_verbose("%08x LSR %08x -> R%d", op1, op2, rd);
             if (likely(op2)) {
-                result = DoShift<true, static_cast<u8>(ShiftType::LSR)>(op1, op2);
+                result = DoShift<true, static_cast<u8>(ShiftType::LSR)>(op1, (u8)op2);
             }
             else {
                 result = op1;
@@ -74,7 +74,7 @@ void ALUOperations(u16 instruction) {
         case ALUOperationsOpcode::ASR:
             log_cpu_verbose("%08x ASR %08x -> R%d", op1, op2, rd);
             if (likely(op2)) {
-                result = DoShift<true, static_cast<u8>(ShiftType::ASR)>(op1, op2);
+                result = DoShift<true, static_cast<u8>(ShiftType::ASR)>(op1, (u8)op2);
             }
             else {
                 result = op1;
@@ -96,7 +96,7 @@ void ALUOperations(u16 instruction) {
         case ALUOperationsOpcode::ROR:
             log_cpu_verbose("%08x ROR %08x -> R%d", op1, op2, rd);
             if (likely(op2)) {
-                result = DoShift<true, static_cast<u8>(ShiftType::ROR)>(op1, op2);
+                result = DoShift<true, static_cast<u8>(ShiftType::ROR)>(op1, (u8)op2);
             }
             else {
                 result = op1;
@@ -279,6 +279,18 @@ void ALUImmediate(u16 instruction) {
 
     // internal cycle
     timer++;
+}
+
+template<bool SP, u8 rd>
+void LoadAddress(u16 instruction) {
+    u32 word8 = (u8)instruction;
+
+    if constexpr(SP) {
+        Registers[rd] = sp + (word8 << 2);
+    }
+    else {
+        Registers[rd] = (pc & ~3) + (word8 << 2);
+    }
 }
 
 #ifndef INLINED_INCLUDES
