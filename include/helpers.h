@@ -57,8 +57,10 @@ static ALWAYS_INLINE u32 popcount(u32 x)
 
 {
 #if __has_builtin(__builtin_popcount)
+#define HAS_POPCOUNT
     return __builtin_popcount(x);
 #elif defined(__x86_64__) || defined(__i386__)
+#define HAS_POPCOUNT
     return __popcnt(x);
 #else
     u32 count = 0;
@@ -71,8 +73,10 @@ static ALWAYS_INLINE u32 popcount(u32 x)
 static ALWAYS_INLINE u32 ctlz(u32 x)
 {
 #if __has_builtin(__builtin_clz)
+#define HAS_CTLZ
     return x ? __builtin_clz(x) : 32;
 #elif defined(__x86_64__) || defined(__i386__)
+#define HAS_CTLZ
     return __lzcnt(x);
 #else
     // todo: binary search
@@ -89,8 +93,10 @@ static ALWAYS_INLINE u32 ctlz(u32 x)
 static ALWAYS_INLINE u32 cttz(u32 x)
 {
 #if __has_builtin(__builtin_ctz)
+#define HAS_CTTZ
     return x ? __builtin_ctz(x) : 32;
 #elif defined(__x86_64__) || defined(__i386__)
+#define HAS_CTTZ
     return _tzcnt_u32(x);
 #else
     // todo: binary search

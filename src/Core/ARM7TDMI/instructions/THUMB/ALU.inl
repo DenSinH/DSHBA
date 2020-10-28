@@ -80,7 +80,6 @@ void ALUOperations(u16 instruction) {
                 result = op1;
             }
             this->Registers[rd] = result;
-            log_debug("%08x ASR %08x -> R%d [%x] @%x", op1, op2, rd, result, pc);
             break;
         case ALUOperationsOpcode::ADC:
             log_cpu_verbose("%08x ADC %08x -> R%d", op1, op2, rd);
@@ -292,6 +291,20 @@ void LoadAddress(u16 instruction) {
         Registers[rd] = (pc & ~3) + (word8 << 2);
     }
 }
+
+template<bool S>
+void AddOffsToSP(u16 instruction) {
+    if constexpr(S) {
+        sp += (instruction & 0x007f) << 2;
+    }
+    else {
+        sp -= (instruction & 0x007f) << 2;
+    }
+
+    // internal cycle
+    timer++;
+}
+
 
 #ifndef INLINED_INCLUDES
 };

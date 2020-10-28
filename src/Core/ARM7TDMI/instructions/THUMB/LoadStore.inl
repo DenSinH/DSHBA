@@ -198,6 +198,7 @@ void MultipleLoadStore(u16 instruction) {
         // invalid register list
         if constexpr(L) {
             pc = Memory->Mem::Read<u32, true>(address);
+            FakePipelineFlush();
 
             // internal cycle
             timer++;
@@ -225,7 +226,7 @@ void MultipleLoadStore(u16 instruction) {
     else {
         // Writeback with Rb in RList:
         // Store OLD base if Rb is FIRST entry in Rlist, otherwise store NEW base (STM/ARMv4)
-        if (unlikely(cttz(rlist) == rb - 1)) {
+        if (unlikely(cttz(rlist) == rb)) {
             // This is only the case if rn is the first register to be stored.
             // e.g.: if rn is 4 and the Rlist ends in 0b11110000, we have
             // 0b11110000 & ((1 << 5) - 1) = 0b11110000 & (0b100000 - 1) =
@@ -238,6 +239,7 @@ void MultipleLoadStore(u16 instruction) {
             rlist &= ~(1 << rb);
         }
 
+        // new base:
         Registers[rb] = (address + (popcount(rlist) << 2));
 
         for (size_t i = 0; i < 8; i++) {
@@ -259,6 +261,29 @@ void PCRelativeLoad(u16 instruction) {
 
     // internal cycle
     timer++;
+}
+
+template<bool L, u8 rd>
+void SPRelativeLoadStore(u16 instruction) {
+    u8 word8 = (instruction & 0xff) << 2;
+
+    if constexpr(L) {
+        u32 loaded = Memory->Read<u32, true>(sp + word8);
+        // word8 is always aligned, so we just check sp for misalignment
+
+        u32 misalignment = sp & 3;
+        if (unlikely(misalignment)) {
+            loaded = ROTR32(loaded, misalignment << 3);
+        }
+
+        Registers[rd] = loaded;
+
+        // internal cycle
+        timer++;
+    }
+    else {
+        Memory->Write<u32, true, true>(sp + word8, Registers[rd]);
+    }
 }
 
 #ifndef INLINED_INCLUDES
