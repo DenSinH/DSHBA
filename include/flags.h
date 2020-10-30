@@ -12,11 +12,13 @@
 #define COMPONENT_SCHEDULER   0x02
 #define COMPONENT_CPU         0x04
 #define COMPONENT_PPU         0x08
+#define COMPONENT_IO          0x10
+#define COMPONENT_DMA         0x20
 
 #ifndef NDEBUG
 // change to change verbosity / component logging:
 #define VERBOSITY VERBOSITY_DEBUG
-#define COMPONENT_FLAGS (0)
+#define COMPONENT_FLAGS (COMPONENT_DMA)
 
 // very intense testing variables:
 #define TRACE_LOG
@@ -35,14 +37,16 @@
 #define FAST_ADD_SUB
 #define BASIC_IDLE_DETECTION
 #define CTTZ_LDM_STM_LOOP_BASE  // not sure if this is worth it (loop unrolling might be faster)
+#define DIRECT_DMA_DATA_COPY
 
 #else
 #define VERBOSITY VERBOSITY_MAX
 
-#define DIRTY_MEMORY_ACCESS
-#define FAST_ADD_SUB
-#define BASIC_IDLE_DETECTION
-#define CTTZ_LDM_STM_LOOP_BASE
+#define DIRTY_MEMORY_ACCESS      // pointer memory access (only works on little endian)
+#define FAST_ADD_SUB             // add/sub/adc/subc based on instrinsics/builtins
+#define BASIC_IDLE_DETECTION     // detect idle branches in ARM/THUMB branch (without link) instructions
+#define CTTZ_LDM_STM_LOOP_BASE   // in LDM/STM type instructions, use cttz(rlist) as lower bound for the loop instead of 0
+#define DIRECT_DMA_DATA_COPY     // use memcpy to copy the register values into DMA data structs (only works on little endian)
 
 #endif
 

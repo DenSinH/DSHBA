@@ -51,3 +51,17 @@ void Mem::LoadROM(const std::string& file_path) {
 void Mem::LoadBIOS(const std::string& file_path) {
     LoadFileTo(reinterpret_cast<char *>(BIOS), file_path, 0x0000'4000);
 }
+
+void Mem::FastDMA(u8* start, u16 length) {
+
+}
+
+void Mem::DoDMA(u32 sad, u32 dad, u16 count, u16 control) {
+    /*
+     * We want to allow faster DMAs in certain memory regions
+     * BIOS/unused is a separate case, cause nothing can be read from there anyway, so the DMA can be skipped entirely.
+     * I/O we have to be careful, as well as EEPROM/Flash
+     * */
+
+
+}

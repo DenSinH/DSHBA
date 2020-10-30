@@ -1,19 +1,19 @@
 #include "MMIO.h"
 
-#include "Registers.h"
-#include "IOFlags.h"
 #include "Interrupts.h"
 
 #include "const.h"
 
 #include "../ARM7TDMI/ARM7TDMI.h"
+#include "../Mem/Mem.h"
 
 // needed for frame size data:
 #include "../PPU/shaders/GX_constants.h"
 
-MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, s_scheduler* scheduler) {
+MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
     PPU = ppu;
     CPU = cpu;
+    Memory = memory;
     Scheduler = scheduler;
 
     HBlankFlag = {
@@ -30,17 +30,6 @@ MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, s_scheduler* scheduler) {
 
     add_event(scheduler, &HBlankFlag);
     add_event(scheduler, &VBlankFlag);
-
-    ReadPrecall[static_cast<u32>(IORegister::DISPSTAT) >> 1]   = &MMIO::ReadDISPSTAT;
-    WriteCallback[static_cast<u32>(IORegister::DISPSTAT) >> 1] = &MMIO::WriteDISPSTAT;
-    ReadPrecall[static_cast<u32>(IORegister::VCOUNT) >> 1]   = &MMIO::ReadVCount;
-
-    ReadPrecall[static_cast<u32>(IORegister::KEYINPUT) >> 1]   = &MMIO::ReadKEYINPUT;
-
-    WriteCallback[static_cast<u32>(IORegister::IME) >> 1] = &MMIO::WriteIME;
-    WriteCallback[static_cast<u32>(IORegister::IE) >> 1] = &MMIO::WriteIE;
-    WriteCallback[static_cast<u32>(IORegister::IF) >> 1] = &MMIO::WriteIF;
-    ReadPrecall[static_cast<u32>(IORegister::IF) >> 1] = &MMIO::ReadIF;
 }
 
 SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {

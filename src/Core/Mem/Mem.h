@@ -11,7 +11,6 @@
 #include <functional>
 #include <utility>
 
-
 enum class MemoryRegion {
     BIOS   = 0x00,
     Unused = 0x01,
@@ -59,6 +58,9 @@ private:
     s_UpdateRange VRAMUpdate = { .min=sizeof(VRAMMEM), .max=0 };
     OAMMEM OAM               = {};
     u8 ROM   [0x0200'0000]   = {};
+
+    void FastDMA(u8* start, u16 length);
+    void DoDMA(u32 sad, u32 dad, u16 count, u16 control);
 };
 
 static u32 stubber = 0;

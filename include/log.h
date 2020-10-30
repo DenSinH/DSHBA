@@ -65,6 +65,26 @@
 #define log_ppu(message, ...) do { } while(0)
 #endif
 
+#if COMPONENT_FLAGS & COMPONENT_IO
+#define log_io(message, ...) do {                        \
+        CONSOLE_DARK_GREEN();                                \
+        fprintf(stdout, "[IO]: " message "\n",  ##__VA_ARGS__); \
+        CONSOLE_RESTORE();                             \
+    } while(0)
+#else
+#define log_io(message, ...) do { } while(0)
+#endif
+
+#if COMPONENT_FLAGS & COMPONENT_DMA
+#define log_dma(message, ...) do {                        \
+        CONSOLE_BLUE();                                \
+        fprintf(stdout, "[DMA]: " message "\n",  ##__VA_ARGS__); \
+        CONSOLE_RESTORE();                             \
+    } while(0)
+#else
+#define log_dma(message, ...) do { } while(0)
+#endif
+
 #if COMPONENT_FLAGS & COMPONENT_SCHEDULER
 #define log_sched(message, ...) do {                        \
         CONSOLE_BLUE();                                \
