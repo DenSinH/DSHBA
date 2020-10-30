@@ -14,11 +14,13 @@ class ARM7TDMI_INL : ARM7TDMI {
 
 template<typename T>
 void SWI(T instruction) {
+    log_cpu_verbose("SWI %x", instruction);
+
     SPSRBank[static_cast<u32>(Mode::Supervisor) & 0xf] = CPSR;
     ChangeMode(Mode::Supervisor);
     CPSR |= static_cast<u32>(CPSRFlags::I);
 
-    // LR_svc holds address or instruction that was not executed
+    // LR_svc holds address of the word after the SWI instruction
     // we are now in svc mode, so lr is lr_svc
     if constexpr(std::is_same_v<T, u32>) {
         // ARM mode

@@ -71,6 +71,22 @@ CONSOLE_COMMAND(Initializer::step_system) {
 #endif
 }
 
+CONSOLE_COMMAND(Initializer::trace_system) {
+#ifdef DO_DEBUGGER
+    if (argc < 2) {
+        STRCPY(output, MAX_OUTPUT_LENGTH, "Please give a number of steps");
+    } else {
+#ifdef TRACE_LOG
+        u32 steps = parsedec(args[1]);
+        gba->CPU.TraceSteps = steps;
+        SPRINTF(output, MAX_OUTPUT_LENGTH, "Tracing system for %d steps", steps);
+#else
+        STRCPY(output, MAX_OUTPUT_LENGTH, "Trace logging is turned off");
+#endif
+    }
+#endif
+}
+
 static u64 ticks, prev_ticks;
 static OVERLAY_INFO(cpu_ticks) {
     ticks = gba->CPU.timer;
@@ -216,6 +232,7 @@ GBA* Initializer::init() {
     add_command("BREAK", "Add breakpoint to system at PC = $1.", break_system);
     add_command("UNBREAK", "Remove breakpoint to system at PC = $1.", unbreak_system);
     add_command("STEP", "Step system for $1 CPU steps (defaults to 1 step).", step_system);
+    add_command("TRACE", "Trace system for $1 CPU steps.", trace_system);
 
     add_overlay_info(cpu_ticks);
     add_overlay_info(fps_counter);

@@ -136,6 +136,7 @@ void Mem::Write(u32 address, T value) {
                     Reflush();
                 }
             }
+
             WriteArray<T>(eWRAM, address & 0x3'ffff, value);
             return;
         case MemoryRegion::iWRAM:
@@ -145,6 +146,7 @@ void Mem::Write(u32 address, T value) {
                     Reflush();
                 }
             }
+
             WriteArray<T>(iWRAM, address & 0x7fff, value);
             return;
         case MemoryRegion::IO:

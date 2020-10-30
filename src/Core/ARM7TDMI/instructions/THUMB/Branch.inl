@@ -52,7 +52,7 @@ void LongBranchLink(u16 instruction) {
 
 void UnconditionalBranch(u16 instruction) {
     i32 offs11 = (instruction & 0x7ff);
-    offs11 = (offs11 << 22) >> 21;  // sign extend and shift by 1
+    offs11 = (offs11 << 21) >> 20;  // sign extend and shift by 1
 
     pc += offs11;
     FakePipelineFlush();

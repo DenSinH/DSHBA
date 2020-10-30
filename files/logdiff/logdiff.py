@@ -26,4 +26,4 @@ with open("./mgba.log", "r") as mGBA:
                 print("Difference in line", lineno)
                 print("   mGBA: ", mGBA_line)
                 print("   DSHBA:", DSHBA_line)
-                quit(1)
+                input()

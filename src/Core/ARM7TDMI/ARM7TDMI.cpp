@@ -22,12 +22,36 @@ ARM7TDMI::ARM7TDMI(s_scheduler *scheduler, Mem *memory)  {
 #endif
 }
 
+void ARM7TDMI::SkipBIOS() {
+    Registers[0] = 0x0800'0000;
+    Registers[1] = 0xea;
+
+    sp = 0x0300'7f00;
+
+    SPLRBank[static_cast<u8>(Mode::FIQ)        & 0xf][0] = 0x0300'7f00;
+    SPLRBank[static_cast<u8>(Mode::Supervisor) & 0xf][0] = 0x0300'7fe0;  // mostly here for show
+    SPLRBank[static_cast<u8>(Mode::Abort)      & 0xf][0] = 0x0300'7f00;  // mostly here for show
+    SPLRBank[static_cast<u8>(Mode::IRQ)        & 0xf][0] = 0x0300'7fa0;
+    SPLRBank[static_cast<u8>(Mode::Undefined)  & 0xf][0] = 0x0300'7f00;  // mostly here for show
+
+    pc = 0x0800'0000;
+    CPSR = 0x6000'001f;
+
+    this->FakePipelineFlush();
+    this->pc += 4;
+}
+
 void ARM7TDMI::Step() {
     u32 instruction;
 //    u32 old_pc = pc;
 
-#ifdef TRACE_LOG
+#ifdef ALWAYS_TRACE_LOG
     LogState();
+#elif defined(TRACE_LOG)
+    if (TraceSteps > 0) {
+        TraceSteps--;
+        LogState();
+    }
 #endif
 
     bool ARMMode = !(CPSR & static_cast<u32>(CPSRFlags::T));
@@ -113,7 +137,7 @@ SCHEDULER_EVENT(ARM7TDMI::InterruptPollEvent) {
             // todo: set memory BIOS readstate
 
             // address of instruction that did not get executed + 4
-            cpu->lr = cpu->pc - ((cpu->CPSR & static_cast<u32>(CPSRFlags::T)) ? 2 : 4);
+            cpu->lr = cpu->pc - ((cpu->CPSR & static_cast<u32>(CPSRFlags::T)) ? 0 : 4);
             cpu->CPSR &= ~static_cast<u32>(CPSRFlags::T);  // enter ARM mode
 
             cpu->pc = static_cast<u32>(ExceptionVector::IRQ);
@@ -131,9 +155,9 @@ void ARM7TDMI::ScheduleInterruptPoll() {
     }
 }
 
-#ifdef TRACE_LOG
+#if defined(TRACE_LOG) || defined(ALWAYS_TRACE_LOG)
 void ARM7TDMI::LogState() {
-    if (true || static_cast<Mode>(CPSR & static_cast<u32>(CPSRFlags::Mode)) != Mode::Supervisor) {
+    if (static_cast<Mode>(CPSR & static_cast<u32>(CPSRFlags::Mode)) != Mode::Supervisor) {
         trace << std::setfill('0') << std::setw(8) << std::hex << Registers[0] << " ";
         trace << std::setfill('0') << std::setw(8) << std::hex << Registers[1] << " ";
         trace << std::setfill('0') << std::setw(8) << std::hex << Registers[2] << " ";

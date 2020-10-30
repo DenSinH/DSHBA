@@ -11,6 +11,7 @@ public:
 
 private:
     static CONSOLE_COMMAND(step_system);
+    static CONSOLE_COMMAND(trace_system);
     static CONSOLE_COMMAND(break_system);
     static CONSOLE_COMMAND(unbreak_system);
     static CONSOLE_COMMAND(pause_system);

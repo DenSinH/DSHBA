@@ -364,7 +364,7 @@ struct s_framebuffer GBAPPU::Render() {
 
 #ifdef CHECK_SCANLINE_BATCH_ACCUM
     if (unlikely(scanline != VISIBLE_SCREEN_HEIGHT)) {
-        log_warn("Something went wrong in batching scanlines: expected %d, got %d", VISIBLE_SCREEN_HEIGHT, scanline);
+        // log_warn("Something went wrong in batching scanlines: expected %d, got %d", VISIBLE_SCREEN_HEIGHT, scanline);
     }
 #endif
 

@@ -51,30 +51,13 @@ public:
     ARM7TDMI(s_scheduler* scheduler, Mem* memory);
     ~ARM7TDMI() {
 
-#ifdef TRACE_LOG
+#if defined(TRACE_LOG) || defined(ALWAYS_TRACE_LOG)
         trace.close();
 #endif
 
     };
 
-    void SkipBIOS() {
-        Registers[0] = 0x0800'0000;
-        Registers[1] = 0xea;
-
-        sp = 0x0300'7f00;
-
-        SPLRBank[static_cast<u8>(Mode::FIQ)        & 0xf][0] = 0x0300'7f00;
-        SPLRBank[static_cast<u8>(Mode::Supervisor) & 0xf][0] = 0x0300'7fe0;  // mostly here for show
-        SPLRBank[static_cast<u8>(Mode::Abort)      & 0xf][0] = 0x0300'7f00;  // mostly here for show
-        SPLRBank[static_cast<u8>(Mode::IRQ)        & 0xf][0] = 0x0300'7fa0;
-        SPLRBank[static_cast<u8>(Mode::Undefined)  & 0xf][0] = 0x0300'7f00;  // mostly here for show
-
-        pc = 0x0800'0000;
-        CPSR = 0x6000'001f;
-
-        this->FakePipelineFlush();
-        this->pc += 4;
-    }
+    void SkipBIOS();
     void Step();
     void PipelineReflush();
 
@@ -90,9 +73,13 @@ private:
     friend void benchmark();
 #endif
 
-#ifdef TRACE_LOG
+#if defined(TRACE_LOG) || defined(ALWAYS_TRACE_LOG)
     std::fstream trace;
     void LogState();
+#ifdef TRACE_LOG
+    u32 TraceSteps = 0;
+#endif
+
 #endif
 
     enum class State : u8 {
@@ -159,12 +146,7 @@ private:
     void BuildARMTable();
     void BuildTHUMBTable();
 
-//    ALWAYS_INLINE void SetCVAdd(u32 op1, u32 op2, u32 result);
-//    ALWAYS_INLINE void SetCVAddC(u64 op1, u64 op2, u32 c, u32 result);
-//    ALWAYS_INLINE void SetCVSub(u32 op1, u32 op2, u32 result);
-//    ALWAYS_INLINE void SetCVSubC(u64 op1, u64 op2, u32 c, u32 result);
     ALWAYS_INLINE void SetNZ(u32 result);
-
     ALWAYS_INLINE u32 adcs_cv(u32 op1, u32 op2, u32 carry_in);
     ALWAYS_INLINE u32 adds_cv(u32 op1, u32 op2);
     ALWAYS_INLINE u32 sbcs_cv(u32 op1, u32 op2, u32 carry_in);
