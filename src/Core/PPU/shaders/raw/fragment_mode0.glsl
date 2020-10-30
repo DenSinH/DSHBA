@@ -41,9 +41,17 @@ uint VRAMIndex(uint Tx, uint Ty, uint Size) {
     return temp;
 }
 
-vec4 regularScreenEntryPixel(uint x, uint y, uint scanline, uint ScreenEntry, uint CBB, bool ColorMode) {
+vec4 regularScreenEntryPixel(uint dx, uint dy, uint scanline, uint ScreenEntry, uint CBB, bool ColorMode) {
     uint PaletteBank = ScreenEntry >> 12;  // 16 bits, we need top 4
-    // todo: flipping
+    if ((ScreenEntry & 0x0800u) != 0) {
+        // VFlip
+        dy = 7 - dy;
+    }
+
+    if ((ScreenEntry & 0x0400u) != 0) {
+        // HFlip
+        dx = 7 - dx;
+    }
 
     uint TID     = ScreenEntry & 0x3ffu;
     uint Address = CBB << 14;
@@ -51,11 +59,11 @@ vec4 regularScreenEntryPixel(uint x, uint y, uint scanline, uint ScreenEntry, ui
     if (!ColorMode) {
         // 4bpp
         Address += TID << 5;       // beginning of tile
-        Address += (y & 7u) << 2;  // beginning of sliver
+        Address += dy << 2;  // beginning of sliver
 
-        Address += (x & 7u) >> 1;  // offset into sliver
+        Address += dx >> 1;  // offset into sliver
         uint VRAMEntry = readVRAM8(Address);
-        if ((x & 1u) != 0) {
+        if ((dx & 1u) != 0) {
             VRAMEntry >>= 4;     // odd x, upper nibble
         }
         else {
@@ -69,9 +77,9 @@ vec4 regularScreenEntryPixel(uint x, uint y, uint scanline, uint ScreenEntry, ui
     else {
         // 8bpp
         Address += TID << 6;       // beginning of tile
-        Address += (y & 7u) << 2;  // beginning of sliver
+        Address += dy << 2;  // beginning of sliver
 
-        Address += (x & 7u);       // offset into sliver
+        Address += dx;       // offset into sliver
         uint VRAMEntry = readVRAM8(Address);
 
         if (VRAMEntry != 0) {
@@ -103,7 +111,7 @@ vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y) {
     ScreenEntryIndex += (SBB << 11u);
     uint ScreenEntry = readVRAM16(ScreenEntryIndex);  // always halfword aligned
 
-    return regularScreenEntryPixel(x_eff, y_eff, y, ScreenEntry, CBB, ColorMode);
+    return regularScreenEntryPixel(x_eff & 7u, y_eff & 7u, y, ScreenEntry, CBB, ColorMode);
 }
 
 

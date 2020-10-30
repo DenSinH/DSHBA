@@ -63,7 +63,7 @@ int main() {
     std::thread ui_thread(ui_run);
 
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Arithmetic/DIV/BIOSDIV.gba");
-    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/tonc/irq_demo.gba");
+    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/tonc/bigmap.gba");
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/thumb.gba");
     gba->Run();
 
