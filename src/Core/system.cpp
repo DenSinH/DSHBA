@@ -31,16 +31,10 @@ void GBA::Run() {
 
     while (!Shutdown) {
 
-        u32 oldpc = CPU.pc;
         if (should_do_events(&Scheduler)) {
             do_events(&Scheduler);
         }
         CPU.Step();
-
-        if (CPU.pc - 8 == 0x00000000) {
-            log_debug("Jump to 0 from %x", oldpc);
-            Paused = true;
-        }
 
 #if defined(DO_BREAKPOINTS) && defined(DO_DEBUGGER)
         if (check_breakpoints(&Breakpoints, CPU.pc - ((CPU.CPSR & static_cast<u32>(CPSRFlags::T)) ? 4 : 8))) {

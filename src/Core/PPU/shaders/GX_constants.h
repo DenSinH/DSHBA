@@ -18,11 +18,17 @@ enum class VMEMSizes : unsigned int {
 
 enum class LCDIORegs : unsigned int {
     DISPCNT = 0x00u,
+    BG0CNT  = 0x08u,
+    BG0HOFS = 0x10u,
+    BG0VOFS = 0x12u,
 };
 
 enum class DPSCNTBits : unsigned int {
     DPFrameSelect = 0x0010u,
+    DisplayBG0    = 0x0100u,
+    DisplayBG1    = 0x0200u,
     DisplayBG2    = 0x0400u,
+    DisplayBG3    = 0x0800u,
 };
 
 #define VISIBLE_SCREEN_HEIGHT 160

@@ -55,6 +55,7 @@ uvec4 readOAMentry(uint index, uint scanline) {
     );
 }
 
+vec4 mode0(uint, uint);
 vec4 mode3(uint, uint);
 vec4 mode4(uint, uint);
 
@@ -66,6 +67,9 @@ void main() {
 
     vec4 outColor;
     switch(DISPCNT & 7u) {
+        case 0u:
+            outColor = mode0(x, y);
+            break;
         case 3u:
             outColor = mode3(x, y);
             break;
