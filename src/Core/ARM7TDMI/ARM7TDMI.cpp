@@ -132,11 +132,13 @@ SCHEDULER_EVENT(ARM7TDMI::InterruptPollEvent) {
             log_cpu("Interrupt!");
             // actually do interrupt
             cpu->SPSRBank[static_cast<u8>(Mode::IRQ) & 0xf] = cpu->CPSR;
+            cpu->ChangeMode(Mode::IRQ);
             cpu->CPSR |= static_cast<u32>(CPSRFlags::I);
 
             // todo: set memory BIOS readstate
 
             // address of instruction that did not get executed + 4
+            // in THUMB mode, we are 4 bytes ahead, in ARM mode, we are 8 bytes ahead
             cpu->lr = cpu->pc - ((cpu->CPSR & static_cast<u32>(CPSRFlags::T)) ? 0 : 4);
             cpu->CPSR &= ~static_cast<u32>(CPSRFlags::T);  // enter ARM mode
 

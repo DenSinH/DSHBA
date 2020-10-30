@@ -62,7 +62,9 @@ vec4 regularScreenEntryPixel(uint x, uint y, uint scanline, uint ScreenEntry, ui
             VRAMEntry &= 0xfu;  // even x, lower nibble
         }
 
-        return vec4(readPALentry((PaletteBank << 4) + VRAMEntry, scanline).xyz, 1);
+        if (VRAMEntry != 0) {
+            return vec4(readPALentry((PaletteBank << 4) + VRAMEntry, scanline).xyz, 1);
+        }
     }
     else {
         // 8bpp
@@ -72,8 +74,13 @@ vec4 regularScreenEntryPixel(uint x, uint y, uint scanline, uint ScreenEntry, ui
         Address += (x & 7u);       // offset into sliver
         uint VRAMEntry = readVRAM8(Address);
 
-        return vec4(readPALentry(VRAMEntry, scanline).xyz, 1);
+        if (VRAMEntry != 0) {
+            return vec4(readPALentry(VRAMEntry, scanline).xyz, 1);
+        }
     }
+
+    // transparent
+    return vec4(0, 0, 0, 0);
 }
 
 vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y) {

@@ -27,8 +27,6 @@ private:
     friend class Initializer;
 
     Mem *Memory;
-
-    u32 BufferScanlineCount = 0;
     u32 BufferFrame = 0;
 
     PALMEM PALBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
@@ -42,7 +40,6 @@ private:
     LCDIO LCDIOBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
 
     s_scheduler* Scheduler;
-    s_event BufferScanline;
 
     std::mutex DrawMutex = std::mutex();
 
@@ -59,7 +56,7 @@ private:
     unsigned int VAO;
     unsigned int VBO;  // for drawing a line
 
-    static SCHEDULER_EVENT(BufferScanlineEvent);
+    void BufferScanline(u32 scanline);
 
     void InitFramebuffers();
     void InitPrograms();

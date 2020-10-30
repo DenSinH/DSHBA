@@ -42,7 +42,7 @@ public:
     template<typename T> inline void Write(u32 address, T value);
 
 private:
-    friend SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent); // allow registers to be buffered
+    friend void GBAPPU::BufferScanline(u32); // allow registers to be buffered
     friend void ParseInput(struct s_controller* controller);   // joypad input
     friend class Initializer;
 

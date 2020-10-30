@@ -80,7 +80,7 @@ const char* FragmentShaderSource =
 "            outColor = mode4(x, y);\n"  // l:75
 "            break;\n"  // l:76
 "        default:\n"  // l:77
-"            outColor = vec4(1, 0, 0, 1); // mode3(x, y);\n"  // l:78
+"            outColor = vec4(1, 1, 1, 1);\n"  // l:78
 "            break;\n"  // l:79
 "    }\n"  // l:80
 "\n"  // l:81
@@ -90,7 +90,7 @@ const char* FragmentShaderSource =
 ;
 
 
-// FragmentShaderMode0Source (from fragment_mode0.glsl, lines 2 to 133)
+// FragmentShaderMode0Source (from fragment_mode0.glsl, lines 2 to 140)
 const char* FragmentShaderMode0Source = 
 "#version 430 core\n"  // l:1
 "\n"  // l:2
@@ -154,75 +154,82 @@ const char* FragmentShaderMode0Source =
 "            VRAMEntry &= 0xfu;  // even x, lower nibble\n"  // l:60
 "        }\n"  // l:61
 "\n"  // l:62
-"        return vec4(readPALentry((PaletteBank << 4) + VRAMEntry, scanline).xyz, 1);\n"  // l:63
-"    }\n"  // l:64
-"    else {\n"  // l:65
-"        // 8bpp\n"  // l:66
-"        Address += TID << 6;       // beginning of tile\n"  // l:67
-"        Address += (y & 7u) << 2;  // beginning of sliver\n"  // l:68
-"\n"  // l:69
-"        Address += (x & 7u);       // offset into sliver\n"  // l:70
-"        uint VRAMEntry = readVRAM8(Address);\n"  // l:71
-"\n"  // l:72
-"        return vec4(readPALentry(VRAMEntry, scanline).xyz, 1);\n"  // l:73
-"    }\n"  // l:74
-"}\n"  // l:75
-"\n"  // l:76
-"vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y) {\n"  // l:77
-"    uint HOFS, VOFS;\n"  // l:78
-"    uint CBB, SBB, Size;\n"  // l:79
-"    bool ColorMode;\n"  // l:80
-"\n"  // l:81
-"    HOFS  = readIOreg(0x10u + (BG << 2), y) & 0x1ffu;\n"  // l:82
-"    VOFS  = readIOreg(0x12u + (BG << 2), y) & 0x1ffu;\n"  // l:83
-"\n"  // l:84
-"    CBB       = (BGCNT >> 2) & 3u;\n"  // l:85
-"    ColorMode = (BGCNT & 0x80u) != 0;  // 0: 4bpp, 1: 8bpp\n"  // l:86
-"    SBB       = (BGCNT >> 8) & 0x1fu;\n"  // l:87
-"    Size      = (BGCNT >> 14) & 3u;\n"  // l:88
-"\n"  // l:89
-"    uint x_eff = (x + HOFS) & 0xffffu;\n"  // l:90
-"    uint y_eff = (y + VOFS) & 0xffffu;\n"  // l:91
-"\n"  // l:92
-"    uint ScreenEntryIndex = VRAMIndex(x_eff >> 3u, y_eff >> 3u, Size);\n"  // l:93
-"    ScreenEntryIndex += (SBB << 11u);\n"  // l:94
-"    uint ScreenEntry = readVRAM16(ScreenEntryIndex);  // always halfword aligned\n"  // l:95
+"        if (VRAMEntry != 0) {\n"  // l:63
+"            return vec4(readPALentry((PaletteBank << 4) + VRAMEntry, scanline).xyz, 1);\n"  // l:64
+"        }\n"  // l:65
+"    }\n"  // l:66
+"    else {\n"  // l:67
+"        // 8bpp\n"  // l:68
+"        Address += TID << 6;       // beginning of tile\n"  // l:69
+"        Address += (y & 7u) << 2;  // beginning of sliver\n"  // l:70
+"\n"  // l:71
+"        Address += (x & 7u);       // offset into sliver\n"  // l:72
+"        uint VRAMEntry = readVRAM8(Address);\n"  // l:73
+"\n"  // l:74
+"        if (VRAMEntry != 0) {\n"  // l:75
+"            return vec4(readPALentry(VRAMEntry, scanline).xyz, 1);\n"  // l:76
+"        }\n"  // l:77
+"    }\n"  // l:78
+"\n"  // l:79
+"    // transparent\n"  // l:80
+"    return vec4(0, 0, 0, 0);\n"  // l:81
+"}\n"  // l:82
+"\n"  // l:83
+"vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y) {\n"  // l:84
+"    uint HOFS, VOFS;\n"  // l:85
+"    uint CBB, SBB, Size;\n"  // l:86
+"    bool ColorMode;\n"  // l:87
+"\n"  // l:88
+"    HOFS  = readIOreg(0x10u + (BG << 2), y) & 0x1ffu;\n"  // l:89
+"    VOFS  = readIOreg(0x12u + (BG << 2), y) & 0x1ffu;\n"  // l:90
+"\n"  // l:91
+"    CBB       = (BGCNT >> 2) & 3u;\n"  // l:92
+"    ColorMode = (BGCNT & 0x80u) != 0;  // 0: 4bpp, 1: 8bpp\n"  // l:93
+"    SBB       = (BGCNT >> 8) & 0x1fu;\n"  // l:94
+"    Size      = (BGCNT >> 14) & 3u;\n"  // l:95
 "\n"  // l:96
-"    return regularScreenEntryPixel(x_eff, y_eff, y, ScreenEntry, CBB, ColorMode);\n"  // l:97
-"}\n"  // l:98
+"    uint x_eff = (x + HOFS) & 0xffffu;\n"  // l:97
+"    uint y_eff = (y + VOFS) & 0xffffu;\n"  // l:98
 "\n"  // l:99
-"\n"  // l:100
-"vec4 mode0(uint x, uint y) {\n"  // l:101
-"    uint DISPCNT = readIOreg(0x00u, y);\n"  // l:102
+"    uint ScreenEntryIndex = VRAMIndex(x_eff >> 3u, y_eff >> 3u, Size);\n"  // l:100
+"    ScreenEntryIndex += (SBB << 11u);\n"  // l:101
+"    uint ScreenEntry = readVRAM16(ScreenEntryIndex);  // always halfword aligned\n"  // l:102
 "\n"  // l:103
-"    uint BGCNT[4];\n"  // l:104
-"\n"  // l:105
-"    for (uint BG = 0; BG < 4; BG++) {\n"  // l:106
-"        BGCNT[BG] = readIOreg(0x08u + (BG << 1), y);\n"  // l:107
-"    }\n"  // l:108
-"\n"  // l:109
-"    vec4 Color;\n"  // l:110
-"    for (uint priority = 0; priority < 4; priority++) {\n"  // l:111
-"        for (uint BG = 0; BG < 4; BG++) {\n"  // l:112
-"            if ((DISPCNT & (0x0100u << BG)) == 0) {\n"  // l:113
-"                continue;  // background disabled\n"  // l:114
-"            }\n"  // l:115
+"    return regularScreenEntryPixel(x_eff, y_eff, y, ScreenEntry, CBB, ColorMode);\n"  // l:104
+"}\n"  // l:105
+"\n"  // l:106
+"\n"  // l:107
+"vec4 mode0(uint x, uint y) {\n"  // l:108
+"    uint DISPCNT = readIOreg(0x00u, y);\n"  // l:109
+"\n"  // l:110
+"    uint BGCNT[4];\n"  // l:111
+"\n"  // l:112
+"    for (uint BG = 0; BG < 4; BG++) {\n"  // l:113
+"        BGCNT[BG] = readIOreg(0x08u + (BG << 1), y);\n"  // l:114
+"    }\n"  // l:115
 "\n"  // l:116
-"            if ((BGCNT[BG] & 0x3u) != priority) {\n"  // l:117
-"                continue;\n"  // l:118
-"            }\n"  // l:119
-"\n"  // l:120
-"            Color = regularBGPixel(BGCNT[BG], BG, x, y);\n"  // l:121
-"\n"  // l:122
-"            if (Color.w != 0) {\n"  // l:123
-"                return Color;\n"  // l:124
-"            }\n"  // l:125
-"        }\n"  // l:126
-"    }\n"  // l:127
-"\n"  // l:128
-"    return vec4(readPALentry(0, y).xyz, 1);\n"  // l:129
-"}\n"  // l:130
-"\n"  // l:131
+"    vec4 Color;\n"  // l:117
+"    for (uint priority = 0; priority < 4; priority++) {\n"  // l:118
+"        for (uint BG = 0; BG < 4; BG++) {\n"  // l:119
+"            if ((DISPCNT & (0x0100u << BG)) == 0) {\n"  // l:120
+"                continue;  // background disabled\n"  // l:121
+"            }\n"  // l:122
+"\n"  // l:123
+"            if ((BGCNT[BG] & 0x3u) != priority) {\n"  // l:124
+"                continue;\n"  // l:125
+"            }\n"  // l:126
+"\n"  // l:127
+"            Color = regularBGPixel(BGCNT[BG], BG, x, y);\n"  // l:128
+"\n"  // l:129
+"            if (Color.w != 0) {\n"  // l:130
+"                return Color;\n"  // l:131
+"            }\n"  // l:132
+"        }\n"  // l:133
+"    }\n"  // l:134
+"\n"  // l:135
+"    return vec4(readPALentry(0, y).xyz, 1);\n"  // l:136
+"}\n"  // l:137
+"\n"  // l:138
 ;
 
 

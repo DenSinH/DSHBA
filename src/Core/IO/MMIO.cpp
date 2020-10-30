@@ -54,7 +54,11 @@ SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
     IO->DISPSTAT ^= static_cast<u16>(DISPSTATFlags::HBLank);
     if (IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::HBLank)) {
         // HBlank was set, clear after 226 cycles
-        event->time += 226;
+        event->time += CYCLES_HBLANK_SET;
+
+        if (IO->VCount < VISIBLE_SCREEN_HEIGHT) {
+            IO->PPU->BufferScanline(IO->VCount);
+        }
 
         // HBlank interrupts
         if (IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::HBLankIRQ)) {
@@ -63,8 +67,8 @@ SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
         }
     }
     else {
-        // HBlank was cleared, clear after 1006 cycles
-        event->time += 1006;
+        // HBlank was cleared, set after 1006 cycles
+        event->time += CYCLES_HBLANK_CLEAR;
 
         // increment VCount
         IO->VCount++;

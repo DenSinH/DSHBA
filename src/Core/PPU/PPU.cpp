@@ -20,16 +20,8 @@ GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
     Scheduler = scheduler;
     Memory = memory;
 
-    BufferScanline = (s_event) {
-        .callback = &GBAPPU::BufferScanlineEvent,
-        .caller = this,
-        .time = CYCLES_PER_SCANLINE
-    };
-
-    add_event(scheduler, &BufferScanline);
-
-    // prevent possible race condition:
-    /*
+    /* prevent possible race condition:
+     *
      * (In theory, if the frontend started up really quickly, the first frame could be drawn when ScanlineBatchSizes
      * was still all 0s, causing it to get stuck in an infinite loop)
      * */
@@ -44,77 +36,66 @@ GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
     }
 }
 
-SCHEDULER_EVENT(GBAPPU::BufferScanlineEvent) {
-    auto ppu = (GBAPPU*)caller;
-
+void GBAPPU::BufferScanline(u32 scanline) {
     // copy over range data
-    ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount] = ppu->Memory->VRAMUpdate;
+    VRAMRanges[BufferFrame][scanline] = Memory->VRAMUpdate;
 
     // copy over actual new data
     memcpy(
-        ppu->PALBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
-        ppu->Memory->PAL,
+        PALBuffer[BufferFrame][scanline],
+        Memory->PAL,
         sizeof(PALMEM)
     );
 #ifndef FULL_VRAM_BUFFER
-    s_UpdateRange range = ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount];
+    s_UpdateRange range = VRAMRanges[BufferFrame][scanline];
     if (range.min <= range.max) {
         memcpy(
-                ppu->VRAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount] + range.min,
-                ppu->Memory->VRAM + range.min,
+                VRAMBuffer[BufferFrame][scanline] + range.min,
+                Memory->VRAM + range.min,
                 range.max - range.min
         );
 
         // go to next batch
-        ppu->CurrentScanlineBatch = ppu->BufferScanlineCount;
-        ppu->ScanlineBatchSizes[ppu->BufferFrame][ppu->CurrentScanlineBatch] = 1;
+        CurrentScanlineBatch = scanline;
+        ScanlineBatchSizes[BufferFrame][CurrentScanlineBatch] = 1;
     }
     else {
         // we can use the same batch of scanlines since VRAM was not updated
-        ppu->ScanlineBatchSizes[ppu->BufferFrame][ppu->CurrentScanlineBatch]++;
+        ScanlineBatchSizes[BufferFrame][CurrentScanlineBatch]++;
     }
 #else
     memcpy(
-        ppu->VRAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
-        ppu->Memory->VRAM,
+        VRAMBuffer[BufferFrame][BufferScanlineCount],
+        Memory->VRAM,
         sizeof(VRAMMEM)
     );
-    ppu->CurrentScanlineBatch = ppu->BufferScanlineCount;
-    ppu->ScanlineBatchSizes[ppu->BufferFrame][ppu->CurrentScanlineBatch] = 1;
+    CurrentScanlineBatch = BufferScanlineCount;
+    ScanlineBatchSizes[BufferFrame][CurrentScanlineBatch] = 1;
 #endif
     memcpy(
-        ppu->OAMBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
-        ppu->Memory->OAM,
+        OAMBuffer[BufferFrame][scanline],
+        Memory->OAM,
         sizeof(OAMMEM)
     );
     memcpy(
-        ppu->LCDIOBuffer[ppu->BufferFrame][ppu->BufferScanlineCount],
-        ppu->Memory->IO->Registers,
+        LCDIOBuffer[BufferFrame][scanline],
+        Memory->IO->Registers,
         sizeof(LCDIO)
     );
 
-    ppu->BufferScanlineCount++;
-    ppu->DrawMutex.lock();
-    if (unlikely(ppu->BufferScanlineCount == VISIBLE_SCREEN_HEIGHT)) {
-        ppu->BufferScanlineCount = 0;
-        ppu->Frame++;
-        ppu->BufferFrame ^= 1;
+    DrawMutex.lock();
+    if (unlikely(scanline == (VISIBLE_SCREEN_HEIGHT - 1))) {
+        Frame++;
+        BufferFrame ^= 1;
 
         // reset scanline batching
-        ppu->CurrentScanlineBatch = 0;  // reset batch
-        ppu->ScanlineBatchSizes[ppu->BufferFrame][0] = 0;
-
-        event->time += (TOTAL_SCREEN_HEIGHT - VISIBLE_SCREEN_HEIGHT) * CYCLES_PER_SCANLINE;
-    }
-    else {
-        event->time += CYCLES_PER_SCANLINE;
+        CurrentScanlineBatch = 0;  // reset batch
+        ScanlineBatchSizes[BufferFrame][0] = 0;
     }
 
     // next time: update whatever was new last scanline, plus what gets drawn next
-    ppu->Memory->VRAMUpdate = ppu->VRAMRanges[ppu->BufferFrame][ppu->BufferScanlineCount];
-    ppu->DrawMutex.unlock();
-
-    add_event(scheduler, event);
+    Memory->VRAMUpdate = VRAMRanges[BufferFrame][scanline];
+    DrawMutex.unlock();
 }
 
 void GBAPPU::InitFramebuffers() {
