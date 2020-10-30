@@ -1,7 +1,7 @@
 #ifndef GC__SHADER_H
 #define GC__SHADER_H
 
-// FragmentShaderSource (from fragment.glsl, lines 2 to 86)
+// FragmentShaderSource (from fragment.glsl, lines 2 to 190)
 const char* FragmentShaderSource = 
 "#version 430 core\n"  // l:1
 "\n"  // l:2
@@ -58,39 +58,143 @@ const char* FragmentShaderSource =
 "    );\n"  // l:53
 "}\n"  // l:54
 "\n"  // l:55
-"vec4 mode0(uint, uint);\n"  // l:56
-"vec4 mode3(uint, uint);\n"  // l:57
-"vec4 mode4(uint, uint);\n"  // l:58
-"\n"  // l:59
-"void main() {\n"  // l:60
-"    uint x = uint(screenCoord.x);\n"  // l:61
-"    uint y = uint(screenCoord.y);\n"  // l:62
-"\n"  // l:63
-"    uint DISPCNT = readIOreg(0, y);\n"  // l:64
-"\n"  // l:65
-"    vec4 outColor;\n"  // l:66
-"    switch(DISPCNT & 7u) {\n"  // l:67
-"        case 0u:\n"  // l:68
-"            outColor = mode0(x, y);\n"  // l:69
-"            break;\n"  // l:70
-"        case 3u:\n"  // l:71
-"            outColor = mode3(x, y);\n"  // l:72
-"            break;\n"  // l:73
-"        case 4u:\n"  // l:74
-"            outColor = mode4(x, y);\n"  // l:75
-"            break;\n"  // l:76
-"        default:\n"  // l:77
-"            outColor = vec4(1, 1, 1, 1);\n"  // l:78
-"            break;\n"  // l:79
-"    }\n"  // l:80
-"\n"  // l:81
-"    FragColor = outColor;\n"  // l:82
-"}\n"  // l:83
-"\n"  // l:84
+"uint VRAMIndex(uint Tx, uint Ty, uint Size) {\n"  // l:56
+"    uint temp = ((Ty & 0x1fu) << 6);\n"  // l:57
+"    temp |= temp | ((Tx & 0x1fu) << 1);\n"  // l:58
+"    switch (Size) {\n"  // l:59
+"        case 0:  // 32x32\n"  // l:60
+"        break;\n"  // l:61
+"        case 1:  // 64x32\n"  // l:62
+"        if ((Tx & 0x20u) != 0) {\n"  // l:63
+"            temp |= 0x800u;\n"  // l:64
+"        }\n"  // l:65
+"        break;\n"  // l:66
+"        case 2:  // 32x64\n"  // l:67
+"        if ((Ty & 0x20u) != 0) {\n"  // l:68
+"            temp |= 0x800u;\n"  // l:69
+"        }\n"  // l:70
+"        break;\n"  // l:71
+"        case 3:  // 64x64\n"  // l:72
+"        if ((Ty & 0x20u) != 0) {\n"  // l:73
+"            temp |= 0x1000u;\n"  // l:74
+"        }\n"  // l:75
+"        if ((Tx & 0x20u) != 0) {\n"  // l:76
+"            temp |= 0x800u;\n"  // l:77
+"        }\n"  // l:78
+"        break;\n"  // l:79
+"        default:\n"  // l:80
+"        // invalid, should not happen\n"  // l:81
+"        return 0;\n"  // l:82
+"    }\n"  // l:83
+"    return temp;\n"  // l:84
+"}\n"  // l:85
+"\n"  // l:86
+"vec4 regularScreenEntryPixel(uint dx, uint dy, uint scanline, uint ScreenEntry, uint CBB, bool ColorMode) {\n"  // l:87
+"    uint PaletteBank = ScreenEntry >> 12;  // 16 bits, we need top 4\n"  // l:88
+"    if ((ScreenEntry & 0x0800u) != 0) {\n"  // l:89
+"        // VFlip\n"  // l:90
+"        dy = 7 - dy;\n"  // l:91
+"    }\n"  // l:92
+"\n"  // l:93
+"    if ((ScreenEntry & 0x0400u) != 0) {\n"  // l:94
+"        // HFlip\n"  // l:95
+"        dx = 7 - dx;\n"  // l:96
+"    }\n"  // l:97
+"\n"  // l:98
+"    uint TID     = ScreenEntry & 0x3ffu;\n"  // l:99
+"    uint Address = CBB << 14;\n"  // l:100
+"\n"  // l:101
+"    if (!ColorMode) {\n"  // l:102
+"        // 4bpp\n"  // l:103
+"        Address += TID << 5;       // beginning of tile\n"  // l:104
+"        Address += dy << 2;  // beginning of sliver\n"  // l:105
+"\n"  // l:106
+"        Address += dx >> 1;  // offset into sliver\n"  // l:107
+"        uint VRAMEntry = readVRAM8(Address);\n"  // l:108
+"        if ((dx & 1u) != 0) {\n"  // l:109
+"            VRAMEntry >>= 4;     // odd x, upper nibble\n"  // l:110
+"        }\n"  // l:111
+"        else {\n"  // l:112
+"            VRAMEntry &= 0xfu;  // even x, lower nibble\n"  // l:113
+"        }\n"  // l:114
+"\n"  // l:115
+"        if (VRAMEntry != 0) {\n"  // l:116
+"            return vec4(readPALentry((PaletteBank << 4) + VRAMEntry, scanline).xyz, 1);\n"  // l:117
+"        }\n"  // l:118
+"    }\n"  // l:119
+"    else {\n"  // l:120
+"        // 8bpp\n"  // l:121
+"        Address += TID << 6;       // beginning of tile\n"  // l:122
+"        Address += dy << 2;  // beginning of sliver\n"  // l:123
+"\n"  // l:124
+"        Address += dx;       // offset into sliver\n"  // l:125
+"        uint VRAMEntry = readVRAM8(Address);\n"  // l:126
+"\n"  // l:127
+"        if (VRAMEntry != 0) {\n"  // l:128
+"            return vec4(readPALentry(VRAMEntry, scanline).xyz, 1);\n"  // l:129
+"        }\n"  // l:130
+"    }\n"  // l:131
+"\n"  // l:132
+"    // transparent\n"  // l:133
+"    return vec4(0, 0, 0, 0);\n"  // l:134
+"}\n"  // l:135
+"\n"  // l:136
+"vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y) {\n"  // l:137
+"    uint HOFS, VOFS;\n"  // l:138
+"    uint CBB, SBB, Size;\n"  // l:139
+"    bool ColorMode;\n"  // l:140
+"\n"  // l:141
+"    HOFS  = readIOreg(0x10u + (BG << 2), y) & 0x1ffu;\n"  // l:142
+"    VOFS  = readIOreg(0x12u + (BG << 2), y) & 0x1ffu;\n"  // l:143
+"\n"  // l:144
+"    CBB       = (BGCNT >> 2) & 3u;\n"  // l:145
+"    ColorMode = (BGCNT & 0x80u) != 0;  // 0: 4bpp, 1: 8bpp\n"  // l:146
+"    SBB       = (BGCNT >> 8) & 0x1fu;\n"  // l:147
+"    Size      = (BGCNT >> 14) & 3u;\n"  // l:148
+"\n"  // l:149
+"    uint x_eff = (x + HOFS) & 0xffffu;\n"  // l:150
+"    uint y_eff = (y + VOFS) & 0xffffu;\n"  // l:151
+"\n"  // l:152
+"    uint ScreenEntryIndex = VRAMIndex(x_eff >> 3u, y_eff >> 3u, Size);\n"  // l:153
+"    ScreenEntryIndex += (SBB << 11u);\n"  // l:154
+"    uint ScreenEntry = readVRAM16(ScreenEntryIndex);  // always halfword aligned\n"  // l:155
+"\n"  // l:156
+"    return regularScreenEntryPixel(x_eff & 7u, y_eff & 7u, y, ScreenEntry, CBB, ColorMode);\n"  // l:157
+"}\n"  // l:158
+"\n"  // l:159
+"vec4 mode0(uint, uint);\n"  // l:160
+"vec4 mode3(uint, uint);\n"  // l:161
+"vec4 mode4(uint, uint);\n"  // l:162
+"\n"  // l:163
+"void main() {\n"  // l:164
+"    uint x = uint(screenCoord.x);\n"  // l:165
+"    uint y = uint(screenCoord.y);\n"  // l:166
+"\n"  // l:167
+"    uint DISPCNT = readIOreg(0, y);\n"  // l:168
+"\n"  // l:169
+"    vec4 outColor;\n"  // l:170
+"    switch(DISPCNT & 7u) {\n"  // l:171
+"        case 0u:\n"  // l:172
+"            outColor = mode0(x, y);\n"  // l:173
+"            break;\n"  // l:174
+"        case 3u:\n"  // l:175
+"            outColor = mode3(x, y);\n"  // l:176
+"            break;\n"  // l:177
+"        case 4u:\n"  // l:178
+"            outColor = mode4(x, y);\n"  // l:179
+"            break;\n"  // l:180
+"        default:\n"  // l:181
+"            outColor = vec4(1, 1, 1, 1);\n"  // l:182
+"            break;\n"  // l:183
+"    }\n"  // l:184
+"\n"  // l:185
+"    FragColor = outColor;\n"  // l:186
+"}\n"  // l:187
+"\n"  // l:188
 ;
 
 
-// FragmentShaderMode0Source (from fragment_mode0.glsl, lines 2 to 148)
+// FragmentShaderMode0Source (from fragment_mode0.glsl, lines 2 to 46)
 const char* FragmentShaderMode0Source = 
 "#version 430 core\n"  // l:1
 "\n"  // l:2
@@ -102,142 +206,40 @@ const char* FragmentShaderMode0Source =
 "vec4 readPALentry(uint index, uint scanline);\n"  // l:8
 "uvec4 readOAMentry(uint index, uint scanline);\n"  // l:9
 "\n"  // l:10
-"uint VRAMIndex(uint Tx, uint Ty, uint Size) {\n"  // l:11
-"    uint temp = ((Ty & 0x1fu) << 6);\n"  // l:12
-"    temp |= temp | ((Tx & 0x1fu) << 1);\n"  // l:13
-"    switch (Size) {\n"  // l:14
-"        case 0:  // 32x32\n"  // l:15
-"            break;\n"  // l:16
-"        case 1:  // 64x32\n"  // l:17
-"            if ((Tx & 0x20u) != 0) {\n"  // l:18
-"                temp |= 0x800u;\n"  // l:19
-"            }\n"  // l:20
-"            break;\n"  // l:21
-"        case 2:  // 32x64\n"  // l:22
-"            if ((Ty & 0x20u) != 0) {\n"  // l:23
-"                temp |= 0x800u;\n"  // l:24
-"            }\n"  // l:25
-"            break;\n"  // l:26
-"        case 3:  // 64x64\n"  // l:27
-"            if ((Ty & 0x20u) != 0) {\n"  // l:28
-"                temp |= 0x1000u;\n"  // l:29
-"            }\n"  // l:30
-"            if ((Tx & 0x20u) != 0) {\n"  // l:31
-"                temp |= 0x800u;\n"  // l:32
-"            }\n"  // l:33
-"            break;\n"  // l:34
-"        default:\n"  // l:35
-"            // invalid, should not happen\n"  // l:36
-"            return 0;\n"  // l:37
-"    }\n"  // l:38
-"    return temp;\n"  // l:39
-"}\n"  // l:40
+"vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y);\n"  // l:11
+"\n"  // l:12
+"vec4 mode0(uint x, uint y) {\n"  // l:13
+"    uint DISPCNT = readIOreg(0x00u, y);\n"  // l:14
+"\n"  // l:15
+"    uint BGCNT[4];\n"  // l:16
+"\n"  // l:17
+"    for (uint BG = 0; BG < 4; BG++) {\n"  // l:18
+"        BGCNT[BG] = readIOreg(0x08u + (BG << 1), y);\n"  // l:19
+"    }\n"  // l:20
+"\n"  // l:21
+"    vec4 Color;\n"  // l:22
+"    for (uint priority = 0; priority < 4; priority++) {\n"  // l:23
+"        for (uint BG = 0; BG < 4; BG++) {\n"  // l:24
+"            if ((DISPCNT & (0x0100u << BG)) == 0) {\n"  // l:25
+"                continue;  // background disabled\n"  // l:26
+"            }\n"  // l:27
+"\n"  // l:28
+"            if ((BGCNT[BG] & 0x3u) != priority) {\n"  // l:29
+"                // background priority\n"  // l:30
+"                continue;\n"  // l:31
+"            }\n"  // l:32
+"\n"  // l:33
+"            Color = regularBGPixel(BGCNT[BG], BG, x, y);\n"  // l:34
+"\n"  // l:35
+"            if (Color.w != 0) {\n"  // l:36
+"                return Color;\n"  // l:37
+"            }\n"  // l:38
+"        }\n"  // l:39
+"    }\n"  // l:40
 "\n"  // l:41
-"vec4 regularScreenEntryPixel(uint dx, uint dy, uint scanline, uint ScreenEntry, uint CBB, bool ColorMode) {\n"  // l:42
-"    uint PaletteBank = ScreenEntry >> 12;  // 16 bits, we need top 4\n"  // l:43
-"    if ((ScreenEntry & 0x0800u) != 0) {\n"  // l:44
-"        // VFlip\n"  // l:45
-"        dy = 7 - dy;\n"  // l:46
-"    }\n"  // l:47
-"\n"  // l:48
-"    if ((ScreenEntry & 0x0400u) != 0) {\n"  // l:49
-"        // HFlip\n"  // l:50
-"        dx = 7 - dx;\n"  // l:51
-"    }\n"  // l:52
-"\n"  // l:53
-"    uint TID     = ScreenEntry & 0x3ffu;\n"  // l:54
-"    uint Address = CBB << 14;\n"  // l:55
-"\n"  // l:56
-"    if (!ColorMode) {\n"  // l:57
-"        // 4bpp\n"  // l:58
-"        Address += TID << 5;       // beginning of tile\n"  // l:59
-"        Address += dy << 2;  // beginning of sliver\n"  // l:60
-"\n"  // l:61
-"        Address += dx >> 1;  // offset into sliver\n"  // l:62
-"        uint VRAMEntry = readVRAM8(Address);\n"  // l:63
-"        if ((dx & 1u) != 0) {\n"  // l:64
-"            VRAMEntry >>= 4;     // odd x, upper nibble\n"  // l:65
-"        }\n"  // l:66
-"        else {\n"  // l:67
-"            VRAMEntry &= 0xfu;  // even x, lower nibble\n"  // l:68
-"        }\n"  // l:69
-"\n"  // l:70
-"        if (VRAMEntry != 0) {\n"  // l:71
-"            return vec4(readPALentry((PaletteBank << 4) + VRAMEntry, scanline).xyz, 1);\n"  // l:72
-"        }\n"  // l:73
-"    }\n"  // l:74
-"    else {\n"  // l:75
-"        // 8bpp\n"  // l:76
-"        Address += TID << 6;       // beginning of tile\n"  // l:77
-"        Address += dy << 2;  // beginning of sliver\n"  // l:78
-"\n"  // l:79
-"        Address += dx;       // offset into sliver\n"  // l:80
-"        uint VRAMEntry = readVRAM8(Address);\n"  // l:81
-"\n"  // l:82
-"        if (VRAMEntry != 0) {\n"  // l:83
-"            return vec4(readPALentry(VRAMEntry, scanline).xyz, 1);\n"  // l:84
-"        }\n"  // l:85
-"    }\n"  // l:86
-"\n"  // l:87
-"    // transparent\n"  // l:88
-"    return vec4(0, 0, 0, 0);\n"  // l:89
-"}\n"  // l:90
-"\n"  // l:91
-"vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y) {\n"  // l:92
-"    uint HOFS, VOFS;\n"  // l:93
-"    uint CBB, SBB, Size;\n"  // l:94
-"    bool ColorMode;\n"  // l:95
-"\n"  // l:96
-"    HOFS  = readIOreg(0x10u + (BG << 2), y) & 0x1ffu;\n"  // l:97
-"    VOFS  = readIOreg(0x12u + (BG << 2), y) & 0x1ffu;\n"  // l:98
-"\n"  // l:99
-"    CBB       = (BGCNT >> 2) & 3u;\n"  // l:100
-"    ColorMode = (BGCNT & 0x80u) != 0;  // 0: 4bpp, 1: 8bpp\n"  // l:101
-"    SBB       = (BGCNT >> 8) & 0x1fu;\n"  // l:102
-"    Size      = (BGCNT >> 14) & 3u;\n"  // l:103
-"\n"  // l:104
-"    uint x_eff = (x + HOFS) & 0xffffu;\n"  // l:105
-"    uint y_eff = (y + VOFS) & 0xffffu;\n"  // l:106
-"\n"  // l:107
-"    uint ScreenEntryIndex = VRAMIndex(x_eff >> 3u, y_eff >> 3u, Size);\n"  // l:108
-"    ScreenEntryIndex += (SBB << 11u);\n"  // l:109
-"    uint ScreenEntry = readVRAM16(ScreenEntryIndex);  // always halfword aligned\n"  // l:110
-"\n"  // l:111
-"    return regularScreenEntryPixel(x_eff & 7u, y_eff & 7u, y, ScreenEntry, CBB, ColorMode);\n"  // l:112
-"}\n"  // l:113
-"\n"  // l:114
-"\n"  // l:115
-"vec4 mode0(uint x, uint y) {\n"  // l:116
-"    uint DISPCNT = readIOreg(0x00u, y);\n"  // l:117
-"\n"  // l:118
-"    uint BGCNT[4];\n"  // l:119
-"\n"  // l:120
-"    for (uint BG = 0; BG < 4; BG++) {\n"  // l:121
-"        BGCNT[BG] = readIOreg(0x08u + (BG << 1), y);\n"  // l:122
-"    }\n"  // l:123
-"\n"  // l:124
-"    vec4 Color;\n"  // l:125
-"    for (uint priority = 0; priority < 4; priority++) {\n"  // l:126
-"        for (uint BG = 0; BG < 4; BG++) {\n"  // l:127
-"            if ((DISPCNT & (0x0100u << BG)) == 0) {\n"  // l:128
-"                continue;  // background disabled\n"  // l:129
-"            }\n"  // l:130
-"\n"  // l:131
-"            if ((BGCNT[BG] & 0x3u) != priority) {\n"  // l:132
-"                continue;\n"  // l:133
-"            }\n"  // l:134
-"\n"  // l:135
-"            Color = regularBGPixel(BGCNT[BG], BG, x, y);\n"  // l:136
-"\n"  // l:137
-"            if (Color.w != 0) {\n"  // l:138
-"                return Color;\n"  // l:139
-"            }\n"  // l:140
-"        }\n"  // l:141
-"    }\n"  // l:142
-"\n"  // l:143
-"    return vec4(readPALentry(0, y).xyz, 1);\n"  // l:144
-"}\n"  // l:145
-"\n"  // l:146
+"    return vec4(readPALentry(0, y).xyz, 1);\n"  // l:42
+"}\n"  // l:43
+"\n"  // l:44
 ;
 
 
