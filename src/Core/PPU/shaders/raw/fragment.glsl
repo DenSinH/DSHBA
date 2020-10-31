@@ -103,7 +103,7 @@ vec4 regularScreenEntryPixel(uint dx, uint dy, uint scanline, uint ScreenEntry, 
 
     if (!ColorMode) {
         // 4bpp
-        Address += TID << 5;       // beginning of tile
+        Address += TID << 5; // beginning of tile
         Address += dy << 2;  // beginning of sliver
 
         Address += dx >> 1;  // offset into sliver
@@ -121,8 +121,8 @@ vec4 regularScreenEntryPixel(uint dx, uint dy, uint scanline, uint ScreenEntry, 
     }
     else {
         // 8bpp
-        Address += TID << 6;       // beginning of tile
-        Address += dy << 2;  // beginning of sliver
+        Address += TID << 6; // beginning of tile
+        Address += dy << 3;  // beginning of sliver
 
         Address += dx;       // offset into sliver
         uint VRAMEntry = readVRAM8(Address);

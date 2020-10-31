@@ -106,7 +106,7 @@ const char* FragmentShaderSource =
 "\n"  // l:101
 "    if (!ColorMode) {\n"  // l:102
 "        // 4bpp\n"  // l:103
-"        Address += TID << 5;       // beginning of tile\n"  // l:104
+"        Address += TID << 5; // beginning of tile\n"  // l:104
 "        Address += dy << 2;  // beginning of sliver\n"  // l:105
 "\n"  // l:106
 "        Address += dx >> 1;  // offset into sliver\n"  // l:107
@@ -124,8 +124,8 @@ const char* FragmentShaderSource =
 "    }\n"  // l:119
 "    else {\n"  // l:120
 "        // 8bpp\n"  // l:121
-"        Address += TID << 6;       // beginning of tile\n"  // l:122
-"        Address += dy << 2;  // beginning of sliver\n"  // l:123
+"        Address += TID << 6; // beginning of tile\n"  // l:122
+"        Address += dy << 3;  // beginning of sliver\n"  // l:123
 "\n"  // l:124
 "        Address += dx;       // offset into sliver\n"  // l:125
 "        uint VRAMEntry = readVRAM8(Address);\n"  // l:126
