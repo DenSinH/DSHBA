@@ -22,7 +22,6 @@ enum class DMACNT_HFlags : u16 {
     SrcIncrement        = 0x0000,
     SrcDecrement        = 0x0080,
     SrcFixed            = 0x0100,
-    SrcIncrementReload  = 0x0180,
 
     Repeat              = 0x0200,
     WordSized           = 0x0400,

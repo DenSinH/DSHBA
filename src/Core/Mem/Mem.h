@@ -31,7 +31,7 @@ enum class MemoryRegion {
 
 class Mem {
 public:
-    Mem(MMIO* IO, u32* pc_ptr, std::function<void(void)> reflush);
+    Mem(MMIO* IO, s_scheduler* scheduler, u32* pc_ptr, u64* timer, std::function<void(void)> reflush);
     ~Mem();
 
     template<typename T, bool count> T Read(u32 address);
@@ -39,6 +39,8 @@ public:
 
     void LoadROM(const std::string& file_path);
     void LoadBIOS(const std::string& file_path);
+    u8* GetPtr(u32 address);
+    template<typename T, bool intermittent_events> void DoDMA(s_DMAData* DMA);
 
 private:
     friend class GBAPPU;  // allow VMEM to be buffered
@@ -46,8 +48,11 @@ private:
 
     template<typename T> ALWAYS_INLINE void WriteVRAM(u32 address, T value);
 
+    s_scheduler* Scheduler;
     u32* pc_ptr;
+    u64* timer;
     std::function<void(void)> Reflush;
+    s_UpdateRange VRAMUpdate = { .min=sizeof(VRAMMEM), .max=0 };
 
     u8 BIOS  [0x4000]        = {};
     u8 eWRAM [0x4'0000]      = {};
@@ -55,18 +60,29 @@ private:
     MMIO* IO;
     PALMEM PAL               = {};
     VRAMMEM VRAM             = {};
-    s_UpdateRange VRAMUpdate = { .min=sizeof(VRAMMEM), .max=0 };
     OAMMEM OAM               = {};
     u8 ROM   [0x0200'0000]   = {};
 
-    void FastDMA(u8* start, u16 length);
-    void DoDMA(u32 sad, u32 dad, u16 count, u16 control);
+    template<typename T, bool intermittent_events> void FastDMA(s_DMAData* DMA);
+    template<typename T, bool intermittent_events> void SlowDMA(s_DMAData* DMA);
 };
 
-static u32 stubber = 0;
+static ALWAYS_INLINE constexpr u32 MaskVRAMAddress(const u32 address) {
+    if ((address & 0x1'ffff) < 0x1'0000) {
+        return address & 0xffff;
+    }
+    return 0x1'0000 | (address & 0x7fff);
+}
+
+#include "DMA.inl"
 
 template<typename T, bool count>
 T Mem::Read(u32 address) {
+    if constexpr(count) {
+        // todo: actual timings
+        (*timer)++;
+    }
+
     switch (static_cast<MemoryRegion>(address >> 24)) {
         case MemoryRegion::BIOS:
             return ReadArray<T>(BIOS, address & 0x3fff);
@@ -84,10 +100,7 @@ T Mem::Read(u32 address) {
         case MemoryRegion::PAL:
             return ReadArray<T>(PAL, address & 0x3ff);
         case MemoryRegion::VRAM:
-            if ((address & 0x1'ffff) < 0x1'0000) {
-                return ReadArray<T>(VRAM, address & 0xffff);
-            }
-            return ReadArray<T>(VRAM, 0x1'0000 | (address & 0x7fff));
+            return ReadArray<T>(VRAM, MaskVRAMAddress(address));
         case MemoryRegion::OAM:
             return ReadArray<T>(OAM, address & 0x3ff);
         case MemoryRegion::ROM_L1:
@@ -120,11 +133,15 @@ ALWAYS_INLINE void Mem::WriteVRAM(u32 address, T value) {
     }
 }
 
+// We only want to re-flush the ARM7TDMI pipeline if we are in an instruction when it happens
+// DMAs, we assume that PC is not in the DMA-ed part of the code
+#define NEAR_PC(mask) ((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & (mask)) <= 8)
 template<typename T, bool count, bool do_reflush>
 void Mem::Write(u32 address, T value) {
-    // We only want to re-flush the ARM7TDMI pipeline if we are in an instruction when it happens
-    // DMAs, we assume that PC is not in the DMA-ed part of the code
-#define NEAR_PC(mask) ((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & (mask)) <= 8)
+    if constexpr(count) {
+        // todo: actual timings
+        (*timer)++;
+    }
 
     switch (static_cast<MemoryRegion>(address >> 24)) {
         case MemoryRegion::BIOS:
@@ -184,15 +201,9 @@ void Mem::Write(u32 address, T value) {
                 }
             }
 #endif
-            if ((address & 0x1'ffff) < 0x1'0000) {
-                WriteVRAM<T>(address & 0xffff, value);
-                WriteArray<T>(VRAM, address & 0xffff, value);
-            }
-            else {
-                // address is already corrected for
-                WriteVRAM<T>(0x1'0000 | (address & 0x7fff), value);
-                WriteArray<T>(VRAM, 0x1'0000 | (address & 0x7fff), value);
-            }
+
+            WriteVRAM<T>(MaskVRAMAddress(address), value);
+            WriteArray<T>(VRAM, MaskVRAMAddress(address), value);
             return;
         case MemoryRegion::OAM:
 #ifdef CHECK_INVALID_REFLUSHES

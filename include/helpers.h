@@ -92,12 +92,12 @@ static ALWAYS_INLINE u32 ctlz(u32 x)
 
 static ALWAYS_INLINE u32 cttz(u32 x)
 {
-#if __has_builtin(__builtin_ctz)
+#if defined(__x86_64__) || defined(__i386__)
+#define HAS_CTTZ
+    return _tzcnt_u32(x);  // one less check (argument is defined for a 0 argument)
+#elif __has_builtin(__builtin_ctz)
 #define HAS_CTTZ
     return x ? __builtin_ctz(x) : 32;
-#elif defined(__x86_64__) || defined(__i386__)
-#define HAS_CTTZ
-    return _tzcnt_u32(x);
 #else
     // todo: binary search
     u8 n;

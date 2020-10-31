@@ -28,13 +28,79 @@ MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
         .time     = CYCLES_PER_SCANLINE * VISIBLE_SCREEN_HEIGHT
     };
 
+    DMAData[0].CNT_L_MAX = 0x4000;
+    DMAData[1].CNT_L_MAX = 0x4000;
+    DMAData[2].CNT_L_MAX = 0x4000;
+    DMAData[3].CNT_L_MAX = 0x10000;
+
     add_event(scheduler, &HBlankFlag);
     add_event(scheduler, &VBlankFlag);
 }
 
+void MMIO::TriggerDMA(u32 x) {
+    const u16 control = DMAData[x].CNT_H;
+
+    bool other_dma_active = false;
+    for (int i = 0; i < 4; i++) {
+        if (i == x) {
+            continue;
+        }
+
+        if (DMAData[i].CNT_H & static_cast<u16>(DMACNT_HFlags::Enable)) {
+            log_debug("Dma %x active", i);
+            other_dma_active = true;
+            break;
+        }
+    }
+
+    if (control & static_cast<u16>(DMACNT_HFlags::WordSized)) {
+        if (other_dma_active) {
+            Memory->DoDMA<u32, true>(&DMAData[x]);
+        }
+        else {
+            Memory->DoDMA<u32, false>(&DMAData[x]);
+        }
+    }
+    else {
+        if (other_dma_active) {
+            Memory->DoDMA<u16, true>(&DMAData[x]);
+        }
+        else {
+            Memory->DoDMA<u16, false>(&DMAData[x]);
+        }
+    }
+
+    // non-repeating or immediate DMAs get disabled
+    if (!(control & static_cast<u16>(DMACNT_HFlags::Repeat)) ||
+            (control & static_cast<u16>(DMACNT_HFlags::StartTiming)) != static_cast<u16>(DMACNT_HFlags::StartImmediate)
+    ) {
+        DMAData[x].CNT_H &= ~static_cast<u16>(DMACNT_HFlags::Enable);
+    }
+
+    // write back the DMA data
+#ifdef DIRECT_DMA_DATA_COPY
+    memcpy(
+            &Registers[static_cast<u32>(IORegister::DMA0SAD) + x * 0xc],
+            &DMAData[x],
+            sizeof(s_DMAData)
+    );
+#else
+    WriteArray<u32>(Registers, static_cast<u32>(IORegister::DMA0SAD)   + x * 0xc, DMAData[x].SAD);
+    WriteArray<u32>(Registers, static_cast<u32>(IORegister::DMA0DAD)   + x * 0xc, DMAData[x].DAD);
+    WriteArray<u32>(Registers, static_cast<u32>(IORegister::DMA0CNT_L) + x * 0xc, DMAData[x].CNT_L);
+    WriteArray<u32>(Registers, static_cast<u32>(IORegister::DMA0CNT_H) + x * 0xc, DMAData[x].CNT_H);
+#endif
+
+    // trigger IRQ
+    if (control & static_cast<u16>(DMACNT_HFlags::IRQ)) {
+        CPU->IF |= static_cast<u16>(Interrupt::DMA0) << x;
+        CPU->ScheduleInterruptPoll();
+    }
+}
+
 SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
     /*
-     * HBlank IRQ is requrested after 960 cycles <- todo
+     * HBlank IRQ is requested after 960 cycles <- todo
      * HBlank flag is clear for 1006 cycles
      * Then for the rest of the scanline (226 cycles), HBlank flag is set
      * */

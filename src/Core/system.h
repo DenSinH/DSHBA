@@ -33,7 +33,7 @@ public:
     bool Shutdown = false;
 
     MMIO IO = MMIO(&PPU, &CPU, &Memory, &Scheduler);
-    Mem Memory = Mem(&IO, &CPU.pc, [&cpu = CPU]() -> void {
+    Mem Memory = Mem(&IO, &Scheduler, &CPU.pc, &CPU.timer, [&cpu = CPU]() -> void {
         cpu.PipelineReflush();
     });
     ARM7TDMI CPU = ARM7TDMI(&Scheduler, &Memory);

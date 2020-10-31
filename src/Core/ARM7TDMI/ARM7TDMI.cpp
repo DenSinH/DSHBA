@@ -84,15 +84,14 @@ void ARM7TDMI::Step() {
         // same here
         pc += 2;
     }
-
-    // for now, tick every instruction
-    // todo: proper timings (in memory accesses)
-    this->timer++;
 }
 
 void ARM7TDMI::FakePipelineFlush() {
     this->Pipeline.Clear();
-    // todo: fake memory timings for pipeline fills
+
+    // for now, tick once every access
+    // todo: proper timings (Memory.getTiming)
+    timer += 2;
 
     if (!(CPSR & static_cast<u32>(CPSRFlags::T))) {
         // ARM mode
@@ -110,15 +109,16 @@ void ARM7TDMI::PipelineReflush() {
     // PC is in an instruction when this happens (marked by a bool in the template)
     log_warn("Reflush for write near PC (%x)", pc);
 
+    // don't add memory access timings for reflushes, because they should have already happened
     if (!(CPSR & static_cast<u32>(CPSRFlags::T))) {
         // ARM mode
-        this->Pipeline.Enqueue(this->Memory->Mem::Read<u32, true>(this->pc - 4));
-        this->Pipeline.Enqueue(this->Memory->Mem::Read<u32, true>(this->pc));
+        this->Pipeline.Enqueue(this->Memory->Mem::Read<u32, false>(this->pc - 4));
+        this->Pipeline.Enqueue(this->Memory->Mem::Read<u32, false>(this->pc));
     }
     else {
         // THUMB mode
-        this->Pipeline.Enqueue(this->Memory->Mem::Read<u16, true>(this->pc - 2));
-        this->Pipeline.Enqueue(this->Memory->Mem::Read<u16, true>(this->pc));
+        this->Pipeline.Enqueue(this->Memory->Mem::Read<u16, false>(this->pc - 2));
+        this->Pipeline.Enqueue(this->Memory->Mem::Read<u16, false>(this->pc));
     }
 }
 

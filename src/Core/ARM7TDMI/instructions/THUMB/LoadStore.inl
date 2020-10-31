@@ -239,7 +239,11 @@ void MultipleLoadStore(u16 instruction) {
     else {
         // Writeback with Rb in RList:
         // Store OLD base if Rb is FIRST entry in Rlist, otherwise store NEW base (STM/ARMv4)
+#ifdef HAS_CTTZ
         if (unlikely(cttz(rlist) == rb)) {
+#else
+        if (unlikely(!(rlist & ((1 << rb) - 1))) {
+#endif
             // This is only the case if rn is the first register to be stored.
             // e.g.: if rn is 4 and the Rlist ends in 0b11110000, we have
             // 0b11110000 & ((1 << 5) - 1) = 0b11110000 & (0b100000 - 1) =

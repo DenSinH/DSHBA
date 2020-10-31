@@ -38,6 +38,7 @@ typedef struct s_DMAData {
     u32 DAD;
     u16 CNT_L;
     u16 CNT_H;
+    u32 CNT_L_MAX;
 } s_DMAData;
 
 #define READ_PRECALL(_name) u16 _name()
@@ -57,9 +58,11 @@ public:
 private:
     friend void GBAPPU::BufferScanline(u32); // allow registers to be buffered
     friend void ParseInput(struct s_controller* controller);   // joypad input
+    friend class Mem;
     friend class Initializer;
 
     void CheckVCountMatch();
+    void TriggerDMA(u32 x);
 
     static SCHEDULER_EVENT(HBlankFlagEvent);
     s_event HBlankFlag = {};
@@ -88,8 +91,8 @@ private:
     Mem* Memory;
     s_scheduler* Scheduler;
 
-    u8 Registers[0x400] = {};
-    s_DMAData DMAData[4];  // shadow registers on DMA enable
+    u8 Registers[0x400]  = {};
+    s_DMAData DMAData[4] = {};  // shadow registers on DMA enable
 
     /*
      * In general, registers wont have a callback
@@ -128,7 +131,12 @@ private:
     // registers that do not have a callback might have a write mask
     // if there is a write callback, I will assume that I also masked stuff there anyway
     static constexpr auto WriteMask = [] {
-        std::array<u16, (0x400 >> 1)> table = {0};
+        std::array<u16, (0x400 >> 1)> table = {};
+
+        // fill with 1s
+        for (int i = 0; i < table.size(); i++) {
+            table[i] = 0xffff;
+        }
 
         table[(static_cast<u32>(IORegister::DMA0SAD) >> 1) + 1] = 0x07ff;  // upper part
         table[(static_cast<u32>(IORegister::DMA1SAD) >> 1) + 1] = 0x0fff;  // upper part
@@ -172,53 +180,39 @@ T MMIO::Read(u32 address) {
 template<>
 inline void MMIO::Write<u32>(u32 address, u32 value) {
     // 32 bit writes are a little different
-    if (unlikely(WriteMask[address >> 1] || WriteMask[(address >> 1) + 1])) {
-        WriteArray<u16>(Registers, address, value & WriteMask[address >> 1]);
-        WriteArray<u16>(Registers, address + 2, (value >> 16) & WriteMask[(address >> 1) + 1]);
-    }
-    else {
-        WriteArray<u32>(Registers, address, value);
+    // Remember Little Endianness!
+    WriteArray<u16>(Registers, address, value & WriteMask[address >> 1]);
+    WriteArray<u16>(Registers, address + 2, (value >> 16) & WriteMask[(address >> 1) + 1]);
 
-        if (unlikely(WriteCallback[address >> 1])) {
-            // little endian:
-            (this->*WriteCallback[address >> 1])(value);
-        }
-        if (unlikely(WriteCallback[1 + (address >> 1)])) {
-            (this->*WriteCallback[1 + (address >> 1)])(value >> 16);
-        }
+    if (unlikely(WriteCallback[address >> 1])) {
+        (this->*WriteCallback[address >> 1])(value);
+    }
+    if (unlikely(WriteCallback[1 + (address >> 1)])) {
+        (this->*WriteCallback[1 + (address >> 1)])(value >> 16);
     }
 }
 
 template<>
 inline void MMIO::Write<u16>(u32 address, u16 value) {
-    if (unlikely(WriteMask[address >> 1])) {
-        WriteArray<u16>(Registers, address, value & WriteMask[address >> 1]);
-    }
-    else {
-        WriteArray<u16>(Registers, address, value);
+    WriteArray<u16>(Registers, address, value & WriteMask[address >> 1]);
 
-        if (unlikely(WriteCallback[address >> 1])) {
-            (this->*WriteCallback[address >> 1])(value);
-        }
+    if (unlikely(WriteCallback[address >> 1])) {
+        (this->*WriteCallback[address >> 1])(value);
     }
 }
 
 template<>
 inline void MMIO::Write<u8>(u32 address, u8 value) {
-    if (unlikely(WriteMask[address >> 1])) {
-        if (address & 1) {
-            WriteArray<u8>(Registers, address, value & WriteMask[address >> 1]);
-        }
-        else {
-            WriteArray<u8>(Registers, address, value & (WriteMask[address >> 1] >> 8));
-        }
+    if (address & 1) {
+        WriteArray<u8>(Registers, address, value & WriteMask[address >> 1]);
     }
     else {
-        WriteArray<u8>(Registers, address, value);
-        if (unlikely(WriteCallback[address >> 1])) {
-            // We have to be careful with this:
-            (this->*WriteCallback[address >> 1])(ReadArray<u16>(Registers, address));
-        }
+        WriteArray<u8>(Registers, address, value & (WriteMask[address >> 1] >> 8));
+    }
+
+    if (unlikely(WriteCallback[address >> 1])) {
+        // We have to be careful with this:
+        (this->*WriteCallback[address >> 1])(ReadArray<u16>(Registers, address));
     }
 }
 
@@ -229,23 +223,29 @@ WRITE_CALLBACK(MMIO::WriteDMAxCNT_H) {
     if (value & static_cast<u16>(DMACNT_HFlags::Enable)) {
         // DMA enable, store DMASAD/DAD/CNT_L registers in shadow registers
         log_dma("Wrote to DMA%dCNT_H: %04x", x, value);
+        log_dma("Settings: SAD: %08x, DAD: %08x, CNT_L: %04x",
+                ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0SAD) + x * 0xc),
+                ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0DAD) + x * 0xc),
+                ReadArray<u16>(Registers, static_cast<u32>(IORegister::DMA0CNT_L) + x * 0xc)
+        );
+
+#ifdef DIRECT_DMA_DATA_COPY
+        // DMACNT_H already copied over
+        memcpy(
+                &DMAData[x],
+                &Registers[static_cast<u32>(IORegister::DMA0SAD) + x * 0xc],
+                sizeof(s_DMAData) - sizeof(u16)
+        );
+#else
+        DMAData[x].SAD   = ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0SAD)   + x * 0xc);
+        DMAData[x].DAD   = ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0DAD)   + x * 0xc);
+        DMAData[x].CNT_L = ReadArray<u16>(Registers, static_cast<u32>(IORegister::DMA0CNT_L) + x * 0xc);
+#endif
+
         if ((value & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(DMACNT_HFlags::StartImmediate)) {
             // no need to have shadow copies for immediate DMAs
             log_dma("DMA started");
-        }
-        else {
-#ifdef DIRECT_DMA_DATA_COPY
-            // DMACNT_H already copied over
-            memcpy(
-                    &DMAData,
-                    &Registers[static_cast<u32>(IORegister::DMA0SAD) + x * 0xc],
-                    sizeof(s_DMAData) - sizeof(u16)
-            );
-#else
-            DMAData[x].SAD   = ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0SAD)   + x * 0xc);
-            DMAData[x].DAD   = ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0DAD)   + x * 0xc);
-            DMAData[x].CNT_L = ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0CNT_L) + x * 0xc);
-#endif
+            TriggerDMA(x);
         }
     }
 }

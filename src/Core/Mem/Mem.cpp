@@ -12,11 +12,13 @@
  * the `count` bool in the templates it so we can count cycles conditionally
  * */
 
-Mem::Mem(MMIO* IO, u32* pc_ptr, std::function<void(void)> reflush) {
+Mem::Mem(MMIO* IO, s_scheduler* scheduler, u32* pc_ptr, u64* timer, std::function<void(void)> reflush) {
+    this->IO = IO;
+    this->Scheduler = scheduler;
     this->pc_ptr = pc_ptr;
     this->Reflush = std::move(reflush);
+    this->timer = timer;
 
-    this->IO = IO;
     memset(BIOS, 0, sizeof(BIOS));
     memset(eWRAM, 0, sizeof(eWRAM));
     memset(iWRAM, 0, sizeof(iWRAM));
@@ -52,16 +54,33 @@ void Mem::LoadBIOS(const std::string& file_path) {
     LoadFileTo(reinterpret_cast<char *>(BIOS), file_path, 0x0000'4000);
 }
 
-void Mem::FastDMA(u8* start, u16 length) {
-
-}
-
-void Mem::DoDMA(u32 sad, u32 dad, u16 count, u16 control) {
-    /*
-     * We want to allow faster DMAs in certain memory regions
-     * BIOS/unused is a separate case, cause nothing can be read from there anyway, so the DMA can be skipped entirely.
-     * I/O we have to be careful, as well as EEPROM/Flash
-     * */
-
-
+u8* Mem::GetPtr(u32 address) {
+    switch (static_cast<MemoryRegion>(address >> 24)) {
+        case MemoryRegion::BIOS:
+            return &BIOS[address & 0x3fff];
+        case MemoryRegion::Unused:
+            return nullptr;
+        case MemoryRegion::eWRAM:
+            return &eWRAM[address & 0x3'ffff];
+        case MemoryRegion::iWRAM:
+            return &iWRAM[address & 0x7fff];
+        case MemoryRegion::IO:
+            return &IO->Registers[address & 0x3ff];
+        case MemoryRegion::PAL:
+            return &PAL[address & 0x3ff];
+        case MemoryRegion::VRAM:
+            return &VRAM[MaskVRAMAddress(address)];
+        case MemoryRegion::OAM:
+            return &OAM[address & 0x3ff];
+        case MemoryRegion::ROM_L1:
+        case MemoryRegion::ROM_L2:
+        case MemoryRegion::ROM_L:
+        case MemoryRegion::ROM_H1:
+        case MemoryRegion::ROM_H2:
+        case MemoryRegion::ROM_H:
+            return &ROM[address & 0x01ff'ffff];
+        case MemoryRegion::SRAM:
+        default:
+            return nullptr;
+    }
 }

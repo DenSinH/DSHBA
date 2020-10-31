@@ -110,37 +110,7 @@ u8 Initializer::ReadByte(u64 offset) {
 
 u8* Initializer::ValidAddressMask(u32 address) {
     // all memory can be read for the GBA
-    switch (static_cast<MemoryRegion>(address >> 24)) {
-        case MemoryRegion::BIOS:
-            return &gba->Memory.BIOS[address & 0x3fff];
-        case MemoryRegion::Unused:
-            return nullptr;
-        case MemoryRegion::eWRAM:
-            return &gba->Memory.eWRAM[address & 0x3'ffff];
-        case MemoryRegion::iWRAM:
-            return &gba->Memory.iWRAM[address & 0x7fff];
-        case MemoryRegion::IO:
-            return &gba->IO.Registers[address & 0x3ff];
-        case MemoryRegion::PAL:
-            return &gba->Memory.PAL[address & 0x3ff];
-        case MemoryRegion::VRAM:
-            if ((address & 0x1'ffff) < 0x1'0000) {
-                return &gba->Memory.VRAM[address & 0xffff];
-            }
-            return &gba->Memory.VRAM[0x1'0000 | (address & 0x7fff)];
-        case MemoryRegion::OAM:
-            return &gba->Memory.OAM[address & 0x3ff];
-        case MemoryRegion::ROM_L1:
-        case MemoryRegion::ROM_L2:
-        case MemoryRegion::ROM_L:
-        case MemoryRegion::ROM_H1:
-        case MemoryRegion::ROM_H2:
-        case MemoryRegion::ROM_H:
-            return &gba->Memory.ROM[address & 0x01ff'ffff];
-        case MemoryRegion::SRAM:
-        default:
-            return nullptr;
-    }
+    return gba->Memory.GetPtr(address);
 }
 
 static void ParseInput(struct s_controller* controller) {
