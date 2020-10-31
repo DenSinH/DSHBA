@@ -46,8 +46,7 @@ void MMIO::TriggerDMA(u32 x) {
             continue;
         }
 
-        if (DMAData[i].CNT_H & static_cast<u16>(DMACNT_HFlags::Enable)) {
-            log_debug("Dma %x active", i);
+        if (DMAEnabled[i]) {
             other_dma_active = true;
             break;
         }
@@ -75,7 +74,9 @@ void MMIO::TriggerDMA(u32 x) {
             (control & static_cast<u16>(DMACNT_HFlags::StartTiming)) != static_cast<u16>(DMACNT_HFlags::StartImmediate)
     ) {
         DMAData[x].CNT_H &= ~static_cast<u16>(DMACNT_HFlags::Enable);
+        DMAEnabled[x] = false;
     }
+    // otherwise, it is already marked as enabled
 
     // write back the DMA data
 #ifdef DIRECT_DMA_DATA_COPY
@@ -120,6 +121,17 @@ SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
             IO->CPU->IF |= static_cast<u16>(Interrupt::HBlank);
             IO->CPU->ScheduleInterruptPoll();
         }
+
+        // HBlank DMAs
+        for (int i = 0; i < 4; i++) {
+            if (!IO->DMAEnabled[i]) {
+                continue;
+            }
+
+            if ((IO->DMAData[i].CNT_H & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(DMACNT_HFlags::StartHBlank)) {
+                IO->TriggerDMA(i);
+            }
+        }
     }
     else {
         // HBlank was cleared, set after 1006 cycles
@@ -153,6 +165,17 @@ SCHEDULER_EVENT(MMIO::VBlankFlagEvent) {
         if (IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::VBlankIRQ)) {
             IO->CPU->IF |= static_cast<u16>(Interrupt::VBlank);
             IO->CPU->ScheduleInterruptPoll();
+        }
+
+        // VBlank DMAs
+        for (int i = 0; i < 4; i++) {
+            if (!IO->DMAEnabled[i]) {
+                continue;
+            }
+
+            if ((IO->DMAData[i].CNT_H & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(DMACNT_HFlags::StartVBlank)) {
+                IO->TriggerDMA(i);
+            }
         }
     }
     else {

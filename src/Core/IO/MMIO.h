@@ -92,6 +92,7 @@ private:
     s_scheduler* Scheduler;
 
     u8 Registers[0x400]  = {};
+    bool DMAEnabled[4]   = {};
     s_DMAData DMAData[4] = {};  // shadow registers on DMA enable
 
     /*
@@ -245,7 +246,12 @@ WRITE_CALLBACK(MMIO::WriteDMAxCNT_H) {
         if ((value & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(DMACNT_HFlags::StartImmediate)) {
             // no need to have shadow copies for immediate DMAs
             log_dma("DMA started");
+            // trigger, but don't mark as enabled
             TriggerDMA(x);
+        }
+        else {
+            // mark as enabled
+            DMAEnabled[x] = true;
         }
     }
 }

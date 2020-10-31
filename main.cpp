@@ -63,9 +63,9 @@ int main() {
     std::thread ui_thread(ui_run);
 
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Decompress/BIT/1BPP/BIOSBIT1BPP.gba");
-    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Arithmetic/ARCTAN/BIOSARCTAN.gba");
-    // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/tonc/bigmap.gba");
-    // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/thumb.gba");
+    // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Arithmetic/ARCTAN/BIOSARCTAN.gba");
+    // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/tonc/dma_demo.gba");
+    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/dma-test.gba");
     gba->Run();
 
     ui_thread.join();

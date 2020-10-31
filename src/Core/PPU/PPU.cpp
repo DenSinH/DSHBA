@@ -65,11 +65,11 @@ void GBAPPU::BufferScanline(u32 scanline) {
     }
 #else
     memcpy(
-        VRAMBuffer[BufferFrame][BufferScanlineCount],
+        VRAMBuffer[BufferFrame][scanline],
         Memory->VRAM,
         sizeof(VRAMMEM)
     );
-    CurrentScanlineBatch = BufferScanlineCount;
+    CurrentScanlineBatch = scanline;
     ScanlineBatchSizes[BufferFrame][CurrentScanlineBatch] = 1;
 #endif
     memcpy(

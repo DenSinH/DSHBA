@@ -140,8 +140,8 @@ enum class DMAAction {
  * we can use 0x1'ffff as a mask
  * */
 static constexpr u32 AllowFastDMAAddressMask[16] = {
-             0x3fff,           0,    0x3'ffff,           0,
-             0x7fff,       0x3ff,    0x1'ffff,       0x3ff,
+                  0,           0,    0x3'ffff,      0x7fff,
+                  0,       0x3ff,    0x1'ffff,       0x3ff,
         0x01ff'ffff, 0x01ff'ffff, 0x01ff'ffff, 0x01ff'ffff,
         0x01ff'ffff, 0x01ff'ffff,           0,           0,
 };
@@ -155,7 +155,7 @@ static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 
         case MemoryRegion::ROM_H:
         case MemoryRegion::ROM_H1:
         case MemoryRegion::ROM_H2:
-            // if EEPROM: slow
+            // todo: if EEPROM: slow
             // otherwise:
         case MemoryRegion::BIOS:
         case MemoryRegion::Unused:
@@ -200,7 +200,7 @@ static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 
         case MemoryRegion::ROM_H:
         case MemoryRegion::ROM_H1:
         case MemoryRegion::ROM_H2:
-            // if EEPROM: slow
+            // todo: if EEPROM: slow
             // otherwise:
             break; // allow fast
         default:
@@ -232,7 +232,20 @@ template<typename T, bool intermittent_events>
 void Mem::DoDMA(s_DMAData* DMA) {
     u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
 
-    switch(AllowFastDMA<T>(DMA->DAD, DMA->SAD, length)) {
+    DMAAction dma_action;
+    if (static_cast<DMACNT_HFlags>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) == DMACNT_HFlags::DestDecrement ||
+        static_cast<DMACNT_HFlags>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) == DMACNT_HFlags::DestFixed) {
+        dma_action = DMAAction::Slow;
+    }
+    else if (static_cast<DMACNT_HFlags>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl)) == DMACNT_HFlags::SrcDecrement ||
+             static_cast<DMACNT_HFlags>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl)) == DMACNT_HFlags::SrcFixed) {
+        dma_action = DMAAction::Slow;
+    }
+    else {
+        dma_action = AllowFastDMA<T>(DMA->DAD, DMA->SAD, length);
+    }
+
+    switch(dma_action) {
         case DMAAction::Fast:
             // invalidate VRAM
             if (static_cast<MemoryRegion>(DMA->DAD >> 24) == MemoryRegion::VRAM) {
