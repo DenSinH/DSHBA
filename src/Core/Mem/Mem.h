@@ -1,15 +1,19 @@
 #pragma once
 
 #include "../IO/MMIO.h"
+#include "../IO/IOFlags.h"
 
 #include "default.h"
 #include "helpers.h"
 #include "flags.h"
 #include "MemoryHelpers.h"
 
+#include <type_traits>
+#include <algorithm>
 #include <string>
 #include <functional>
 #include <utility>
+#include <type_traits>
 
 enum class MemoryRegion {
     BIOS   = 0x00,
@@ -26,7 +30,8 @@ enum class MemoryRegion {
     ROM_H1 = 0x0b,
     ROM_L2 = 0x0c,
     ROM_H2 = 0x0d,
-    SRAM   = 0x0e
+    SRAM   = 0x0e,
+    OOB,
 };
 
 class Mem {
@@ -42,11 +47,107 @@ public:
     u8* GetPtr(u32 address);
     template<typename T, bool intermittent_events> void DoDMA(s_DMAData* DMA);
 
+    template<typename T>
+    static constexpr u8 GetAccessTime(MemoryRegion R) {
+        switch (R) {
+            case MemoryRegion::BIOS:
+                return Mem::AccessTiming<T, MemoryRegion::BIOS>();
+            case MemoryRegion::iWRAM:
+                return Mem::AccessTiming<T, MemoryRegion::iWRAM>();
+            case MemoryRegion::eWRAM:
+                return Mem::AccessTiming<T, MemoryRegion::eWRAM>();
+            case MemoryRegion::IO:
+                return Mem::AccessTiming<T, MemoryRegion::IO>();
+            case MemoryRegion::PAL:
+                return Mem::AccessTiming<T, MemoryRegion::PAL>();
+            case MemoryRegion::VRAM:
+                return Mem::AccessTiming<T, MemoryRegion::VRAM>();
+            case MemoryRegion::OAM:
+                return Mem::AccessTiming<T, MemoryRegion::OAM>();
+            case MemoryRegion::ROM_L:
+                return Mem::AccessTiming<T, MemoryRegion::ROM_L>();
+            case MemoryRegion::ROM_L1:
+                return Mem::AccessTiming<T, MemoryRegion::ROM_L1>();
+            case MemoryRegion::ROM_L2:
+                return Mem::AccessTiming<T, MemoryRegion::ROM_L2>();
+            case MemoryRegion::ROM_H:
+                return Mem::AccessTiming<T, MemoryRegion::ROM_H>();
+            case MemoryRegion::ROM_H1:
+                return Mem::AccessTiming<T, MemoryRegion::ROM_H1>();
+            case MemoryRegion::ROM_H2:
+                return Mem::AccessTiming<T, MemoryRegion::ROM_H2>();
+            case MemoryRegion::SRAM:
+                return Mem::AccessTiming<T, MemoryRegion::SRAM>();
+            case MemoryRegion::Unused:
+                return Mem::AccessTiming<T, MemoryRegion::Unused>();
+            case MemoryRegion::OOB:
+                return Mem::AccessTiming<T, MemoryRegion::OOB>();
+            default:
+                return 1;
+        }
+    }
+
+    // timings for ROM are different
+    template<typename T, MemoryRegion R>
+    static constexpr u8 AccessTiming() {
+        switch (R) {
+            case MemoryRegion::BIOS:
+            case MemoryRegion::iWRAM:
+            case MemoryRegion::IO:
+            case MemoryRegion::OAM:  // todo: check if VBlank/HBlank for extra cycle
+                return 1;
+            case MemoryRegion::eWRAM:
+                if constexpr(std::is_same_v<T, u32>) {
+                    return 6;
+                }
+                return 3;
+            case MemoryRegion::PAL:
+            case MemoryRegion::VRAM:
+                // todo: check if VBlank/HBlank for extra cycle
+                if constexpr(std::is_same_v<T, u32>) {
+                    return 2;
+                }
+                return 1;
+            case MemoryRegion::ROM_L:
+            case MemoryRegion::ROM_H:
+                if constexpr(std::is_same_v<T, u32>) {
+                    return 5;
+                }
+                return 2;
+            case MemoryRegion::ROM_L1:
+            case MemoryRegion::ROM_H1:
+                if constexpr(std::is_same_v<T, u32>) {
+                    return 9;
+                }
+                return 5;
+            case MemoryRegion::ROM_L2:
+            case MemoryRegion::ROM_H2:
+                // todo: waitstates/sequential accesses
+                if constexpr(std::is_same_v<T, u32>) {
+                    return 17;
+                }
+                return 9;
+            case MemoryRegion::SRAM:
+                return 5;
+            case MemoryRegion::Unused:
+            case MemoryRegion::OOB:
+            default:
+                // todo: ?
+                return 1;
+        }
+    }
+
 private:
     friend class GBAPPU;  // allow VMEM to be buffered
     friend class Initializer;
 
     template<typename T> ALWAYS_INLINE void WriteVRAM(u32 address, T value);
+    static ALWAYS_INLINE constexpr u32 MaskVRAMAddress(const u32 address) {
+        if ((address & 0x1'ffff) < 0x1'0000) {
+            return address & 0xffff;
+        }
+        return 0x1'0000 | (address & 0x7fff);
+    }
 
     s_scheduler* Scheduler;
     u32* pc_ptr;
@@ -63,19 +164,16 @@ private:
     OAMMEM OAM               = {};
     u8 ROM   [0x0200'0000]   = {};
 
+#define INLINED_INCLUDES
+#include "MemDMAUtil.inl"
+#undef INLINED_INCLUDES
+
 #ifdef FAST_DMA
     template<typename T, bool intermittent_events> void FastDMA(s_DMAData* DMA);  // incrementing DMAs in both directions
     template<typename T, bool intermittent_events> void MediumDMA(s_DMAData* DMA);  // DMAs from and to safe memory regions
 #endif
     template<typename T, bool intermittent_events> void SlowDMA(s_DMAData* DMA);  // DMAs with wrapping/special behavior
 };
-
-static ALWAYS_INLINE constexpr u32 MaskVRAMAddress(const u32 address) {
-    if ((address & 0x1'ffff) < 0x1'0000) {
-        return address & 0xffff;
-    }
-    return 0x1'0000 | (address & 0x7fff);
-}
 
 #include "MemReadWrite.inl" // Read/Write related templated functions
 #include "MemDMA.inl"       // DMA related templated functions

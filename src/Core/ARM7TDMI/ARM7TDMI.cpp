@@ -43,7 +43,6 @@ void ARM7TDMI::SkipBIOS() {
 
 void ARM7TDMI::Step() {
     u32 instruction;
-//    u32 old_pc = pc;
 
 #ifdef ALWAYS_TRACE_LOG
     LogState();
@@ -54,7 +53,7 @@ void ARM7TDMI::Step() {
     }
 #endif
 
-    bool ARMMode = !(CPSR & static_cast<u32>(CPSRFlags::T));
+    const bool ARMMode = !(CPSR & static_cast<u32>(CPSRFlags::T));
     if (unlikely(Pipeline.Count)) {
         // we only have stuff in the pipeline if writes near PC happened
         instruction = Pipeline.Dequeue();
@@ -89,15 +88,13 @@ void ARM7TDMI::Step() {
 void ARM7TDMI::FakePipelineFlush() {
     this->Pipeline.Clear();
 
-    // for now, tick once every access
-    // todo: proper timings (Memory.getTiming)
-    timer += 2;
-
     if (!(CPSR & static_cast<u32>(CPSRFlags::T))) {
+        timer += Mem::GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24)) << 1;
         // ARM mode
         this->pc += 4;
     }
     else {
+        timer += Mem::GetAccessTime<u16>(static_cast<MemoryRegion>(pc >> 24)) << 1;
         // THUMB mode
         this->pc += 2;
     }

@@ -1,30 +1,33 @@
 
 template<typename T, bool count>
 T Mem::Read(u32 address) {
-    if constexpr(count) {
-        // todo: actual timings
-        (*timer)++;
-    }
-
     switch (static_cast<MemoryRegion>(address >> 24)) {
         case MemoryRegion::BIOS:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::BIOS>(); }
             return ReadArray<T>(BIOS, address & 0x3fff);
         case MemoryRegion::Unused:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::Unused>(); }
             return 0;
         case MemoryRegion::eWRAM:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::eWRAM>(); }
             return ReadArray<T>(eWRAM, address & 0x3'ffff);
         case MemoryRegion::iWRAM:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::iWRAM>(); }
             return ReadArray<T>(iWRAM, address & 0x7fff);
         case MemoryRegion::IO:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::IO>(); }
             if ((address & 0x00ff'ffff) < 0x3ff) {
                 return IO->Read<T>(address & 0x3ff);
             }
             return 0;  // todo: invalid reads
         case MemoryRegion::PAL:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::PAL>(); }
             return ReadArray<T>(PAL, address & 0x3ff);
         case MemoryRegion::VRAM:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::VRAM>(); }
             return ReadArray<T>(VRAM, MaskVRAMAddress(address));
         case MemoryRegion::OAM:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::OAM>(); }
             return ReadArray<T>(OAM, address & 0x3ff);
         case MemoryRegion::ROM_L1:
         case MemoryRegion::ROM_L2:
@@ -34,11 +37,14 @@ T Mem::Read(u32 address) {
         case MemoryRegion::ROM_H2:
         case MemoryRegion::ROM_H:
             // todo: EEPROM attempts
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::ROM_L>(); }
             return ReadArray<T>(ROM, address & 0x01ff'ffff);
         case MemoryRegion::SRAM:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::SRAM>(); }
             log_warn("SRAM read @0x%08x", address);
             return 0;
         default:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::OOB>(); }
             return 0;
     }
 }
@@ -61,20 +67,18 @@ ALWAYS_INLINE void Mem::WriteVRAM(u32 address, T value) {
 #define NEAR_PC(mask) ((address >> 24) == (*pc_ptr >> 24)) && ((std::abs(int(address - *pc_ptr)) & (mask)) <= 8)
 template<typename T, bool count, bool do_reflush>
 void Mem::Write(u32 address, T value) {
-    if constexpr(count) {
-        // todo: actual timings
-        (*timer)++;
-    }
-
     switch (static_cast<MemoryRegion>(address >> 24)) {
         case MemoryRegion::BIOS:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::BIOS>(); }
             // BIOS is read-only
+            return;
         case MemoryRegion::Unused:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::Unused>(); }
             return;
         case MemoryRegion::eWRAM:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::eWRAM>(); }
             if constexpr(do_reflush) {
                 if (unlikely(NEAR_PC(0x3'ffff))) {
-//                    log_debug("%x near %x, distance %x", address >> 24, *pc_ptr >> 24, std::abs(int(address - *pc_ptr)) & (0x3'ffff));
                     Reflush();
                 }
             }
@@ -82,9 +86,9 @@ void Mem::Write(u32 address, T value) {
             WriteArray<T>(eWRAM, address & 0x3'ffff, value);
             return;
         case MemoryRegion::iWRAM:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::iWRAM>(); }
             if constexpr(do_reflush) {
                 if (unlikely(NEAR_PC(0x7fff))) {
-//                    log_debug("%x near %x, distance %x", address >> 24, *pc_ptr >> 24, std::abs(int(address - *pc_ptr)) & (0x3'ffff));
                     Reflush();
                 }
             }
@@ -92,6 +96,7 @@ void Mem::Write(u32 address, T value) {
             WriteArray<T>(iWRAM, address & 0x7fff, value);
             return;
         case MemoryRegion::IO:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::IO>(); }
 #ifdef CHECK_INVALID_REFLUSHES
             if constexpr(do_reflush) {
                 if (unlikely(NEAR_PC(0x3ff))) {
@@ -105,6 +110,7 @@ void Mem::Write(u32 address, T value) {
             }
             return;
         case MemoryRegion::PAL:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::PAL>(); }
 #ifdef CHECK_INVALID_REFLUSHES
             if constexpr(do_reflush) {
                 if (unlikely(NEAR_PC(0x3ff))) {
@@ -116,6 +122,7 @@ void Mem::Write(u32 address, T value) {
             WriteArray<T>(PAL, address & 0x3ff, value);
             return;
         case MemoryRegion::VRAM:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::VRAM>(); }
 #ifdef CHECK_INVALID_REFLUSHES
             if constexpr(do_reflush) {
                 // this address is actually not quite right, but we are doing this as check anyway
@@ -131,6 +138,7 @@ void Mem::Write(u32 address, T value) {
             WriteArray<T>(VRAM, MaskVRAMAddress(address), value);
             return;
         case MemoryRegion::OAM:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::OAM>(); }
 #ifdef CHECK_INVALID_REFLUSHES
             if constexpr(do_reflush) {
                 if (unlikely(NEAR_PC(0x3ff))) {
@@ -147,12 +155,15 @@ void Mem::Write(u32 address, T value) {
         case MemoryRegion::ROM_H1:
         case MemoryRegion::ROM_H2:
         case MemoryRegion::ROM_H:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::ROM_L>(); }
             // todo: EEPROM attempts
             return;
         case MemoryRegion::SRAM:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::SRAM>(); }
             log_warn("SRAM write @0x%08x", address);
             return;
         default:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::OOB>(); }
             return;
     }
 }

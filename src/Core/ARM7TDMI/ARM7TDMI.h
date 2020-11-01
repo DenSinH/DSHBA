@@ -35,6 +35,21 @@ enum class CPSRFlags : u32 {
     Mode = 0x0000'001f,
 };
 
+enum class State : u8 {
+    ARM   = 0,
+    THUMB = 1,
+};
+
+enum class Mode : u8 {
+    User        = 0b10000,
+    FIQ         = 0b10001,
+    IRQ         = 0b10010,
+    Supervisor  = 0b10011,
+    Abort       = 0b10111,
+    Undefined   = 0b11011,
+    System      = 0b11111,
+};
+
 enum class ExceptionVector : u32 {
     Reset = 0x0000'0000,
     SWI   = 0x0000'0008,
@@ -82,21 +97,6 @@ private:
 
 #endif
 
-    enum class State : u8 {
-        ARM   = 0,
-        THUMB = 1,
-    };
-
-    enum class Mode : u8 {
-        User        = 0b10000,
-        FIQ         = 0b10001,
-        IRQ         = 0b10010,
-        Supervisor  = 0b10011,
-        Abort       = 0b10111,
-        Undefined   = 0b11011,
-        System      = 0b11111,
-    };
-
     u32 CPSR            = {};
     u32 SPSR            = {};
     u32 SPSRBank[16]    = {};
@@ -111,7 +111,7 @@ private:
     u16 IF       = 0;
     u16 IE       = 0;
 
-    // todo: only buffer pipeline on STR(|H|B) instructions near PC
+    // only buffer pipeline on STR(|H|B)/STM instructions near PC
     // we still keep PC ahead of course
     s_Pipeline Pipeline;
 
@@ -150,7 +150,6 @@ private:
     ALWAYS_INLINE u32 adcs_cv(u32 op1, u32 op2, u32 carry_in);
     ALWAYS_INLINE u32 adds_cv(u32 op1, u32 op2);
     ALWAYS_INLINE u32 sbcs_cv(u32 op1, u32 op2, u32 carry_in);
-    ALWAYS_INLINE u32 sbcs_cv_old(u32 op1, u32 op2, u32 carry_in);
     ALWAYS_INLINE u32 subs_cv(u32 op1, u32 op2);
 
     ALWAYS_INLINE void Idle() {

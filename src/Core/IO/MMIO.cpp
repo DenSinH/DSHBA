@@ -164,6 +164,14 @@ SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
             IO->VCount = 0;
         }
 
+        if (IO->VCount == IO->DISPSTAT >> 8) {
+            // VCount match
+            IO->DISPSTAT |= static_cast<u16>(DISPSTATFlags::VCount);
+        }
+        else {
+            IO->DISPSTAT &= ~static_cast<u16>(DISPSTATFlags::VCount);
+        }
+
         IO->CheckVCountMatch();
     }
 }
@@ -173,7 +181,6 @@ SCHEDULER_EVENT(MMIO::VBlankFlagEvent) {
      * VBlank is set after 160 scanlines, set for the rest of the frame
      * */
     auto IO = (MMIO*)caller;
-    log_debug("VBlank");
 
     IO->DISPSTAT ^= static_cast<u16>(DISPSTATFlags::VBlank);
     if (IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::VBlank)) {
@@ -241,14 +248,15 @@ WRITE_CALLBACK(MMIO::WriteIME) {
         CPU->ScheduleInterruptPoll();
     }
 }
+
 WRITE_CALLBACK(MMIO::WriteIE) {
-    log_debug("Wrote %x to IE at %x", value, CPU->pc);
     CPU->IE = value;
     if (value) {
         // check if there are any interrupts
         CPU->ScheduleInterruptPoll();
     }
 }
+
 WRITE_CALLBACK(MMIO::WriteIF) {
     CPU->IF &= ~value;
     if (CPU->IF) {
@@ -259,6 +267,7 @@ WRITE_CALLBACK(MMIO::WriteIF) {
     // to make sure 8bit writes are handled properly, we must clear the IF part:
     WriteArray<u16>(Registers, static_cast<u32>(IORegister::IF), 0);
 }
+
 READ_PRECALL(MMIO::ReadIF) {
     return CPU->IF;
 }
