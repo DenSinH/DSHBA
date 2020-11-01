@@ -235,7 +235,7 @@ u32 ARM7TDMI::adcs_cv(u32 op1, u32 op2, u32 carry_in) {
 
 #if defined(FAST_ADD_SUB) && __has_builtin(__builtin_sadd_overflow)
     int _; // we already have the result
-    if (__builtin_sadd_overflow(op1 + carry_in, op2, &_)) {
+    if (__builtin_sadd_overflow(op1 + carry_in, op2, &_) || unlikely(carry_in && (op1 == 0x7fff'ffff))) {
         CPSR |= static_cast<u32>(CPSRFlags::V);
     }
 #else
@@ -268,7 +268,7 @@ u32 ARM7TDMI::sbcs_cv(u32 op1, u32 op2, u32 carry_in) {
 
 #if defined(FAST_ADD_SUB) && __has_builtin(__builtin_ssub_overflow)
     int _;  // we already have the result
-    if (__builtin_ssub_overflow(op1, op2 + 1 - carry_in, &_)) {
+    if (__builtin_ssub_overflow(op1, op2 + 1 - carry_in, &_) || unlikely(!carry_in && (op2 == 0x7fff'ffff))) {
         CPSR |= static_cast<u32>(CPSRFlags::V);
     }
 #else
@@ -276,18 +276,6 @@ u32 ARM7TDMI::sbcs_cv(u32 op1, u32 op2, u32 carry_in) {
 #endif // add_overflow
 
     return result;
-}
-
-u32 ARM7TDMI::sbcs_cv_old(u32 op1, u32 op2, u32 carry_in) {
-    // subtract with carry and set CV
-    CPSR &= ~(static_cast<u32>(CPSRFlags::C) | static_cast<u32>(CPSRFlags::V));
-    u32 result;
-    result = (u32)(op1 - (op2 - carry_in + 1));
-    CPSR |= ((op2 + 1 - carry_in) <= op1) ? static_cast<u32>(CPSRFlags::C) : 0;
-    CPSR |= (((op1 ^ op2) & (~op2 ^ result)) >> 31) ? static_cast<u32>(CPSRFlags::V) : 0;
-
-    return result;
-
 }
 
 u32 ARM7TDMI::subs_cv(u32 op1, u32 op2) {

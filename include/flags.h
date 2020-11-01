@@ -18,7 +18,7 @@
 #ifndef NDEBUG
 // change to change verbosity / component logging:
 #define VERBOSITY VERBOSITY_DEBUG
-#define COMPONENT_FLAGS (COMPONENT_DMA)
+#define COMPONENT_FLAGS (0)
 
 // very intense testing variables:
 #undef TRACE_LOG

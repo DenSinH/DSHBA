@@ -139,6 +139,9 @@ private:
             table[i] = 0xffff;
         }
 
+        table[(static_cast<u32>(IORegister::BG0CNT) >> 1) + 1] = 0xdfff;
+        table[(static_cast<u32>(IORegister::BG1CNT) >> 1) + 1] = 0xdfff;
+
         table[(static_cast<u32>(IORegister::DMA0SAD) >> 1) + 1] = 0x07ff;  // upper part
         table[(static_cast<u32>(IORegister::DMA1SAD) >> 1) + 1] = 0x0fff;  // upper part
         table[(static_cast<u32>(IORegister::DMA2SAD) >> 1) + 1] = 0x0fff;  // upper part
@@ -157,101 +160,6 @@ private:
     }();
 };
 
-template<>
-inline u32 MMIO::Read<u32>(u32 address) {
-    // 32 bit writes are a little different
-    if (unlikely(ReadPrecall[address >> 1])) {
-        WriteArray<u16>(Registers, address, (this->*ReadPrecall[address >> 1])());
-    }
-    if (unlikely(ReadPrecall[1 + (address >> 1)])) {
-        WriteArray<u16>(Registers, address + 2, (this->*ReadPrecall[1 + (address >> 1)])());
-    }
-
-    return ReadArray<u32>(Registers, address);
-}
-
-template<typename T>
-T MMIO::Read(u32 address) {
-    if (unlikely(ReadPrecall[address >> 1])) {
-        WriteArray<u16>(Registers, address, (this->*ReadPrecall[address >> 1])());
-    }
-    return ReadArray<T>(Registers, address);
-}
-
-template<>
-inline void MMIO::Write<u32>(u32 address, u32 value) {
-    // 32 bit writes are a little different
-    // Remember Little Endianness!
-    WriteArray<u16>(Registers, address, value & WriteMask[address >> 1]);
-    WriteArray<u16>(Registers, address + 2, (value >> 16) & WriteMask[(address >> 1) + 1]);
-
-    if (unlikely(WriteCallback[address >> 1])) {
-        (this->*WriteCallback[address >> 1])(value);
-    }
-    if (unlikely(WriteCallback[1 + (address >> 1)])) {
-        (this->*WriteCallback[1 + (address >> 1)])(value >> 16);
-    }
-}
-
-template<>
-inline void MMIO::Write<u16>(u32 address, u16 value) {
-    WriteArray<u16>(Registers, address, value & WriteMask[address >> 1]);
-
-    if (unlikely(WriteCallback[address >> 1])) {
-        (this->*WriteCallback[address >> 1])(value);
-    }
-}
-
-template<>
-inline void MMIO::Write<u8>(u32 address, u8 value) {
-    if (address & 1) {
-        WriteArray<u8>(Registers, address, value & WriteMask[address >> 1]);
-    }
-    else {
-        WriteArray<u8>(Registers, address, value & (WriteMask[address >> 1] >> 8));
-    }
-
-    if (unlikely(WriteCallback[address >> 1])) {
-        // We have to be careful with this:
-        (this->*WriteCallback[address >> 1])(ReadArray<u16>(Registers, address));
-    }
-}
-
-template<u8 x>
-WRITE_CALLBACK(MMIO::WriteDMAxCNT_H) {
-    DMAData[x].CNT_H = value;
-
-    if (value & static_cast<u16>(DMACNT_HFlags::Enable)) {
-        // DMA enable, store DMASAD/DAD/CNT_L registers in shadow registers
-        log_dma("Wrote to DMA%dCNT_H: %04x", x, value);
-        log_dma("Settings: SAD: %08x, DAD: %08x, CNT_L: %04x",
-                ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0SAD) + x * 0xc),
-                ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0DAD) + x * 0xc),
-                ReadArray<u16>(Registers, static_cast<u32>(IORegister::DMA0CNT_L) + x * 0xc)
-        );
-
-#ifdef DIRECT_DMA_DATA_COPY
-        // DMACNT_H already copied over
-        memcpy(
-                &DMAData[x],
-                &Registers[static_cast<u32>(IORegister::DMA0SAD) + x * 0xc],
-                sizeof(s_DMAData) - sizeof(u16)
-        );
-#else
-        DMAData[x].SAD   = ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0SAD)   + x * 0xc);
-        DMAData[x].DAD   = ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0DAD)   + x * 0xc);
-        DMAData[x].CNT_L = ReadArray<u16>(Registers, static_cast<u32>(IORegister::DMA0CNT_L) + x * 0xc);
-#endif
-
-        if ((value & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(DMACNT_HFlags::StartImmediate)) {
-            // no need to have shadow copies for immediate DMAs
-            log_dma("DMA started");
-            // trigger, but don't mark as enabled
-            TriggerDMA(x);
-        }
-        else {
-            // mark as enabled
-            DMAEnabled[x] = true;
-        }
-    }
-}
+#include "ReadWrite.inl"  // Read/Write templated functions
+#include "DMA.inl"        // DMA related inlined functions
+#include "Timers.inl"
