@@ -1,9 +1,10 @@
 
 template<u8 x>
 WRITE_CALLBACK(MMIO::WriteDMAxCNT_H) {
+    bool was_enabled = (DMAData[x].CNT_H & static_cast<u16>(DMACNT_HFlags::Enable)) != 0;
     DMAData[x].CNT_H = value;
 
-    if (value & static_cast<u16>(DMACNT_HFlags::Enable)) {
+    if (!was_enabled && (value & static_cast<u16>(DMACNT_HFlags::Enable))) {
         // DMA enable, store DMASAD/DAD/CNT_L registers in shadow registers
         log_dma("Wrote to DMA%dCNT_H: %04x", x, value);
         log_dma("Settings: SAD: %08x, DAD: %08x, CNT_L: %04x",
@@ -29,7 +30,7 @@ WRITE_CALLBACK(MMIO::WriteDMAxCNT_H) {
             // no need to have shadow copies for immediate DMAs
             log_dma("DMA started");
             // trigger, but don't mark as enabled
-            TriggerDMA(x);
+            TriggerDMAChannel(x);
         }
         else {
             // mark as enabled

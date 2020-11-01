@@ -31,6 +31,8 @@ vec4 mode4(uint x, uint y) {
     uint PaletteIndex = readVRAM8(VRAMAddr);
 
     vec4 Color = readPALentry(PaletteIndex, y);
+    uint Priority = readIOreg(++BG2CNT++, y);
+    gl_FragDepth = float(Priority) / 4.0;
 
     // We already converted to BGR when buffering data
     return vec4(Color.rgb, 1.0);

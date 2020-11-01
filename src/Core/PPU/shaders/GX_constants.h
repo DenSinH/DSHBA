@@ -19,6 +19,7 @@ enum class VMEMSizes : unsigned int {
 enum class LCDIORegs : unsigned int {
     DISPCNT = 0x00u,
     BG0CNT  = 0x08u,
+    BG2CNT  = 0x0cu,
     BG0HOFS = 0x10u,
     BG0VOFS = 0x12u,
 };
@@ -29,6 +30,46 @@ enum class DPSCNTBits : unsigned int {
     DisplayBG1    = 0x0200u,
     DisplayBG2    = 0x0400u,
     DisplayBG3    = 0x0800u,
+};
+
+enum class OBJ_ATTR0 : unsigned int {
+    ATTR0_Y  = 0x00ffu,
+
+    ATTR0_OM      = 0x0300u,
+    ATTR0_REG     = 0x0000u,
+    ATTR0_AFF     = 0x0100u,
+    ATTR0_HIDE    = 0x0200u,
+    ATTR0_AFF_DBL = 0x0300u,
+
+    ATTR0_GM      = 0x0c00u,
+    ATTR0_NORMAL  = 0x0000u,
+    ATTR0_BLEND   = 0x0400u,
+    ATTR0_WIN     = 0x0800u,
+
+    ATTR0_MOSAIC  = 0x1000u,
+
+    ATTR0_CM      = 0x2000u,
+    ATTR0_4BPP    = 0x0000u,
+    ATTR0_8BPP    = 0x2000u,
+
+    ATTR0_Sh      = 0xc000u,
+    ATTR0_SQUARE  = 0x0000u,
+    ATTR0_WIDE    = 0x1000u,
+    ATTR0_TALL    = 0x2000u,
+};
+
+enum class OBJ_ATTR1 : unsigned int {
+    ATTR1_X   = 0x01ffu,
+    ATTR1_AFF = 0x3e00u,
+    ATTR1_HF  = 0x1000u,
+    ATTR1_VF  = 0x2000u,
+    ATTR1_Sz  = 0xc000u,
+};
+
+enum class OBJ_ATTR2 : unsigned int {
+    ATTR2_TID = 0x03ffu,
+    ATTR2_PR  = 0x0c00u,
+    ATTR2_PB  = 0xf000u,
 };
 
 #define VISIBLE_SCREEN_HEIGHT 160

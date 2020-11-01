@@ -192,10 +192,12 @@ struct MemoryViewer
         ImGuiListClipper clipper(line_total_count, s.LineHeight);
         const int lines_to_show = clipper.DisplayEnd - clipper.DisplayStart;
 
-        if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow)))         { CenterAddr -= Cols; }
-        else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow)))  { CenterAddr += Cols; }
-        else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_LeftArrow)))  { CenterAddr -= Cols * lines_to_show; }
-        else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_RightArrow))) { CenterAddr += Cols * lines_to_show; }
+        if (ImGui::IsWindowFocused()) {
+            if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow)))         { CenterAddr -= Cols; }
+            else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow)))  { CenterAddr += Cols; }
+            else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_LeftArrow)))  { CenterAddr -= Cols * lines_to_show; }
+            else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_RightArrow))) { CenterAddr += Cols * lines_to_show; }
+        }
 
         // Draw vertical separator
         ImVec2 window_pos = ImGui::GetWindowPos();

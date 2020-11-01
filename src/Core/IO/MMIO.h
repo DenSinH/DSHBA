@@ -102,7 +102,8 @@ private:
     /*============== DMA ==============*/
     bool DMAEnabled[4]       = {};
     s_DMAData DMAData[4]     = {};  // shadow registers on DMA enable
-    void TriggerDMA(u32 x);
+    void TriggerDMAChannel(u32 x);
+    void TriggerDMATiming(DMACNT_HFlags start_timing);
     template<u8 x> WRITE_CALLBACK(WriteDMAxCNT_H);
 
     /*============= Timers =============*/

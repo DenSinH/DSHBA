@@ -2,9 +2,14 @@
 
 #version 430 core
 
+#define attr0 x
+#define attr1 y
+#define attr2 z
+#define attr3 w
 
 in vec2 screenCoord;
 
+out float gl_FragDepth;
 out vec4 FragColor;
 
 uniform sampler2D PAL;
@@ -60,28 +65,28 @@ uint VRAMIndex(uint Tx, uint Ty, uint Size) {
     temp |= temp | ((Tx & 0x1fu) << 1);
     switch (Size) {
         case 0:  // 32x32
-        break;
+            break;
         case 1:  // 64x32
-        if ((Tx & 0x20u) != 0) {
-            temp |= 0x800u;
-        }
-        break;
+            if ((Tx & 0x20u) != 0) {
+                temp |= 0x800u;
+            }
+            break;
         case 2:  // 32x64
-        if ((Ty & 0x20u) != 0) {
-            temp |= 0x800u;
-        }
-        break;
+            if ((Ty & 0x20u) != 0) {
+                temp |= 0x800u;
+            }
+            break;
         case 3:  // 64x64
-        if ((Ty & 0x20u) != 0) {
-            temp |= 0x1000u;
-        }
-        if ((Tx & 0x20u) != 0) {
-            temp |= 0x800u;
-        }
-        break;
+            if ((Ty & 0x20u) != 0) {
+                temp |= 0x1000u;
+            }
+            if ((Tx & 0x20u) != 0) {
+                temp |= 0x800u;
+            }
+            break;
         default:
-        // invalid, should not happen
-        return 0;
+            // invalid, should not happen
+            return 0;
     }
     return temp;
 }
@@ -159,6 +164,17 @@ vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y) {
     return regularScreenEntryPixel(x_eff & 7u, y_eff & 7u, y, ScreenEntry, CBB, ColorMode);
 }
 
+//struct s_OBJSize {
+//    uint width;
+//    uint height;
+//};
+//
+//const s_OBJSize OBJSizeTable[3][4] = {
+//    { s_OBJSize(8, 8),  s_OBJSize(16, 16), s_OBJSize(32, 32), s_OBJSize(64, 64) },
+//    { s_OBJSize(16, 8), s_OBJSize(32, 8),  s_OBJSize(32, 16), s_OBJSize(64, 32) },
+//    { s_OBJSize(8, 16), s_OBJSize(8, 32),  s_OBJSize(16, 32), s_OBJSize(32, 62) }
+//};
+
 vec4 mode0(uint, uint);
 vec4 mode3(uint, uint);
 vec4 mode4(uint, uint);
@@ -181,7 +197,7 @@ void main() {
             outColor = mode4(x, y);
             break;
         default:
-            outColor = vec4(1, 1, 1, 1);
+            outColor = vec4(float(x) / float(++VISIBLE_SCREEN_WIDTH++), float(y) / float(++VISIBLE_SCREEN_HEIGHT++), 1, 1);
             break;
     }
 

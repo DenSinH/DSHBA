@@ -57,7 +57,7 @@ void MMIO::TriggerInterrupt(u16 interrupt) {
     CPU->ScheduleInterruptPoll();
 }
 
-void MMIO::TriggerDMA(u32 x) {
+void MMIO::TriggerDMAChannel(u32 x) {
     const u16 control = DMAData[x].CNT_H;
 
     bool other_dma_active = false;
@@ -114,7 +114,20 @@ void MMIO::TriggerDMA(u32 x) {
 
     // trigger IRQ
     if (control & static_cast<u16>(DMACNT_HFlags::IRQ)) {
+        log_dma("Trigger DMA%x interrupt (IE %x)", x, CPU->IE);
         TriggerInterrupt(static_cast<u16>(Interrupt::DMA0) << x);
+    }
+}
+
+void MMIO::TriggerDMATiming(DMACNT_HFlags start_timing) {
+    for (int i = 0; i < 4; i++) {
+        if (!DMAEnabled[i]) {
+            continue;
+        }
+
+        if ((DMAData[i].CNT_H & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(start_timing)) {
+            TriggerDMAChannel(i);
+        }
     }
 }
 
@@ -142,15 +155,7 @@ SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
         }
 
         // HBlank DMAs
-        for (int i = 0; i < 4; i++) {
-            if (!IO->DMAEnabled[i]) {
-                continue;
-            }
-
-            if ((IO->DMAData[i].CNT_H & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(DMACNT_HFlags::StartHBlank)) {
-                IO->TriggerDMA(i);
-            }
-        }
+        IO->TriggerDMATiming(DMACNT_HFlags::StartHBlank);
     }
     else {
         // HBlank was cleared, set after 1006 cycles
@@ -194,15 +199,7 @@ SCHEDULER_EVENT(MMIO::VBlankFlagEvent) {
         }
 
         // VBlank DMAs
-        for (int i = 0; i < 4; i++) {
-            if (!IO->DMAEnabled[i]) {
-                continue;
-            }
-
-            if ((IO->DMAData[i].CNT_H & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(DMACNT_HFlags::StartVBlank)) {
-                IO->TriggerDMA(i);
-            }
-        }
+        IO->TriggerDMATiming(DMACNT_HFlags::StartVBlank);
     }
     else {
         // VBlank was cleared, set after visible frame

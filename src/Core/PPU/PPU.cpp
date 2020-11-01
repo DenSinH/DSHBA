@@ -103,7 +103,7 @@ void GBAPPU::InitFramebuffers() {
     glGenFramebuffers(1, &Framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
 
-    GLuint rendered_texture;
+    GLuint rendered_texture, depth_buffer;
     // create a texture to render to and fill it with 0 (also set filtering to low)
     glGenTextures(1, &rendered_texture);
     glBindTexture(GL_TEXTURE_2D, rendered_texture);
@@ -111,6 +111,12 @@ void GBAPPU::InitFramebuffers() {
                  0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    // add depth buffer
+    glGenRenderbuffers(1, &depth_buffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, depth_buffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_buffer);
 
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, rendered_texture, 0);
     GLenum draw_buffers[1] = { GL_COLOR_ATTACHMENT0 };
@@ -249,6 +255,8 @@ void GBAPPU::VideoInit() {
     InitBuffers();
 
     glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
 }
 
 void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
@@ -315,9 +323,8 @@ struct s_framebuffer GBAPPU::Render() {
     glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
     glViewport(0, 0, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT);
 
-    // todo: backdrop color
     glClearColor(0, 0, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // draw scanlines that are available
     DrawMutex.lock();
