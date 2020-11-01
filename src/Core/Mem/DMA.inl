@@ -1,13 +1,36 @@
 #include "../IO/IOFlags.h"
 
 #include <type_traits>
+#include <algorithm>
 
+template<typename T>
+static constexpr i32 DeltaXAD(u16 flag) {
+    switch (static_cast<DMACNT_HFlags>(flag)) {
+        case DMACNT_HFlags::DestIncrementReload:
+        case DMACNT_HFlags::DestIncrement:
+        // case DMACNT_HFlags::SrcIncrement:  also 0, same as DestIncrement
+            return sizeof(T);
+        case DMACNT_HFlags::DestDecrement:
+        case DMACNT_HFlags::SrcDecrement:
+            return -sizeof(T);
+        case DMACNT_HFlags::DestFixed:
+        case DMACNT_HFlags::SrcFixed:
+            return 0;
+        default: UNREACHABLE
+            log_fatal("Invalid flag passed to DeltaXAD");
+    }
+}
 
 template<typename T, bool intermittent_events>
 void Mem::FastDMA(s_DMAData* DMA) {
+    /*
+     * Safe direct DMAs with both incrementing addresses
+     * */
     u32 cycles_per_access = 1;  // todo
-    u8* dest   = GetPtr(DMA->DAD);
-    u8* src    = GetPtr(DMA->SAD);
+
+    // align addresses
+    u8* dest   = GetPtr(DMA->DAD & ~(sizeof(T) - 1));
+    u8* src    = GetPtr(DMA->SAD & ~(sizeof(T) - 1));
     u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
 
     log_dma("Fast DMA %x -> %x (len: %x, control: %04x)", DMA->SAD, DMA->DAD, length, DMA->CNT_H);
@@ -18,7 +41,7 @@ void Mem::FastDMA(s_DMAData* DMA) {
         memcpy(
                 dest,
                 src,
-                length << (std::is_same_v<T, u32> ? 2 : 1)
+                length * sizeof(T)
         );
         (*timer) += length * cycles_per_access;
     }
@@ -33,30 +56,89 @@ void Mem::FastDMA(s_DMAData* DMA) {
             memcpy(
                     dest,
                     src,
-                    accesses_until_next_event << (std::is_same_v<T, u32> ? 2 : 1)
+                    accesses_until_next_event * sizeof(T)
             );
             (*timer) += accesses_until_next_event * cycles_per_access;
             do_events(Scheduler);
 
             length -= accesses_until_next_event;
-            dest += accesses_until_next_event << (std::is_same_v<T, u32> ? 2 : 1);
-            src  += accesses_until_next_event << (std::is_same_v<T, u32> ? 2 : 1);
+            dest += accesses_until_next_event * sizeof(T);
+            src  += accesses_until_next_event * sizeof(T);
         }
     }
 
     // update DMA data
     if ((DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) != static_cast<u16>(DMACNT_HFlags::DestIncrementReload)) {
-        DMA->DAD += length << (std::is_same_v<T, u32> ? 2 : 1);
+        DMA->DAD += length * sizeof(T);
     }
-    DMA->SAD += length << (std::is_same_v<T, u32> ? 2 : 1);
+    DMA->SAD += length * sizeof(T);
+}
+
+template<typename T, bool intermittent_events>
+void Mem::MediumDMA(s_DMAData* DMA) {
+    /*
+     * Safe direct DMAs with varying src/dest address control
+     * */
+    u32 cycles_per_access = 1;  // todo
+
+    // align addresses
+    u8* dest   = GetPtr(DMA->DAD & ~(sizeof(T) - 1));
+    u8* src    = GetPtr(DMA->SAD & ~(sizeof(T) - 1));
+    u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
+
+    i32 delta_dad = DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl));
+    i32 delta_sad = DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl));
+
+    log_dma("Medium DMA %x -> %x (len: %x, control: %04x)", DMA->SAD, DMA->DAD, length, DMA->CNT_H);
+    if constexpr(!intermittent_events) {
+        // direct memcpy
+        log_dma("Medium DMA, no intermissions");
+        for (size_t i = 0; i < length; i++) {
+            *(T*)dest = *(T*)src;
+
+            dest += delta_dad;
+            src  += delta_sad;
+        }
+        (*timer) += length * cycles_per_access;
+    }
+    else {
+        log_dma("Medium DMA with intermissions");
+        // intermittent memcpy
+        while (length != 0) {
+            u16 accesses_until_next_event = (peek_event(Scheduler) / cycles_per_access) + 1; // + 1 to get over the limit
+            accesses_until_next_event = MIN(length, accesses_until_next_event);
+
+            log_dma("DMAing chunk of length %x", accesses_until_next_event);
+            for (size_t i = 0; i < accesses_until_next_event; i++) {
+                *(T*)dest = *(T*)src;
+
+                dest += delta_dad;
+                src  += delta_sad;
+            }
+            (*timer) += accesses_until_next_event * cycles_per_access;
+            do_events(Scheduler);
+
+            length -= accesses_until_next_event;
+        }
+    }
+
+    // update DMA data
+    if ((DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) != static_cast<u16>(DMACNT_HFlags::DestIncrementReload)) {
+        DMA->DAD += length * delta_dad;
+    }
+    DMA->SAD += length * delta_sad;
 }
 
 template<typename T, bool intermittent_events>
 void Mem::SlowDMA(s_DMAData* DMA) {
+    // address alignment happens in read/write handlers
     u32 dad = DMA->DAD;
     u32 sad = DMA->SAD;
     u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
     const u16 control = DMA->CNT_H;
+
+    i32 delta_dad = DeltaXAD<T>(control & static_cast<u16>(DMACNT_HFlags::DestAddrControl));
+    i32 delta_sad = DeltaXAD<T>(control & static_cast<u16>(DMACNT_HFlags::SrcAddrControl));
 
     log_dma("Slow DMA %x -> %x (len: %x, control: %04x)", sad, dad, DMA->CNT_L, control);
 
@@ -71,30 +153,8 @@ void Mem::SlowDMA(s_DMAData* DMA) {
             }
         }
 
-        switch (static_cast<DMACNT_HFlags>(control & static_cast<u16>(DMACNT_HFlags::DestAddrControl))) {
-            case DMACNT_HFlags::DestIncrement:
-            case DMACNT_HFlags::DestIncrementReload:
-                dad += sizeof(T);
-                break;
-            case DMACNT_HFlags::DestDecrement:
-                dad -= sizeof(T);
-                break;
-            case DMACNT_HFlags::DestFixed:
-            default:
-                break;
-        }
-
-        switch (static_cast<DMACNT_HFlags>(control & static_cast<u16>(DMACNT_HFlags::SrcAddrControl))) {
-            case DMACNT_HFlags::SrcIncrement:
-                sad += sizeof(T);
-                break;
-            case DMACNT_HFlags::SrcDecrement:
-                sad -= sizeof(T);
-                break;
-            case DMACNT_HFlags::SrcFixed:
-            default:
-                break;
-        }
+        dad += delta_dad;
+        sad += delta_sad;
     }
 
     if ((DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) != static_cast<u16>(DMACNT_HFlags::DestIncrementReload)) {
@@ -128,6 +188,7 @@ void Mem::SlowDMA(s_DMAData* DMA) {
  * */
 enum class DMAAction {
     Fast,
+    Medium,
     Slow,
     Skip,  // like DMAs to BIOS (I know PMD does this)
 };
@@ -147,7 +208,7 @@ static constexpr u32 AllowFastDMAAddressMask[16] = {
 };
 
 template<typename T>
-static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 length) {
+static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 length, const u16 control) {
     const auto dar = static_cast<MemoryRegion>(dad >> 24);
     const auto sar = static_cast<MemoryRegion>(sad >> 24);
 
@@ -168,7 +229,7 @@ static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 
         case MemoryRegion::SRAM:
             return DMAAction::Slow;
         case MemoryRegion::VRAM:
-            if (MaskVRAMAddress(dad) + (length << (std::is_same_v<T, u32> ? 2 : 1)) > 0x1'8000) {
+            if (MaskVRAMAddress(dad) + (length * sizeof(T)) > 0x1'8000) {
                 return DMAAction::Slow;
             }
         case MemoryRegion::eWRAM:
@@ -186,7 +247,7 @@ static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 
         case MemoryRegion::Unused:
             return DMAAction::Slow;
         case MemoryRegion::VRAM:
-            if (MaskVRAMAddress(sad) + (length << (std::is_same_v<T, u32> ? 2 : 1)) > 0x1'8000) {
+            if (MaskVRAMAddress(sad) + (length * sizeof(T)) > 0x1'8000) {
                 return DMAAction::Slow;
             }
         case MemoryRegion::eWRAM:
@@ -209,9 +270,9 @@ static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 
     log_dma("SAR okay for fast DMA");
 
     const u32 dad_start_masked = dad & ~AllowFastDMAAddressMask[static_cast<u32>(dar)];
-    const u32 dad_end_masked   = (dad + (length << (std::is_same_v<T, u32> ? 2 : 1))) & ~AllowFastDMAAddressMask[static_cast<u32>(dar)];
+    const u32 dad_end_masked   = (dad + (length * sizeof(T))) & ~AllowFastDMAAddressMask[static_cast<u32>(dar)];
     const u32 sad_start_masked = sad & ~AllowFastDMAAddressMask[static_cast<u32>(sar)];
-    const u32 sad_end_masked   = (sad + (length << (std::is_same_v<T, u32> ? 2 : 1))) & ~AllowFastDMAAddressMask[static_cast<u32>(sar)];
+    const u32 sad_end_masked   = (sad + (length * sizeof(T))) & ~AllowFastDMAAddressMask[static_cast<u32>(sar)];
 
     if (dad_start_masked != dad_end_masked) {
         // destination mirroring effect
@@ -225,6 +286,16 @@ static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 
         return DMAAction::Slow;
     }
 
+    if (DeltaXAD<T>(control & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) <= 0) {
+        // decrement/fixed destination
+        return DMAAction::Medium;
+    }
+
+    if (DeltaXAD<T>(control & static_cast<u16>(DMACNT_HFlags::SrcAddrControl)) <= 0) {
+        // decrement/fixed source
+        return DMAAction::Medium;
+    }
+
     return DMAAction::Fast;
 }
 
@@ -232,38 +303,19 @@ template<typename T, bool intermittent_events>
 void Mem::DoDMA(s_DMAData* DMA) {
     u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
 
-    DMAAction dma_action;
-    if (static_cast<DMACNT_HFlags>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) == DMACNT_HFlags::DestDecrement ||
-        static_cast<DMACNT_HFlags>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) == DMACNT_HFlags::DestFixed) {
-        dma_action = DMAAction::Slow;
-    }
-    else if (static_cast<DMACNT_HFlags>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl)) == DMACNT_HFlags::SrcDecrement ||
-             static_cast<DMACNT_HFlags>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl)) == DMACNT_HFlags::SrcFixed) {
-        dma_action = DMAAction::Slow;
-    }
-    else {
-        dma_action = AllowFastDMA<T>(DMA->DAD, DMA->SAD, length);
-    }
+    DMAAction dma_action = AllowFastDMA<T>(DMA->DAD, DMA->SAD, length, DMA->CNT_H);
 
     switch(dma_action) {
-        case DMAAction::Fast:
-            // invalidate VRAM
+        case DMAAction::Medium:
+            // Invalidate VRAM, we do this before the transfer because the transfer updates DMA*
             if (static_cast<MemoryRegion>(DMA->DAD >> 24) == MemoryRegion::VRAM) {
-                u32 low, high;
+                u32 low  = MaskVRAMAddress(DMA->DAD);
+                u32 high = MaskVRAMAddress(DMA->DAD + length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)));
 
-                if (static_cast<DMACNT_HFlags>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) ==
-                    DMACNT_HFlags::DestDecrement
-                        ) {
-                    low = DMA->DAD - (length << (std::is_same_v<T, u32> ? 2 : 1));
-                    high = DMA->DAD;
+                if (unlikely(high < low)) {
+                    // decrementing DMA
+                    std::swap(high, low);
                 }
-                else {
-                    low = DMA->DAD;
-                    high = DMA->DAD + ((length + 1) << (std::is_same_v<T, u32> ? 2 : 1));
-                }
-
-                low  = MaskVRAMAddress(low);
-                high = MaskVRAMAddress(high);
 
                 if ((high + sizeof(T)) > VRAMUpdate.max) {
                     VRAMUpdate.max = high + sizeof(T);
@@ -272,7 +324,22 @@ void Mem::DoDMA(s_DMAData* DMA) {
                     VRAMUpdate.min = low;
                 }
             }
+            MediumDMA<T, intermittent_events>(DMA);
+            break;
+        case DMAAction::Fast:
+            // invalidate VRAM, we do this before the transfer because the transfer updates DMA*
+            // for fast DMAs, we know both address controls are increasing
+            if (static_cast<MemoryRegion>(DMA->DAD >> 24) == MemoryRegion::VRAM) {
+                u32 low  = MaskVRAMAddress(DMA->DAD);
+                u32 high = MaskVRAMAddress(DMA->DAD + length * sizeof(T));
 
+                if ((high + sizeof(T)) > VRAMUpdate.max) {
+                    VRAMUpdate.max = high + sizeof(T);
+                }
+                if (low < VRAMUpdate.min) {
+                    VRAMUpdate.min = low;
+                }
+            }
             FastDMA<T, intermittent_events>(DMA);
             return;
         case DMAAction::Slow:
@@ -283,30 +350,9 @@ void Mem::DoDMA(s_DMAData* DMA) {
             (*timer) += cycles_per_access * length;
 
             if ((DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) != static_cast<u16>(DMACNT_HFlags::DestIncrementReload)) {
-                switch (static_cast<DMACNT_HFlags>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl))) {
-                    case DMACNT_HFlags::DestIncrement:
-                        DMA->DAD += length * sizeof(T);
-                        break;
-                    case DMACNT_HFlags::DestDecrement:
-                        DMA->DAD -= length * sizeof(T);
-                        break;
-                    case DMACNT_HFlags::DestFixed:
-                    default:
-                        break;
-                }
+                DMA->DAD += length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl));
             }
-
-            switch (static_cast<DMACNT_HFlags>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl))) {
-                case DMACNT_HFlags::SrcIncrement:
-                    DMA->SAD += length * sizeof(T);
-                    break;
-                case DMACNT_HFlags::SrcDecrement:
-                    DMA->DAD -= length * sizeof(T);
-                    break;
-                case DMACNT_HFlags::SrcFixed:
-                default:
-                    break;
-            }
+            DMA->SAD += length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl));;
         }
         default:
             break;

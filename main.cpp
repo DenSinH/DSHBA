@@ -66,6 +66,7 @@ int main() {
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Arithmetic/ARCTAN/BIOSARCTAN.gba");
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/tonc/dma_demo.gba");
     gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/dma-test.gba");
+    // gba->Memory.LoadROM("D:/User/Downloads/Pokemon - Emerald Version (USA, Europe).gba");
     gba->Run();
 
     ui_thread.join();
