@@ -85,6 +85,16 @@
 #define log_dma(message, ...) do { } while(0)
 #endif
 
+#if COMPONENT_FLAGS & COMPONENT_TIMERS
+#define log_tmr(message, ...) do {                        \
+        CONSOLE_GREEN();                                \
+        fprintf(stdout, "[TIMERS]: " message "\n",  ##__VA_ARGS__); \
+        CONSOLE_RESTORE();                             \
+    } while(0)
+#else
+#define log_tmr(message, ...) do { } while(0)
+#endif
+
 #if COMPONENT_FLAGS & COMPONENT_SCHEDULER
 #define log_sched(message, ...) do {                        \
         CONSOLE_BLUE();                                \

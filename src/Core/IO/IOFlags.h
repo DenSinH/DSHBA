@@ -35,3 +35,10 @@ enum class DMACNT_HFlags : u16 {
     IRQ                 = 0x4000,
     Enable              = 0x8000,
 };
+
+enum class TMCNT_HFlags : u16 {
+    Prescaler = 0x0003,
+    CountUp   = 0x0004,
+    IRQ       = 0x0040,
+    Enabled   = 0x0080,
+};

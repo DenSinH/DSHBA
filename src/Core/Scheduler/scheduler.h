@@ -35,7 +35,7 @@ typedef struct s_event {
  * (function pointers can be compared anyway)
  * */
 void add_event(s_scheduler *scheduler, s_event *event);
-s_event *pop_event(s_scheduler *scheduler);  // mostly only used for debugging the scheduler
+s_event* pop_event(s_scheduler *scheduler);  // mostly only used for debugging the scheduler
 void remove_event(s_scheduler *scheduler, s_event *event);
 void reschedule_event(s_scheduler *scheduler, s_event *event, u64 new_time);
 void change_event(s_scheduler *scheduler, s_event *event, u64 new_time);

@@ -14,6 +14,7 @@
 #define COMPONENT_PPU         0x08
 #define COMPONENT_IO          0x10
 #define COMPONENT_DMA         0x20
+#define COMPONENT_TIMERS      0x40
 
 #ifndef NDEBUG
 // change to change verbosity / component logging:
@@ -37,7 +38,7 @@
 #define FAST_ADD_SUB
 #define BASIC_IDLE_DETECTION
 #define CTTZ_LDM_STM_LOOP_BASE  // not sure if this is worth it (loop unrolling might be faster)
-#define DIRECT_DMA_DATA_COPY
+#define DIRECT_IO_DATA_COPY
 #define FAST_DMA
 
 #else
@@ -47,7 +48,7 @@
 #define FAST_ADD_SUB             // add/sub/adc/subc based on instrinsics/builtins
 #define BASIC_IDLE_DETECTION     // detect idle branches in ARM/THUMB branch (without link) instructions
 #define CTTZ_LDM_STM_LOOP_BASE   // in LDM/STM type instructions, use cttz(rlist) as lower bound for the loop instead of 0
-#define DIRECT_DMA_DATA_COPY     // use memcpy to copy the register values into DMA data structs (only works on little endian)
+#define DIRECT_IO_DATA_COPY     // use memcpy to copy the register values into DMA data structs (only works on little endian)
 #define FAST_DMA                 // use memcpy/pointer copies to do DMA transfers
 
 #endif

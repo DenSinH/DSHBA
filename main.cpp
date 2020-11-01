@@ -65,8 +65,8 @@ int main() {
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Decompress/BIT/1BPP/BIOSBIT1BPP.gba");
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Arithmetic/ARCTAN/BIOSARCTAN.gba");
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/tonc/dma_demo.gba");
-    // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/suite.gba");
-    gba->Memory.LoadROM("D:/User/Downloads/Kirby - Nightmare in Dream Land (USA).gba");
+    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/suite.gba");
+    // gba->Memory.LoadROM("D:/User/Downloads/Kirby - Nightmare in Dream Land (USA).gba");
     gba->Run();
 
     ui_thread.join();

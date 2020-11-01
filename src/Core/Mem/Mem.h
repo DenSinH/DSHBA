@@ -77,5 +77,5 @@ static ALWAYS_INLINE constexpr u32 MaskVRAMAddress(const u32 address) {
     return 0x1'0000 | (address & 0x7fff);
 }
 
-#include "ReadWrite.inl" // Read/Write related templated functions
-#include "DMA.inl"       // DMA related templated functions
+#include "MemReadWrite.inl" // Read/Write related templated functions
+#include "MemDMA.inl"       // DMA related templated functions

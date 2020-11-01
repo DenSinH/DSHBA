@@ -1,7 +1,5 @@
 #include "MMIO.h"
 
-#include "Interrupts.h"
-
 #include "const.h"
 
 #include "../ARM7TDMI/ARM7TDMI.h"
@@ -33,8 +31,30 @@ MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
     DMAData[2].CNT_L_MAX = 0x4000;
     DMAData[3].CNT_L_MAX = 0x10000;
 
+    Timer[0].Overflow = (s_event) {
+        .callback = TimerOverflowEvent<0>,
+        .caller   = this,
+    };
+    Timer[1].Overflow = (s_event) {
+        .callback = TimerOverflowEvent<1>,
+        .caller   = this,
+    };
+    Timer[2].Overflow = (s_event) {
+        .callback = TimerOverflowEvent<2>,
+        .caller   = this,
+    };
+    Timer[3].Overflow = (s_event) {
+        .callback = TimerOverflowEvent<3>,
+        .caller   = this,
+    };
+
     add_event(scheduler, &HBlankFlag);
     add_event(scheduler, &VBlankFlag);
+}
+
+void MMIO::TriggerInterrupt(u16 interrupt) {
+    CPU->IF |= interrupt;
+    CPU->ScheduleInterruptPoll();
 }
 
 void MMIO::TriggerDMA(u32 x) {
@@ -79,7 +99,7 @@ void MMIO::TriggerDMA(u32 x) {
     // otherwise, it is already marked as enabled
 
     // write back the DMA data
-#ifdef DIRECT_DMA_DATA_COPY
+#ifdef DIRECT_IO_DATA_COPY
     memcpy(
             &Registers[static_cast<u32>(IORegister::DMA0SAD) + x * 0xc],
             &DMAData[x],
@@ -94,8 +114,7 @@ void MMIO::TriggerDMA(u32 x) {
 
     // trigger IRQ
     if (control & static_cast<u16>(DMACNT_HFlags::IRQ)) {
-        CPU->IF |= static_cast<u16>(Interrupt::DMA0) << x;
-        CPU->ScheduleInterruptPoll();
+        TriggerInterrupt(static_cast<u16>(Interrupt::DMA0) << x);
     }
 }
 
@@ -111,6 +130,7 @@ SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
     if (IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::HBLank)) {
         // HBlank was set, clear after 226 cycles
         event->time += CYCLES_HBLANK_SET;
+        add_event(scheduler, event);
 
         if (IO->VCount < VISIBLE_SCREEN_HEIGHT) {
             IO->PPU->BufferScanline(IO->VCount);
@@ -118,8 +138,7 @@ SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
 
         // HBlank interrupts
         if (IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::HBLankIRQ)) {
-            IO->CPU->IF |= static_cast<u16>(Interrupt::HBlank);
-            IO->CPU->ScheduleInterruptPoll();
+            IO->TriggerInterrupt(static_cast<u16>(Interrupt::HBlank));
         }
 
         // HBlank DMAs
@@ -136,6 +155,7 @@ SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
     else {
         // HBlank was cleared, set after 1006 cycles
         event->time += CYCLES_HBLANK_CLEAR;
+        add_event(scheduler, event);
 
         // increment VCount
         IO->VCount++;
@@ -146,8 +166,6 @@ SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
 
         IO->CheckVCountMatch();
     }
-
-    add_event(scheduler, event);
 }
 
 SCHEDULER_EVENT(MMIO::VBlankFlagEvent) {
@@ -155,16 +173,17 @@ SCHEDULER_EVENT(MMIO::VBlankFlagEvent) {
      * VBlank is set after 160 scanlines, set for the rest of the frame
      * */
     auto IO = (MMIO*)caller;
+    log_debug("VBlank");
 
     IO->DISPSTAT ^= static_cast<u16>(DISPSTATFlags::VBlank);
     if (IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::VBlank)) {
         // VBlank was set, clear after 68 scanlines (total frame height - visible frame height)
         event->time += CYCLES_PER_SCANLINE * (TOTAL_SCREEN_HEIGHT - VISIBLE_SCREEN_HEIGHT);
+        add_event(scheduler, event);
 
         // VBlank interrupts
         if (IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::VBlankIRQ)) {
-            IO->CPU->IF |= static_cast<u16>(Interrupt::VBlank);
-            IO->CPU->ScheduleInterruptPoll();
+            IO->TriggerInterrupt(static_cast<u16>(Interrupt::VBlank));
         }
 
         // VBlank DMAs
@@ -181,17 +200,15 @@ SCHEDULER_EVENT(MMIO::VBlankFlagEvent) {
     else {
         // VBlank was cleared, set after visible frame
         event->time += CYCLES_PER_SCANLINE * VISIBLE_SCREEN_HEIGHT;
+        add_event(scheduler, event);
     }
-
-    add_event(scheduler, event);
 }
 
 void MMIO::CheckVCountMatch() {
     // VCount interrupts
     if (DISPSTAT & static_cast<u16>(DISPSTATFlags::VCountIRQ)) {
         if ((DISPSTAT >> 8) == VCount) {
-            CPU->IF |= static_cast<u16>(Interrupt::VCount);
-            CPU->ScheduleInterruptPoll();
+            TriggerInterrupt(static_cast<u16>(Interrupt::VCount));
         }
     }
 }
@@ -225,6 +242,7 @@ WRITE_CALLBACK(MMIO::WriteIME) {
     }
 }
 WRITE_CALLBACK(MMIO::WriteIE) {
+    log_debug("Wrote %x to IE at %x", value, CPU->pc);
     CPU->IE = value;
     if (value) {
         // check if there are any interrupts

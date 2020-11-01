@@ -16,10 +16,10 @@ T Mem::Read(u32 address) {
         case MemoryRegion::iWRAM:
             return ReadArray<T>(iWRAM, address & 0x7fff);
         case MemoryRegion::IO:
-            if ((address & 0x00ff'ffff) > 0x3ff) {
-                return 0;
+            if ((address & 0x00ff'ffff) < 0x3ff) {
+                return IO->Read<T>(address & 0x3ff);
             }
-            return IO->Read<T>(address & 0x3ff);
+            return 0;  // todo: invalid reads
         case MemoryRegion::PAL:
             return ReadArray<T>(PAL, address & 0x3ff);
         case MemoryRegion::VRAM:
@@ -100,7 +100,9 @@ void Mem::Write(u32 address, T value) {
                 }
             }
 #endif
-            IO->Write<T>(address & 0x3ff, value);
+            if ((address & 0x00ff'ffff) < 0x3ff) {
+                IO->Write<T>(address & 0x3ff, value);
+            }
             return;
         case MemoryRegion::PAL:
 #ifdef CHECK_INVALID_REFLUSHES

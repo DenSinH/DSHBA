@@ -12,7 +12,7 @@ WRITE_CALLBACK(MMIO::WriteDMAxCNT_H) {
                 ReadArray<u16>(Registers, static_cast<u32>(IORegister::DMA0CNT_L) + x * 0xc)
         );
 
-#ifdef DIRECT_DMA_DATA_COPY
+#ifdef DIRECT_IO_DATA_COPY
         // DMACNT_H already copied over
         memcpy(
                 &DMAData[x],

@@ -12,12 +12,26 @@ inline u32 MMIO::Read<u32>(u32 address) {
     return ReadArray<u32>(Registers, address);
 }
 
-template<typename T>
-T MMIO::Read(u32 address) {
+template<>
+inline u16 MMIO::Read(u32 address) {
     if (unlikely(ReadPrecall[address >> 1])) {
-        WriteArray<u16>(Registers, address, (this->*ReadPrecall[address >> 1])());
+        // no need for indirections for 16 bit reads
+       return (this->*ReadPrecall[address >> 1])();
     }
-    return ReadArray<T>(Registers, address);
+    return ReadArray<u16>(Registers, address);
+}
+
+template<>
+inline u8 MMIO::Read(u32 address) {
+    if (unlikely(ReadPrecall[address >> 1])) {
+        // we can also prevent indirections here
+        if (address & 1) {
+            // misaligned
+            return (this->*ReadPrecall[address >> 1])() >> 8;
+        }
+        return (u8)(this->*ReadPrecall[address >> 1])();
+    }
+    return ReadArray<u8>(Registers, address);
 }
 
 template<>
@@ -28,10 +42,10 @@ inline void MMIO::Write<u32>(u32 address, u32 value) {
     WriteArray<u16>(Registers, address + 2, (value >> 16) & WriteMask[(address >> 1) + 1]);
 
     if (unlikely(WriteCallback[address >> 1])) {
-        (this->*WriteCallback[address >> 1])(value);
+        (this->*WriteCallback[address >> 1])(value & WriteMask[address >> 1]);
     }
     if (unlikely(WriteCallback[1 + (address >> 1)])) {
-        (this->*WriteCallback[1 + (address >> 1)])(value >> 16);
+        (this->*WriteCallback[1 + (address >> 1)])((value >> 16) & WriteMask[(address >> 1) + 1]);
     }
 }
 
@@ -40,7 +54,7 @@ inline void MMIO::Write<u16>(u32 address, u16 value) {
     WriteArray<u16>(Registers, address, value & WriteMask[address >> 1]);
 
     if (unlikely(WriteCallback[address >> 1])) {
-        (this->*WriteCallback[address >> 1])(value);
+        (this->*WriteCallback[address >> 1])(value & WriteMask[address >> 1]);
     }
 }
 
@@ -53,8 +67,10 @@ inline void MMIO::Write<u8>(u32 address, u8 value) {
         WriteArray<u8>(Registers, address, value & (WriteMask[address >> 1] >> 8));
     }
 
+    // todo: if there is also a special readcallback
     if (unlikely(WriteCallback[address >> 1])) {
         // We have to be careful with this:
+        // writemask is already applied
         (this->*WriteCallback[address >> 1])(ReadArray<u16>(Registers, address));
     }
 }
