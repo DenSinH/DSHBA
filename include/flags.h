@@ -38,6 +38,7 @@
 #define BASIC_IDLE_DETECTION
 #define CTTZ_LDM_STM_LOOP_BASE  // not sure if this is worth it (loop unrolling might be faster)
 #define DIRECT_DMA_DATA_COPY
+#define FAST_DMA
 
 #else
 #define VERBOSITY VERBOSITY_MAX
@@ -47,6 +48,7 @@
 #define BASIC_IDLE_DETECTION     // detect idle branches in ARM/THUMB branch (without link) instructions
 #define CTTZ_LDM_STM_LOOP_BASE   // in LDM/STM type instructions, use cttz(rlist) as lower bound for the loop instead of 0
 #define DIRECT_DMA_DATA_COPY     // use memcpy to copy the register values into DMA data structs (only works on little endian)
+#define FAST_DMA                 // use memcpy/pointer copies to do DMA transfers
 
 #endif
 

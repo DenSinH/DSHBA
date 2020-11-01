@@ -130,6 +130,12 @@ static ALWAYS_INLINE u32 cttz(u32 x)
 #define ASSUME(x)
 #endif
 
+#if __has_builtin(__builtin_assume_aligned)
+#define ASSUME_ALIGNED(ptr, alignment) __builtin_assume_aligned(ptr, alignment)
+#else
+#define ASSUME_ALIGNED(ptr, alignment)
+#endif
+
 #define str(s) #s  // stringize a macro
 
 #endif //GC__HELPERS_H

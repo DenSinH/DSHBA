@@ -63,8 +63,10 @@ private:
     OAMMEM OAM               = {};
     u8 ROM   [0x0200'0000]   = {};
 
+#ifdef FAST_DMA
     template<typename T, bool intermittent_events> void FastDMA(s_DMAData* DMA);  // incrementing DMAs in both directions
     template<typename T, bool intermittent_events> void MediumDMA(s_DMAData* DMA);  // DMAs from and to safe memory regions
+#endif
     template<typename T, bool intermittent_events> void SlowDMA(s_DMAData* DMA);  // DMAs with wrapping/special behavior
 };
 

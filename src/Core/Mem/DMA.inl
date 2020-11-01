@@ -21,6 +21,7 @@ static constexpr i32 DeltaXAD(u16 flag) {
     }
 }
 
+#ifdef FAST_DMA
 template<typename T, bool intermittent_events>
 void Mem::FastDMA(s_DMAData* DMA) {
     /*
@@ -32,7 +33,6 @@ void Mem::FastDMA(s_DMAData* DMA) {
     u8* dest   = GetPtr(DMA->DAD & ~(sizeof(T) - 1));
     u8* src    = GetPtr(DMA->SAD & ~(sizeof(T) - 1));
     u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
-
     log_dma("Fast DMA %x -> %x (len: %x, control: %04x)", DMA->SAD, DMA->DAD, length, DMA->CNT_H);
 
     if constexpr(!intermittent_events) {
@@ -128,6 +128,7 @@ void Mem::MediumDMA(s_DMAData* DMA) {
     }
     DMA->SAD += length * delta_sad;
 }
+#endif
 
 template<typename T, bool intermittent_events>
 void Mem::SlowDMA(s_DMAData* DMA) {
@@ -164,6 +165,7 @@ void Mem::SlowDMA(s_DMAData* DMA) {
     DMA->SAD = sad;
 }
 
+#ifdef FAST_DMA
 /*
  * We want to allow faster DMAs in certain memory regions
  * BIOS/unused is a separate case, cause nothing can be read from there anyway, so the DMA can be skipped entirely.
@@ -298,9 +300,11 @@ static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 
 
     return DMAAction::Fast;
 }
+#endif
 
 template<typename T, bool intermittent_events>
 void Mem::DoDMA(s_DMAData* DMA) {
+#ifdef FAST_DMA
     u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
 
     DMAAction dma_action = AllowFastDMA<T>(DMA->DAD, DMA->SAD, length, DMA->CNT_H);
@@ -357,4 +361,7 @@ void Mem::DoDMA(s_DMAData* DMA) {
         default:
             break;
     }
+#else
+    SlowDMA<T, intermittent_events>(DMA);
+#endif
 }
