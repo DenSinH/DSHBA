@@ -3,9 +3,12 @@ add_library(Core STATIC
         system.cpp
         Breakpoints/breakpoints.h
         Breakpoints/breakpoints.c
-        Scheduler/scheduler.c
+        Scheduler/scheduler.cpp
+        Scheduler/scheduler_impl.h
         Scheduler/scheduler.h
-        CoreUtils.cpp include/CoreUtils.h IO/MMIO.cpp IO/MMIO.h)
+        CoreUtils.cpp
+        include/CoreUtils.h
+        )
 
 add_subdirectory(Mem)
 add_subdirectory(ARM7TDMI)

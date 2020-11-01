@@ -8,7 +8,7 @@ template<u8 x> void MMIO::OverflowTimer() {
     ASSUME(x < 4);
 
     Timer[x].Counter = Timer[x].Register.CNT_L;  // reload counter
-    Timer[x].TriggerTime = *Scheduler->timer;    // reset triggertime
+    Timer[x].TriggerTime = get_time(Scheduler);  // reset triggertime
 
     if constexpr(x < 3) {
         // tick next timer if in count-up mode
@@ -58,12 +58,12 @@ template<u8 x> WRITE_CALLBACK(MMIO::WriteTMxCNT_L) {
 template<u8 x> READ_PRECALL(MMIO::ReadTMxCNT_L) {
     if constexpr (x == 0) {
         // always direct
-        Timer[x].FlushDirect(*Scheduler->timer);
+        Timer[x].FlushDirect(get_time(Scheduler));
     }
     else {
         // maybe count-up
         if (!(Timer[x].Register.CNT_H & static_cast<u16>(TMCNT_HFlags::CountUp))) {
-            Timer[x].FlushDirect(*Scheduler->timer);
+            Timer[x].FlushDirect(get_time(Scheduler));
         }
     }
     return (u16)Timer[x].Counter;
@@ -81,12 +81,12 @@ template<u8 x> WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
         // flush timer
         if constexpr (x == 0) {
             // always direct
-            Timer[x].FlushDirect(*Scheduler->timer);
+            Timer[x].FlushDirect(get_time(Scheduler));
         }
         else {
             // maybe count-up
             if (!(Timer[x].Register.CNT_H & static_cast<u16>(TMCNT_HFlags::CountUp))) {
-                Timer[x].FlushDirect(*Scheduler->timer);
+                Timer[x].FlushDirect(get_time(Scheduler));
             }
         }
     }
@@ -94,7 +94,7 @@ template<u8 x> WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
         // timer got enabled
         // trigger timing still needs to be set
         Timer[x].Counter = Timer[x].Register.CNT_L;
-        Timer[x].TriggerTime = *Scheduler->timer;
+        Timer[x].TriggerTime = get_time(Scheduler);
     }
     else {
         // nothing interesting happens
@@ -115,7 +115,8 @@ template<u8 x> WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
         // delta time
         u64 new_time = (0x10000 - Timer[x].Counter) << Timer[x].PrescalerShift;
         // absolute time
-        new_time = (*Scheduler->timer) + (*Scheduler->timer - Timer[x].TriggerTime) + new_time;
+        u64 current_time = get_time(Scheduler);
+        new_time = current_time + (current_time - Timer[x].TriggerTime) + new_time;
         Timer[x].Overflow.time = new_time;
 
         add_event(Scheduler, &Timer[x].Overflow);

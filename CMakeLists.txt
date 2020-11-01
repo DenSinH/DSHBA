@@ -15,12 +15,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-Ofast") # -march=native
 set(CMAKE_C_FLAGS_RELEASE "-Ofast")
 
 # add_compile_options($<$<CONFIG:DEBUG>:-Wall>)
-add_compile_options(
-        -Wno-gnu-binary-literal
-        -Wno-visibility
-        -Wno-c++98-compat
-        -Wno-double-promotion
-)
 add_compile_definitions(
         $<$<CONFIG:RELEASE>:NDEBUG>
         $<$<CONFIG:RELEASE>:BOOST_DISABLE_ASSERTS>

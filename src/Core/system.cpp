@@ -7,8 +7,6 @@
 #include "flags.h"
 
 GBA::GBA() {
-    Scheduler.timer = &CPU.timer;
-
     Memory.LoadBIOS(BIOS_FILE);
 
 #ifdef DO_BREAKPOINTS
@@ -31,8 +29,8 @@ void GBA::Run() {
 
     while (!Shutdown) {
 
-        if (unlikely(should_do_events(&Scheduler))) {
-            do_events(&Scheduler);
+        if (unlikely(should_do_events(Scheduler))) {
+            do_events(Scheduler);
         }
         CPU.Step();
 
