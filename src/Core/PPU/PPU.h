@@ -7,7 +7,10 @@
 
 #include "default.h"
 
+#include <glad/glad.h>
+
 #include <mutex>
+#include <array>
 
 class Mem;
 
@@ -44,22 +47,86 @@ private:
     std::mutex DrawMutex = std::mutex();
 
     // programs for each draw program
-    unsigned int Program;
-    unsigned int Framebuffer;
+    GLuint BGProgram;
+    GLuint Framebuffer;
 
-    unsigned int IOTexture, IOLocation;
-    unsigned int OAMTexture, OAMLocation;
-    unsigned int PALTexture, PALLocation;
+    GLuint IOTexture, BGIOLocation;
+    GLuint OAMTexture, BGOAMLocation;
+    GLuint PALTexture, BGPALLocation;
+    GLuint VRAMSSBO;
 
-    // unsigned int PALBinding, OAMBinding, IOBinding;
-    unsigned int VRAMSSBO;
-    unsigned int VAO;
-    unsigned int VBO;  // for drawing a line
+    GLuint BGVAO;
+    GLuint BGVBO;  // for drawing a batch of scanlines
+
+    static const constexpr auto ObjIndices = [] {
+        std::array<u16, ((128 * 5) >> 2)> table = {0};
+
+        u16 index = 0;
+        for (int i = 0; i < table.size(); i += 5) {
+            table[i]     = index++;
+            table[i + 1] = index++;
+            table[i + 2] = index++;
+            table[i + 3] = index++;
+            table[i + 4] = 0xffff;  // restart index
+        }
+
+        return table;
+    }();
+
+    // buffer attribute 0 and 1 (positions) to send to the vertex shader
+    u32 NumberOfObjVerts = 0;
+    u32 ObjAttr01Buffer[sizeof(OAMMEM)];
+    GLuint ObjProgram;
+    GLuint ObjIOLocation;
+    GLuint ObjOAMLocation;
+    GLuint ObjPALLocation;
+
+    GLuint ObjVAO;
+    GLuint ObjVBO;
+    GLuint ObjEBO;
 
     void BufferScanline(u32 scanline);
 
     void InitFramebuffers();
-    void InitPrograms();
-    void InitBuffers();
+    void InitBGProgram();
+    void InitObjProgram();
+    void InitBGBuffers();
+    void InitObjBuffers();
+
+    template<bool ObjWindow>
+    void BufferObjects(u32 buffer);
+
     void DrawScanlines(u32 scanline, u32 amount);
+    void DrawObjects();
 };
+
+
+template<bool ObjWindow>
+void GBAPPU::BufferObjects(u32 buffer) {
+    NumberOfObjVerts = 0;
+    for (int i = 0; i < (sizeof(OAMMEM) >> 3); i++) {
+        // search halfway through the frame
+        u32 Attr01 = *(u32*)&OAMBuffer[buffer][VISIBLE_SCREEN_HEIGHT >> 1][i << 3];
+
+        if ((Attr01 & 0x0300) == 0x0200) {
+            // rendering disabled
+            continue;
+        }
+
+        if constexpr(!ObjWindow) {
+            if ((Attr01 & 0x0c00) == 0x0800) {
+                // part of object window, dont buffer now
+                continue;
+            }
+        }
+        else {
+            // todo
+            break;
+        }
+
+        ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;
+        ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;
+        ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;
+        ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;
+    }
+}

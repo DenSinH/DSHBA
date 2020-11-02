@@ -55,7 +55,7 @@ int main() {
 #endif
 
 #ifdef DO_BREAKPOINTS
-    gba->Paused = false;
+    gba->Paused = true;
 #endif
 
     atexit(exception_handler);
@@ -66,9 +66,9 @@ int main() {
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Arithmetic/ARCTAN/BIOSARCTAN.gba");
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/tonc/obj_demo.gba");
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/ags.gba");
-    // gba->Memory.LoadROM("D:/User/Downloads/Kirby - Nightmare in Dream Land (USA).gba");
+    gba->Memory.LoadROM("D:/User/Downloads/Kirby - Nightmare in Dream Land (USA).gba");
     // gba->Memory.LoadROM("D:/User/Downloads/Pokemon - Emerald Version (USA, Europe).gba");
-    gba->Memory.LoadROM("D:/User/Downloads/Legend of Zelda, The - The Minish Cap (USA).gba");
+    // gba->Memory.LoadROM("D:/User/Downloads/Legend of Zelda, The - The Minish Cap (USA).gba");
     // gba->Memory.LoadROM("D:/User/Downloads/Pokemon - Ruby Version (USA, Europe) (Rev 2).gba");
     gba->Run();
 

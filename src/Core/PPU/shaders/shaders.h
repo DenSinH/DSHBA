@@ -1,7 +1,7 @@
 #ifndef GC__SHADER_H
 #define GC__SHADER_H
 
-// FragmentShaderSource (from fragment.glsl, lines 2 to 206)
+// FragmentShaderSource (from fragment.glsl, lines 2 to 195)
 const char* FragmentShaderSource = 
 "#version 430 core\n"  // l:1
 "\n"  // l:2
@@ -167,46 +167,35 @@ const char* FragmentShaderSource =
 "    return regularScreenEntryPixel(x_eff & 7u, y_eff & 7u, y, ScreenEntry, CBB, ColorMode);\n"  // l:162
 "}\n"  // l:163
 "\n"  // l:164
-"//struct s_OBJSize {\n"  // l:165
-"//    uint width;\n"  // l:166
-"//    uint height;\n"  // l:167
-"//};\n"  // l:168
-"//\n"  // l:169
-"//const s_OBJSize OBJSizeTable[3][4] = {\n"  // l:170
-"//    { s_OBJSize(8, 8),  s_OBJSize(16, 16), s_OBJSize(32, 32), s_OBJSize(64, 64) },\n"  // l:171
-"//    { s_OBJSize(16, 8), s_OBJSize(32, 8),  s_OBJSize(32, 16), s_OBJSize(64, 32) },\n"  // l:172
-"//    { s_OBJSize(8, 16), s_OBJSize(8, 32),  s_OBJSize(16, 32), s_OBJSize(32, 62) }\n"  // l:173
-"//};\n"  // l:174
-"\n"  // l:175
-"vec4 mode0(uint, uint);\n"  // l:176
-"vec4 mode3(uint, uint);\n"  // l:177
-"vec4 mode4(uint, uint);\n"  // l:178
-"\n"  // l:179
-"void main() {\n"  // l:180
-"    uint x = uint(screenCoord.x);\n"  // l:181
-"    uint y = uint(screenCoord.y);\n"  // l:182
-"\n"  // l:183
-"    uint DISPCNT = readIOreg(0, y);\n"  // l:184
-"\n"  // l:185
-"    vec4 outColor;\n"  // l:186
-"    switch(DISPCNT & 7u) {\n"  // l:187
-"        case 0u:\n"  // l:188
-"            outColor = mode0(x, y);\n"  // l:189
-"            break;\n"  // l:190
-"        case 3u:\n"  // l:191
-"            outColor = mode3(x, y);\n"  // l:192
-"            break;\n"  // l:193
-"        case 4u:\n"  // l:194
-"            outColor = mode4(x, y);\n"  // l:195
-"            break;\n"  // l:196
-"        default:\n"  // l:197
-"            outColor = vec4(float(x) / float(240), float(y) / float(160), 1, 1);\n"  // l:198
-"            break;\n"  // l:199
-"    }\n"  // l:200
-"\n"  // l:201
-"    FragColor = outColor;\n"  // l:202
-"}\n"  // l:203
-"\n"  // l:204
+"vec4 mode0(uint, uint);\n"  // l:165
+"vec4 mode3(uint, uint);\n"  // l:166
+"vec4 mode4(uint, uint);\n"  // l:167
+"\n"  // l:168
+"void main() {\n"  // l:169
+"    uint x = uint(screenCoord.x);\n"  // l:170
+"    uint y = uint(screenCoord.y);\n"  // l:171
+"\n"  // l:172
+"    uint DISPCNT = readIOreg(0, y);\n"  // l:173
+"\n"  // l:174
+"    vec4 outColor;\n"  // l:175
+"    switch(DISPCNT & 7u) {\n"  // l:176
+"        case 0u:\n"  // l:177
+"            outColor = mode0(x, y);\n"  // l:178
+"            break;\n"  // l:179
+"        case 3u:\n"  // l:180
+"            outColor = mode3(x, y);\n"  // l:181
+"            break;\n"  // l:182
+"        case 4u:\n"  // l:183
+"            outColor = mode4(x, y);\n"  // l:184
+"            break;\n"  // l:185
+"        default:\n"  // l:186
+"            outColor = vec4(float(x) / float(240), float(y) / float(160), 1, 1);\n"  // l:187
+"            break;\n"  // l:188
+"    }\n"  // l:189
+"\n"  // l:190
+"    FragColor = outColor;\n"  // l:191
+"}\n"  // l:192
+"\n"  // l:193
 ;
 
 
@@ -343,6 +332,107 @@ const char* FragmentShaderMode4Source =
 "    return vec4(Color.rgb, 1.0);\n"  // l:36
 "}\n"  // l:37
 "\n"  // l:38
+;
+
+
+// ObjectFragmentShaderSource (from object_fragment.glsl, lines 2 to 28)
+const char* ObjectFragmentShaderSource = 
+"#version 430 core\n"  // l:1
+"\n"  // l:2
+"#define attr0 x\n"  // l:3
+"#define attr1 y\n"  // l:4
+"#define attr2 z\n"  // l:5
+"#define attr3 w\n"  // l:6
+"\n"  // l:7
+"in vec2 InObjPos;\n"  // l:8
+"flat in uint ObjWidth;\n"  // l:9
+"flat in uint ObjHeight;\n"  // l:10
+"\n"  // l:11
+"uniform sampler2D PAL;\n"  // l:12
+"uniform usampler2D OAM;\n"  // l:13
+"uniform usampler2D IO;\n"  // l:14
+"\n"  // l:15
+"out vec4 FragColor;\n"  // l:16
+"\n"  // l:17
+"layout (std430, binding = 4) readonly buffer VRAMSSBO\n"  // l:18
+"{\n"  // l:19
+"    uint VRAM[0x18000u >> 2];\n"  // l:20
+"};\n"  // l:21
+"\n"  // l:22
+"void main() {\n"  // l:23
+"    FragColor = vec4(InObjPos.x / float(ObjWidth), InObjPos.y / float(ObjHeight), 1, 1);\n"  // l:24
+"}\n"  // l:25
+"\n"  // l:26
+;
+
+
+// ObjectVertexShaderSource (from object_vertex.glsl, lines 2 to 67)
+const char* ObjectVertexShaderSource = 
+"#version 430 core\n"  // l:1
+"\n"  // l:2
+"#define attr0 x\n"  // l:3
+"#define attr1 y\n"  // l:4
+"#define attr2 z\n"  // l:5
+"#define attr3 w\n"  // l:6
+"\n"  // l:7
+"layout (location = 0) in uint ObjAttr0;\n"  // l:8
+"layout (location = 1) in uint ObjAttr1;\n"  // l:9
+"\n"  // l:10
+"out vec2 InObjPos;\n"  // l:11
+"flat out uint ObjWidth;\n"  // l:12
+"flat out uint ObjHeight;\n"  // l:13
+"\n"  // l:14
+"struct s_ObjSize {\n"  // l:15
+"    uint width;\n"  // l:16
+"    uint height;\n"  // l:17
+"};\n"  // l:18
+"\n"  // l:19
+"const s_ObjSize ObjSizeTable[3][4] = {\n"  // l:20
+"    { s_ObjSize(8, 8),  s_ObjSize(16, 16), s_ObjSize(32, 32), s_ObjSize(64, 64) },\n"  // l:21
+"    { s_ObjSize(16, 8), s_ObjSize(32, 8),  s_ObjSize(32, 16), s_ObjSize(64, 32) },\n"  // l:22
+"    { s_ObjSize(8, 16), s_ObjSize(8, 32),  s_ObjSize(16, 32), s_ObjSize(32, 62) }\n"  // l:23
+"};\n"  // l:24
+"\n"  // l:25
+"struct s_Position {\n"  // l:26
+"    bool right;\n"  // l:27
+"    bool low;\n"  // l:28
+"};\n"  // l:29
+"\n"  // l:30
+"const s_Position PositionTable[4] = {\n"  // l:31
+"    s_Position(false, false), s_Position(true, false), s_Position(true, true), s_Position(false, true)\n"  // l:32
+"};\n"  // l:33
+"\n"  // l:34
+"void main() {\n"  // l:35
+"    s_Position Position = PositionTable[gl_VertexID & 3];\n"  // l:36
+"\n"  // l:37
+"    uint Shape = ObjAttr0 >> 14;\n"  // l:38
+"    uint Size  = ObjAttr1 >> 14;\n"  // l:39
+"\n"  // l:40
+"    s_ObjSize ObjSize = ObjSizeTable[Shape][Size];\n"  // l:41
+"    ObjWidth = ObjSize.width;\n"  // l:42
+"    ObjHeight = ObjSize.height;\n"  // l:43
+"\n"  // l:44
+"    ivec2 ScreenPos = ivec2(ObjAttr1 & 0x1ffu, ObjAttr0 & 0xffu);\n"  // l:45
+"    InObjPos = uvec2(0, 0);\n"  // l:46
+"    if (Position.right) {\n"  // l:47
+"        InObjPos.x  += ObjWidth;\n"  // l:48
+"        ScreenPos.x += int(ObjWidth);\n"  // l:49
+"    }\n"  // l:50
+"\n"  // l:51
+"    if (Position.low) {\n"  // l:52
+"        InObjPos.y  += ObjHeight;\n"  // l:53
+"        ScreenPos.y += int(ObjHeight);\n"  // l:54
+"    }\n"  // l:55
+"\n"  // l:56
+"    // todo: if mirrored: ObjWidth - InObjPos.x\n"  // l:57
+"\n"  // l:58
+"    gl_Position = vec4(\n"  // l:59
+"        -1.0 + 2.0 * float(ScreenPos.x) / float(240),\n"  // l:60
+"        1.0 - 2.0 * float(ScreenPos.y) / float(160),\n"  // l:61
+"        0, 1\n"  // l:62
+"    );\n"  // l:63
+"}\n"  // l:64
+"\n"  // l:65
 ;
 
 

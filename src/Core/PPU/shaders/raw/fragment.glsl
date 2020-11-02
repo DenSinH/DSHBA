@@ -164,17 +164,6 @@ vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y) {
     return regularScreenEntryPixel(x_eff & 7u, y_eff & 7u, y, ScreenEntry, CBB, ColorMode);
 }
 
-//struct s_OBJSize {
-//    uint width;
-//    uint height;
-//};
-//
-//const s_OBJSize OBJSizeTable[3][4] = {
-//    { s_OBJSize(8, 8),  s_OBJSize(16, 16), s_OBJSize(32, 32), s_OBJSize(64, 64) },
-//    { s_OBJSize(16, 8), s_OBJSize(32, 8),  s_OBJSize(32, 16), s_OBJSize(64, 32) },
-//    { s_OBJSize(8, 16), s_OBJSize(8, 32),  s_OBJSize(16, 32), s_OBJSize(32, 62) }
-//};
-
 vec4 mode0(uint, uint);
 vec4 mode3(uint, uint);
 vec4 mode4(uint, uint);

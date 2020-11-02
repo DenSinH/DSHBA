@@ -8,13 +8,12 @@
 
 #include "../../Frontend/interface.h"
 
-#include <glad/glad.h>
-
 #include "log.h"
 #include "const.h"
 
 #define INTERNAL_FRAMEBUFFER_WIDTH 1280
 #define INTERNAL_FRAMEBUFFER_HEIGHT 720
+
 
 GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
     Scheduler = scheduler;
@@ -127,9 +126,9 @@ void GBAPPU::InitFramebuffers() {
     }
 }
 
-void GBAPPU::InitPrograms() {
-    unsigned int vertexShader;
-    unsigned int fragmentShader, modeShaders[6];
+void GBAPPU::InitBGProgram() {
+    GLuint vertexShader;
+    GLuint fragmentShader, modeShaders[6];
 
     // create shader
     vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -157,13 +156,13 @@ void GBAPPU::InitPrograms() {
     CompileShader(modeShaders[4], "modeShaders[4]");
 
     // create program object
-    Program = glCreateProgram();
-    glAttachShader(Program, vertexShader);
-    glAttachShader(Program, fragmentShader);
-    glAttachShader(Program, modeShaders[0]);
-    glAttachShader(Program, modeShaders[3]);
-    glAttachShader(Program, modeShaders[4]);
-    LinkProgram(Program);
+    BGProgram = glCreateProgram();
+    glAttachShader(BGProgram, vertexShader);
+    glAttachShader(BGProgram, fragmentShader);
+    glAttachShader(BGProgram, modeShaders[0]);
+    glAttachShader(BGProgram, modeShaders[3]);
+    glAttachShader(BGProgram, modeShaders[4]);
+    LinkProgram(BGProgram);
 
     // dump shaders
     glDeleteShader(vertexShader);
@@ -173,11 +172,38 @@ void GBAPPU::InitPrograms() {
     glDeleteShader(modeShaders[4]);
 }
 
-void GBAPPU::InitBuffers() {
+void GBAPPU::InitObjProgram() {
+    GLuint vertexShader;
+    GLuint fragmentShader;
+
+    // create shader
+    vertexShader = glCreateShader(GL_VERTEX_SHADER);
+
+    // compile it
+    glShaderSource(vertexShader, 1, &ObjectVertexShaderSource, nullptr);
+    glCompileShader(vertexShader);
+    CompileShader(vertexShader, "ObjectVertexShaderSource");
+
+    // create and compile fragmentshaders
+    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &ObjectFragmentShaderSource, nullptr);
+    CompileShader(fragmentShader, "ObjectFragmentShader");
+
+    // create program object
+    ObjProgram = glCreateProgram();
+    glAttachShader(ObjProgram, vertexShader);
+    glAttachShader(ObjProgram, fragmentShader);
+    LinkProgram(ObjProgram);
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+}
+
+void GBAPPU::InitBGBuffers() {
 
     // Setup VAO to bind the buffers to
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);
+    glGenVertexArrays(1, &BGVAO);
+    glBindVertexArray(BGVAO);
 
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glGenTextures(1, &PALTexture);
@@ -189,7 +215,7 @@ void GBAPPU::InitBuffers() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sizeof(PALMEM) >> 1, 256, 0, GL_BGRA,
                  GL_UNSIGNED_SHORT_1_5_5_5_REV, nullptr);
 
-    PALLocation = glGetUniformLocation(Program, "PAL");
+    BGPALLocation = glGetUniformLocation(BGProgram, "PAL");
 
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
     glGenTextures(1, &OAMTexture);
@@ -203,7 +229,7 @@ void GBAPPU::InitBuffers() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16UI, sizeof(OAMMEM) >> 3, 256, 0, GL_RGBA_INTEGER,
                  GL_UNSIGNED_SHORT, nullptr);
 
-    OAMLocation = glGetUniformLocation(Program, "OAM");
+    BGOAMLocation = glGetUniformLocation(BGProgram, "OAM");
 
     // Initially buffer the buffers with some data so we don't have to reallocate memory every time
     glGenBuffers(1, &VRAMSSBO);
@@ -227,41 +253,129 @@ void GBAPPU::InitBuffers() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, 0x40, 256, 0, GL_RED_INTEGER,
                  GL_UNSIGNED_SHORT, nullptr);
 
-    IOLocation = glGetUniformLocation(Program, "IO");
+    BGIOLocation = glGetUniformLocation(BGProgram, "IO");
 
-    glGenBuffers(1, &VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glGenBuffers(1, &BGVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, BGVBO);
 
     // position attribute
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    glUseProgram(Program);
-    glUniform1i(PALLocation, static_cast<u32>(BufferBindings::PAL));
-    glUniform1i(OAMLocation, static_cast<u32>(BufferBindings::OAM));
-    glUniform1i(IOLocation, static_cast<u32>(BufferBindings::LCDIO));
+    glUseProgram(BGProgram);
+    glUniform1i(BGPALLocation, static_cast<u32>(BufferBindings::PAL));
+    glUniform1i(BGOAMLocation, static_cast<u32>(BufferBindings::OAM));
+    glUniform1i(BGIOLocation, static_cast<u32>(BufferBindings::LCDIO));
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    log_debug("OpenGL error after initialization: %x", glGetError());
+    log_debug("OpenGL error after BG initialization: %x", glGetError());
+}
+
+void GBAPPU::InitObjBuffers() {
+    // BG buffers are already initialized, so we just need to initialize the actual Obj buffers
+    glGenVertexArrays(1, &ObjVAO);
+    glBindVertexArray(ObjVAO);
+
+    glGenBuffers(1, &ObjVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, ObjVBO);
+
+    glVertexAttribIPointer(0, 1, GL_UNSIGNED_SHORT, sizeof(u32), (void*)0);  // OBJ_ATTR0
+    glEnableVertexAttribArray(0);
+    glVertexAttribIPointer(1, 1, GL_UNSIGNED_SHORT, sizeof(u32), (void*)2);  // OBJ_ATTR1
+    glEnableVertexAttribArray(1);
+
+    // buffer elements
+    glGenBuffers(1, &ObjEBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ObjEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, ObjIndices.size(), ObjIndices.data(), GL_STATIC_COPY);
+
+    // bind textures/VRAM like in BGBuffers
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
+    glBindTexture(GL_TEXTURE_2D, PALTexture);
+    ObjPALLocation = glGetUniformLocation(ObjProgram, "PAL");
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
+    glBindTexture(GL_TEXTURE_2D, OAMTexture);
+    ObjOAMLocation = glGetUniformLocation(ObjProgram, "OAM");
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
+    glBindTexture(GL_TEXTURE_2D, IOTexture);
+    ObjIOLocation = glGetUniformLocation(ObjProgram, "IO");
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
+
+    glUseProgram(ObjProgram);
+    glUniform1i(ObjPALLocation, static_cast<u32>(BufferBindings::PAL));
+    glUniform1i(ObjOAMLocation, static_cast<u32>(BufferBindings::OAM));
+    glUniform1i(ObjIOLocation, static_cast<u32>(BufferBindings::LCDIO));
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    log_debug("OpenGL error after Obj initialization: %x", glGetError());
 }
 
 void GBAPPU::VideoInit() {
     InitFramebuffers();
-    InitPrograms();
-    InitBuffers();
+    InitBGProgram();
+    InitObjProgram();
+    InitBGBuffers();
+    InitObjBuffers();
 
     glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void GBAPPU::DrawObjects() {
+    BufferObjects<false>(BufferFrame ^ 1);
+
+    if (!NumberOfObjVerts) {
+        return;
+    }
+    // log_debug("%d objects enabled", NumberOfObjVerts >> 2);
+
+    glUseProgram(ObjProgram);
+    glBindVertexArray(ObjVAO);
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
+    glBindTexture(GL_TEXTURE_2D, PALTexture);
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
+    glBindTexture(GL_TEXTURE_2D, OAMTexture);
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
+    glBindTexture(GL_TEXTURE_2D, IOTexture);
+
+    glBindBuffer(GL_ARRAY_BUFFER, ObjVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(u32) * NumberOfObjVerts, ObjAttr01Buffer, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ObjEBO);
+    glEnable(GL_PRIMITIVE_RESTART);
+    glPrimitiveRestartIndex(0xffff);
+
+    // * 5 for the restartindex
+    glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
+    glDisable(GL_PRIMITIVE_RESTART);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+    glUseProgram(0);
 }
 
 void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     s_UpdateRange range;
-    glBindVertexArray(VAO);
+    glBindVertexArray(BGVAO);
 
 #ifndef FULL_VRAM_BUFFER
     range = VRAMRanges[BufferFrame ^ 1][scanline];
@@ -289,8 +403,8 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    glUseProgram(Program);
-    glBindVertexArray(VAO);
+    glUseProgram(BGProgram);
+    glBindVertexArray(BGVAO);
 
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glBindTexture(GL_TEXTURE_2D, PALTexture);
@@ -301,7 +415,7 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, BGVBO);
     const float quad[8] = {
             -1.0, (float) scanline,            // top left
              1.0, (float) scanline,            // top right
@@ -311,6 +425,8 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), quad, GL_STATIC_DRAW);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
 
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
     glUseProgram(0);
@@ -361,6 +477,7 @@ struct s_framebuffer GBAPPU::Render() {
         // log_warn("Something went wrong in batching scanlines: expected %d, got %d", VISIBLE_SCREEN_HEIGHT, scanline);
     }
 #endif
+    DrawObjects();
 
     DrawMutex.unlock();
 
