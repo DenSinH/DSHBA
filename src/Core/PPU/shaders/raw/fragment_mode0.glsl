@@ -36,7 +36,7 @@ vec4 mode0(uint x, uint y) {
             Color = regularBGPixel(BGCNT[BG], BG, x, y);
 
             if (Color.w != 0) {
-                gl_FragDepth = float(priority) / 4.0;
+                gl_FragDepth = (2 * float(priority) + 1) / 8.0;
                 return Color;
             }
         }

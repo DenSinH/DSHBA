@@ -25,9 +25,11 @@ GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
      * was still all 0s, causing it to get stuck in an infinite loop)
      * */
     for (int i = 0; i < VISIBLE_SCREEN_HEIGHT; i++) {
-        ScanlineBatchSizes[0][i] = ScanlineBatchSizes[1][i] = 1;
+        ScanlineVRAMBatchSizes[0][i] = ScanlineVRAMBatchSizes[1][i] = 1;
+        ScanlineOAMBatchSizes[0][i] = ScanlineOAMBatchSizes[1][i] = 1;
     }
-    ScanlineBatchSizes[1][0] = 160;
+    ScanlineVRAMBatchSizes[1][0] = 160;
+    ScanlineOAMBatchSizes[1][0] = 160;
 
     // initially, VRAM is not updated at all
     for (int i = 0; i < VISIBLE_SCREEN_HEIGHT; i++) {
@@ -55,12 +57,15 @@ void GBAPPU::BufferScanline(u32 scanline) {
         );
 
         // go to next batch
-        CurrentScanlineBatch = scanline;
-        ScanlineBatchSizes[BufferFrame][CurrentScanlineBatch] = 1;
+        CurrentVRAMScanlineBatch = scanline;
+        ScanlineVRAMBatchSizes[BufferFrame][CurrentVRAMScanlineBatch] = 1;
+
+        // mark OAM as dirty as well
+        Memory->DirtyOAM = true;
     }
     else {
         // we can use the same batch of scanlines since VRAM was not updated
-        ScanlineBatchSizes[BufferFrame][CurrentScanlineBatch]++;
+        ScanlineVRAMBatchSizes[BufferFrame][CurrentVRAMScanlineBatch]++;
     }
 #else
     memcpy(
@@ -68,16 +73,25 @@ void GBAPPU::BufferScanline(u32 scanline) {
         Memory->VRAM,
         sizeof(VRAMMEM)
     );
-    CurrentScanlineBatch = scanline;
-    ScanlineBatchSizes[BufferFrame][CurrentScanlineBatch] = 1;
+    CurrentVRAMScanlineBatch = scanline;
+    ScanlineVRAMBatchSizes[BufferFrame][CurrentVRAMScanlineBatch] = 1;
 #endif
-    // OAM snapshot
-    if (scanline == (VISIBLE_SCREEN_HEIGHT >> 1)) {
+    if (Memory->DirtyOAM || unlikely(scanline == 0)) {
         memcpy(
-                OAMBuffer[BufferFrame],
+                OAMBuffer[BufferFrame][scanline],
                 Memory->OAM,
                 sizeof(OAMMEM)
         );
+        // go to next batch
+        CurrentOAMScanlineBatch = scanline;
+        ScanlineOAMBatchSizes[BufferFrame][CurrentOAMScanlineBatch] = 1;
+
+        // reset dirty OAM status
+        Memory->DirtyOAM = false;
+    }
+    else {
+        // we can use the same batch of scanlines since OAM was not updated
+        ScanlineOAMBatchSizes[BufferFrame][CurrentOAMScanlineBatch]++;
     }
     memcpy(
         LCDIOBuffer[BufferFrame][scanline],
@@ -91,8 +105,10 @@ void GBAPPU::BufferScanline(u32 scanline) {
         BufferFrame ^= 1;
 
         // reset scanline batching
-        CurrentScanlineBatch = 0;  // reset batch
-        ScanlineBatchSizes[BufferFrame][0] = 0;
+        CurrentVRAMScanlineBatch = 0;  // reset batch
+        ScanlineVRAMBatchSizes[BufferFrame][0] = 0;
+        CurrentOAMScanlineBatch = 0;  // reset batch
+        ScanlineOAMBatchSizes[BufferFrame][0] = 0;
     }
 
     // next time: update whatever was new last scanline, plus what gets drawn next
@@ -294,6 +310,9 @@ void GBAPPU::InitObjBuffers() {
     glUniform1i(ObjPALLocation, static_cast<u32>(BufferBindings::PAL));
     glUniform1i(ObjIOLocation, static_cast<u32>(BufferBindings::LCDIO));
 
+    YClipStartLocation = glGetUniformLocation(ObjProgram, "YClipStart");
+    YClipEndLocation   = glGetUniformLocation(ObjProgram, "YClipEnd");
+
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -316,14 +335,7 @@ void GBAPPU::VideoInit() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void GBAPPU::DrawObjects() {
-    BufferObjects<false>(BufferFrame ^ 1);
-
-    if (!NumberOfObjVerts) {
-        return;
-    }
-    log_ppu("%d objects enabled", NumberOfObjVerts >> 2);
-
+void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
     glUseProgram(ObjProgram);
     glBindVertexArray(ObjVAO);
 
@@ -334,16 +346,25 @@ void GBAPPU::DrawObjects() {
     glBindTexture(GL_TEXTURE_2D, IOTexture);
 
     glBindBuffer(GL_ARRAY_BUFFER, ObjVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttr01Buffer, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ObjEBO);
     glEnable(GL_PRIMITIVE_RESTART);
     glPrimitiveRestartIndex(0xffff);
 
-    // * 5 for the restartindex
-    glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
-    glDisable(GL_PRIMITIVE_RESTART);
+    BufferObjects<false>(BufferFrame ^ 1, scanline, amount);
 
+    if (NumberOfObjVerts) {
+        glUniform1ui(YClipStartLocation, scanline);
+        glUniform1ui(YClipEndLocation, scanline + amount);
+
+        glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttr01Buffer, GL_STATIC_DRAW);
+        // * 5 for the restartindex
+        glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
+    }
+
+    log_ppu("%d objects enabled", NumberOfObjVerts >> 2);
+
+    glDisable(GL_PRIMITIVE_RESTART);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -432,21 +453,30 @@ struct s_framebuffer GBAPPU::Render() {
                     GL_RED_INTEGER, GL_UNSIGNED_SHORT, LCDIOBuffer[BufferFrame ^ 1]);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    size_t scanline = 0;
+    size_t VRAM_scanline = 0, OAM_scanline = 0;
     do {
-        u32 batch_size = ScanlineBatchSizes[BufferFrame ^ 1][scanline];
-        DrawScanlines(scanline, batch_size);
-        scanline += batch_size;
-        log_ppu("%d scanlines batched (accum %d)", batch_size, scanline);
+        if (VRAM_scanline < OAM_scanline) {
+            u32 batch_size = ScanlineVRAMBatchSizes[BufferFrame ^ 1][VRAM_scanline];
+            DrawScanlines(VRAM_scanline, batch_size);
+            VRAM_scanline += batch_size;
+            log_ppu("%d VRAM scanlines batched (accum %d)", batch_size, VRAM_scanline);
+        }
+        else {
+            u32 batch_size = ScanlineOAMBatchSizes[BufferFrame ^ 1][OAM_scanline];
+            DrawObjects(OAM_scanline, batch_size);
+            OAM_scanline += batch_size;
+
+            log_ppu("%d OAM scanlines batched (accum %d)", batch_size, OAM_scanline);
+        }
         // should actually be !=, but just to be sure we don't ever get stuck
-    } while (scanline < VISIBLE_SCREEN_HEIGHT);
+    } while (VRAM_scanline < VISIBLE_SCREEN_HEIGHT
+          || OAM_scanline < VISIBLE_SCREEN_HEIGHT);
 
 #ifdef CHECK_SCANLINE_BATCH_ACCUM
-    if (unlikely(scanline != VISIBLE_SCREEN_HEIGHT)) {
-        // log_warn("Something went wrong in batching scanlines: expected %d, got %d", VISIBLE_SCREEN_HEIGHT, scanline);
+    if (unlikely((VRAM_scanline != VISIBLE_SCREEN_HEIGHT)) || (OAM_scanline != VISIBLE_SCREEN_HEIGHT)) {
+        // log_warn("Something went wrong in batching scanlines: expected %d, got %d, %d", VISIBLE_SCREEN_HEIGHT, VRAM_scanline, OAM_scanline);
     }
 #endif
-    DrawObjects();
 
     DrawMutex.unlock();
 

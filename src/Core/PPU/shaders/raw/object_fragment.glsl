@@ -16,6 +16,9 @@ flat in uint ObjHeight;
 uniform sampler2D PAL;
 uniform usampler2D IO;
 
+uniform uint YClipStart;
+uniform uint YClipEnd;
+
 layout (std430, binding = ++VRAMSSBO++) readonly buffer VRAMSSBO
 {
     uint VRAM[++VRAMSize++ >> 2];
@@ -147,10 +150,10 @@ void main() {
         discard;
     }
 
-    if (OnScreenPos.y < 0) {
+    if (OnScreenPos.y < float(YClipStart)) {
         discard;
     }
-    if (OnScreenPos.y > ++VISIBLE_SCREEN_HEIGHT++) {
+    if (OnScreenPos.y >= float(YClipEnd)) {
         discard;
     }
 

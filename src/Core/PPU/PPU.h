@@ -36,10 +36,12 @@ private:
     PALMEM PALBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
     VRAMMEM VRAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
     s_UpdateRange VRAMRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
-    OAMMEM OAMBuffer[2] = {};
+    OAMMEM OAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
 
-    u32 ScanlineBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
-    u32 CurrentScanlineBatch = 0;
+    u32 ScanlineVRAMBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
+    u32 CurrentVRAMScanlineBatch = 0;
+    u32 ScanlineOAMBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
+    u32 CurrentOAMScanlineBatch = 0;
 
     LCDIO LCDIOBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
 
@@ -73,12 +75,19 @@ private:
         return table;
     }();
 
+    static const constexpr i32 ObjHeight[3][4] = {
+            {8,  16, 32, 64},
+            {8,   8, 16, 32},
+            {16, 32, 32, 64},
+    };
+
     // buffer attribute 0 and 1 (positions) to send to the vertex shader
     u32 NumberOfObjVerts = 0;
     u64 ObjAttr01Buffer[sizeof(OAMMEM)];
     GLuint ObjProgram;
     GLuint ObjIOLocation;
     GLuint ObjPALLocation;
+    GLuint YClipStartLocation, YClipEndLocation;
 
     GLuint ObjVAO;
     GLuint ObjVBO;
@@ -93,25 +102,27 @@ private:
     void InitObjBuffers();
 
     template<bool ObjWindow>
-    void BufferObjects(u32 buffer);
+    void BufferObjects(u32 buffer, i32 scanline, i32 batch_size);
 
     void DrawScanlines(u32 scanline, u32 amount);
-    void DrawObjects();
+    void DrawObjects(u32 scanline, u32 amount);
 };
 
 
 template<bool ObjWindow>
-void GBAPPU::BufferObjects(u32 buffer) {
+void GBAPPU::BufferObjects(u32 buffer, i32 scanline, i32 batch_size) {
     NumberOfObjVerts = 0;
+    i32 y;
+    u32 height;
     // buffer in reverse for object priority
     for (int i = sizeof(OAMMEM) - sizeof(u64); i >= 0; i -= sizeof(u64)) {
-        if ((OAMBuffer[buffer][i + 1] & 0x03) == 0x02) {
+        if ((OAMBuffer[buffer][scanline][i + 1] & 0x03) == 0x02) {
             // rendering disabled
             continue;
         }
 
         if constexpr(!ObjWindow) {
-            if ((OAMBuffer[buffer][i + 1] & 0x0c) == 0x08) {
+            if ((OAMBuffer[buffer][scanline][i + 1] & 0x0c) == 0x08) {
                 // part of object window, dont buffer now
                 continue;
             }
@@ -121,7 +132,18 @@ void GBAPPU::BufferObjects(u32 buffer) {
             break;
         }
 
-        u64 Attr01 = *(u64*)&OAMBuffer[buffer][i];
+        y = OAMBuffer[buffer][scanline][i];
+        if (y > VISIBLE_SCREEN_HEIGHT) {
+            y -= 0x100;
+        }
+
+        height = ObjHeight[OAMBuffer[buffer][scanline][i + 1] >> 6][OAMBuffer[buffer][scanline][i + 3] >> 6];
+        if (((y + height) < scanline) || (y >= (scanline + batch_size))) {
+            // not in frame
+            continue;
+        }
+
+        u64 Attr01 = *(u64*)&OAMBuffer[buffer][scanline][i];
         ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;
         ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;
         ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;

@@ -230,7 +230,7 @@ const char* FragmentShaderMode0Source =
 "            Color = regularBGPixel(BGCNT[BG], BG, x, y);\n"  // l:34
 "\n"  // l:35
 "            if (Color.w != 0) {\n"  // l:36
-"                gl_FragDepth = float(priority) / 4.0;\n"  // l:37
+"                gl_FragDepth = (2 * float(priority) + 1) / 8.0;\n"  // l:37
 "                return Color;\n"  // l:38
 "            }\n"  // l:39
 "        }\n"  // l:40
@@ -328,7 +328,7 @@ const char* FragmentShaderMode4Source =
 ;
 
 
-// ObjectFragmentShaderSource (from object_fragment.glsl, lines 2 to 170)
+// ObjectFragmentShaderSource (from object_fragment.glsl, lines 2 to 173)
 const char* ObjectFragmentShaderSource = 
 "#version 430 core\n"  // l:1
 "\n"  // l:2
@@ -346,158 +346,161 @@ const char* ObjectFragmentShaderSource =
 "uniform sampler2D PAL;\n"  // l:14
 "uniform usampler2D IO;\n"  // l:15
 "\n"  // l:16
-"layout (std430, binding = 4) readonly buffer VRAMSSBO\n"  // l:17
-"{\n"  // l:18
-"    uint VRAM[0x18000u >> 2];\n"  // l:19
-"};\n"  // l:20
-"\n"  // l:21
-"out vec4 FragColor;\n"  // l:22
-"out float gl_FragDepth;\n"  // l:23
+"uniform uint YClipStart;\n"  // l:17
+"uniform uint YClipEnd;\n"  // l:18
+"\n"  // l:19
+"layout (std430, binding = 4) readonly buffer VRAMSSBO\n"  // l:20
+"{\n"  // l:21
+"    uint VRAM[0x18000u >> 2];\n"  // l:22
+"};\n"  // l:23
 "\n"  // l:24
-"/* same stuff as background program: */\n"  // l:25
-"\n"  // l:26
-"uint readVRAM8(uint address) {\n"  // l:27
-"    uint alignment = address & 3u;\n"  // l:28
-"    uint value = VRAM[address >> 2];\n"  // l:29
-"    value = (value) >> (alignment << 3u);\n"  // l:30
-"    value &= 0xffu;\n"  // l:31
-"    return value;\n"  // l:32
-"}\n"  // l:33
-"\n"  // l:34
-"uint readVRAM16(uint address) {\n"  // l:35
-"    uint alignment = address & 2u;\n"  // l:36
-"    uint value = VRAM[address >> 2];\n"  // l:37
-"    value = (value) >> (alignment << 3u);\n"  // l:38
-"    value &= 0xffffu;\n"  // l:39
-"    return value;\n"  // l:40
-"}\n"  // l:41
-"\n"  // l:42
-"uint readVRAM32(uint address) {\n"  // l:43
-"    return VRAM[address >> 2];\n"  // l:44
-"}\n"  // l:45
-"\n"  // l:46
-"uint readIOreg(uint address, uint scanline) {\n"  // l:47
-"    return texelFetch(\n"  // l:48
-"        IO, ivec2(address >> 1u, scanline), 0\n"  // l:49
-"    ).r;\n"  // l:50
-"}\n"  // l:51
-"\n"  // l:52
-"vec4 readPALentry(uint index, uint scanline) {\n"  // l:53
-"    // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:\n"  // l:54
-"    return texelFetch(\n"  // l:55
-"        PAL, ivec2(index, scanline), 0\n"  // l:56
-"    );\n"  // l:57
-"}\n"  // l:58
-"\n"  // l:59
-"vec4 RegularObject(bool OAM2DMapping, uint scanline) {\n"  // l:60
-"    uint TID = OBJ.attr2 & 0x03ffu;\n"  // l:61
-"    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;\n"  // l:62
-"    gl_FragDepth = float(Priority) / 4.0;\n"  // l:63
-"\n"  // l:64
-"    uint PaletteBank = OBJ.attr2 >> 12;\n"  // l:65
-"\n"  // l:66
-"    // todo: mosaic\n"  // l:67
-"    uint dx = uint(InObjPos.x);\n"  // l:68
-"    uint dy = uint(InObjPos.y);\n"  // l:69
-"\n"  // l:70
-"    uint PixelAddress;\n"  // l:71
-"    if ((OBJ.attr0 & 0x2000u) == 0x0000u) {\n"  // l:72
-"        PixelAddress = TID << 5;\n"  // l:73
-"\n"  // l:74
-"        // get base address for line of tiles (vertically)\n"  // l:75
-"        if (OAM2DMapping) {\n"  // l:76
-"            PixelAddress += ObjWidth * (dy >> 3) << 2;\n"  // l:77
-"        }\n"  // l:78
-"        else {\n"  // l:79
-"            PixelAddress += 32 * 0x20 * (dy >> 3);\n"  // l:80
+"out vec4 FragColor;\n"  // l:25
+"out float gl_FragDepth;\n"  // l:26
+"\n"  // l:27
+"/* same stuff as background program: */\n"  // l:28
+"\n"  // l:29
+"uint readVRAM8(uint address) {\n"  // l:30
+"    uint alignment = address & 3u;\n"  // l:31
+"    uint value = VRAM[address >> 2];\n"  // l:32
+"    value = (value) >> (alignment << 3u);\n"  // l:33
+"    value &= 0xffu;\n"  // l:34
+"    return value;\n"  // l:35
+"}\n"  // l:36
+"\n"  // l:37
+"uint readVRAM16(uint address) {\n"  // l:38
+"    uint alignment = address & 2u;\n"  // l:39
+"    uint value = VRAM[address >> 2];\n"  // l:40
+"    value = (value) >> (alignment << 3u);\n"  // l:41
+"    value &= 0xffffu;\n"  // l:42
+"    return value;\n"  // l:43
+"}\n"  // l:44
+"\n"  // l:45
+"uint readVRAM32(uint address) {\n"  // l:46
+"    return VRAM[address >> 2];\n"  // l:47
+"}\n"  // l:48
+"\n"  // l:49
+"uint readIOreg(uint address, uint scanline) {\n"  // l:50
+"    return texelFetch(\n"  // l:51
+"        IO, ivec2(address >> 1u, scanline), 0\n"  // l:52
+"    ).r;\n"  // l:53
+"}\n"  // l:54
+"\n"  // l:55
+"vec4 readPALentry(uint index, uint scanline) {\n"  // l:56
+"    // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:\n"  // l:57
+"    return texelFetch(\n"  // l:58
+"        PAL, ivec2(index, scanline), 0\n"  // l:59
+"    );\n"  // l:60
+"}\n"  // l:61
+"\n"  // l:62
+"vec4 RegularObject(bool OAM2DMapping, uint scanline) {\n"  // l:63
+"    uint TID = OBJ.attr2 & 0x03ffu;\n"  // l:64
+"    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;\n"  // l:65
+"    gl_FragDepth = float(Priority) / 4.0;\n"  // l:66
+"\n"  // l:67
+"    uint PaletteBank = OBJ.attr2 >> 12;\n"  // l:68
+"\n"  // l:69
+"    // todo: mosaic\n"  // l:70
+"    uint dx = uint(InObjPos.x);\n"  // l:71
+"    uint dy = uint(InObjPos.y);\n"  // l:72
+"\n"  // l:73
+"    uint PixelAddress;\n"  // l:74
+"    if ((OBJ.attr0 & 0x2000u) == 0x0000u) {\n"  // l:75
+"        PixelAddress = TID << 5;\n"  // l:76
+"\n"  // l:77
+"        // get base address for line of tiles (vertically)\n"  // l:78
+"        if (OAM2DMapping) {\n"  // l:79
+"            PixelAddress += ObjWidth * (dy >> 3) << 2;\n"  // l:80
 "        }\n"  // l:81
-"        PixelAddress += (dy & 7u) << 2; // offset within tile for sliver\n"  // l:82
-"\n"  // l:83
-"        // Sprites VRAM base address is 0x10000\n"  // l:84
-"        PixelAddress = (PixelAddress & 0x7fffu) | 0x10000u;\n"  // l:85
+"        else {\n"  // l:82
+"            PixelAddress += 32 * 0x20 * (dy >> 3);\n"  // l:83
+"        }\n"  // l:84
+"        PixelAddress += (dy & 7u) << 2; // offset within tile for sliver\n"  // l:85
 "\n"  // l:86
-"        // horizontal offset:\n"  // l:87
-"        PixelAddress += (dx >> 3) << 5;  // of tile\n"  // l:88
-"        PixelAddress += ((dx & 7u) >> 1);       // in tile\n"  // l:89
-"\n"  // l:90
-"        uint VRAMEntry = readVRAM8(PixelAddress);\n"  // l:91
-"        if ((dx & 1u) != 0) {\n"  // l:92
-"            // upper nibble\n"  // l:93
-"            VRAMEntry >>= 4;\n"  // l:94
-"        }\n"  // l:95
-"        else {\n"  // l:96
-"            VRAMEntry &= 0x0fu;\n"  // l:97
+"        // Sprites VRAM base address is 0x10000\n"  // l:87
+"        PixelAddress = (PixelAddress & 0x7fffu) | 0x10000u;\n"  // l:88
+"\n"  // l:89
+"        // horizontal offset:\n"  // l:90
+"        PixelAddress += (dx >> 3) << 5;  // of tile\n"  // l:91
+"        PixelAddress += ((dx & 7u) >> 1);       // in tile\n"  // l:92
+"\n"  // l:93
+"        uint VRAMEntry = readVRAM8(PixelAddress);\n"  // l:94
+"        if ((dx & 1u) != 0) {\n"  // l:95
+"            // upper nibble\n"  // l:96
+"            VRAMEntry >>= 4;\n"  // l:97
 "        }\n"  // l:98
-"\n"  // l:99
-"        if (VRAMEntry != 0) {\n"  // l:100
-"            return vec4(readPALentry(0x100 + (PaletteBank << 4) + VRAMEntry, scanline).xyz, 1);\n"  // l:101
-"        }\n"  // l:102
-"        else {\n"  // l:103
-"            // transparent\n"  // l:104
-"            discard;\n"  // l:105
-"        }\n"  // l:106
-"    }\n"  // l:107
-"    else {\n"  // l:108
-"        // 8bpp\n"  // l:109
-"        PixelAddress = TID << 5;\n"  // l:110
-"\n"  // l:111
-"        if (OAM2DMapping) {\n"  // l:112
-"            PixelAddress += ObjWidth * (dy & ~7u);\n"  // l:113
-"        }\n"  // l:114
-"        else {\n"  // l:115
-"            PixelAddress += 32 * 0x20 * (dy >> 3);\n"  // l:116
+"        else {\n"  // l:99
+"            VRAMEntry &= 0x0fu;\n"  // l:100
+"        }\n"  // l:101
+"\n"  // l:102
+"        if (VRAMEntry != 0) {\n"  // l:103
+"            return vec4(readPALentry(0x100 + (PaletteBank << 4) + VRAMEntry, scanline).xyz, 1);\n"  // l:104
+"        }\n"  // l:105
+"        else {\n"  // l:106
+"            // transparent\n"  // l:107
+"            discard;\n"  // l:108
+"        }\n"  // l:109
+"    }\n"  // l:110
+"    else {\n"  // l:111
+"        // 8bpp\n"  // l:112
+"        PixelAddress = TID << 5;\n"  // l:113
+"\n"  // l:114
+"        if (OAM2DMapping) {\n"  // l:115
+"            PixelAddress += ObjWidth * (dy & ~7u);\n"  // l:116
 "        }\n"  // l:117
-"        PixelAddress += (dy & 7u) << 3;\n"  // l:118
-"\n"  // l:119
-"        // Sprites VRAM base address is 0x10000\n"  // l:120
-"        PixelAddress = (PixelAddress & 0x7fffu) | 0x10000u;\n"  // l:121
+"        else {\n"  // l:118
+"            PixelAddress += 32 * 0x20 * (dy >> 3);\n"  // l:119
+"        }\n"  // l:120
+"        PixelAddress += (dy & 7u) << 3;\n"  // l:121
 "\n"  // l:122
-"        // horizontal offset:\n"  // l:123
-"        PixelAddress += (dx >> 3) << 6;\n"  // l:124
-"        PixelAddress += dx & 7u;\n"  // l:125
-"\n"  // l:126
-"        uint VRAMEntry = readVRAM8(PixelAddress);\n"  // l:127
-"\n"  // l:128
+"        // Sprites VRAM base address is 0x10000\n"  // l:123
+"        PixelAddress = (PixelAddress & 0x7fffu) | 0x10000u;\n"  // l:124
+"\n"  // l:125
+"        // horizontal offset:\n"  // l:126
+"        PixelAddress += (dx >> 3) << 6;\n"  // l:127
+"        PixelAddress += dx & 7u;\n"  // l:128
 "\n"  // l:129
-"        if (VRAMEntry != 0) {\n"  // l:130
-"            return vec4(readPALentry(0x100 + VRAMEntry, scanline).xyz, 1);\n"  // l:131
-"        }\n"  // l:132
-"        else {\n"  // l:133
-"            // transparent\n"  // l:134
-"            discard;\n"  // l:135
-"        }\n"  // l:136
-"    }\n"  // l:137
-"}\n"  // l:138
-"\n"  // l:139
-"void main() {\n"  // l:140
-"    if (OnScreenPos.x < 0) {\n"  // l:141
-"        discard;\n"  // l:142
-"    }\n"  // l:143
-"    if (OnScreenPos.x > 240) {\n"  // l:144
+"        uint VRAMEntry = readVRAM8(PixelAddress);\n"  // l:130
+"\n"  // l:131
+"\n"  // l:132
+"        if (VRAMEntry != 0) {\n"  // l:133
+"            return vec4(readPALentry(0x100 + VRAMEntry, scanline).xyz, 1);\n"  // l:134
+"        }\n"  // l:135
+"        else {\n"  // l:136
+"            // transparent\n"  // l:137
+"            discard;\n"  // l:138
+"        }\n"  // l:139
+"    }\n"  // l:140
+"}\n"  // l:141
+"\n"  // l:142
+"void main() {\n"  // l:143
+"    if (OnScreenPos.x < 0) {\n"  // l:144
 "        discard;\n"  // l:145
 "    }\n"  // l:146
-"\n"  // l:147
-"    if (OnScreenPos.y < 0) {\n"  // l:148
-"        discard;\n"  // l:149
-"    }\n"  // l:150
-"    if (OnScreenPos.y > 160) {\n"  // l:151
+"    if (OnScreenPos.x > 240) {\n"  // l:147
+"        discard;\n"  // l:148
+"    }\n"  // l:149
+"\n"  // l:150
+"    if (OnScreenPos.y < float(YClipStart)) {\n"  // l:151
 "        discard;\n"  // l:152
 "    }\n"  // l:153
-"\n"  // l:154
-"    uint scanline = uint(OnScreenPos.y);\n"  // l:155
-"    uint DISPCNT      = readIOreg(0x00u, scanline);\n"  // l:156
-"    bool OAM2DMapping = (DISPCNT & (0x0040u)) != 0;\n"  // l:157
-"\n"  // l:158
-"    switch (OBJ.attr0 & 0x0300u) {\n"  // l:159
-"        case 0x0000u:\n"  // l:160
-"            FragColor = RegularObject(OAM2DMapping, scanline);\n"  // l:161
-"            break;\n"  // l:162
-"        default:\n"  // l:163
-"            FragColor = vec4(InObjPos.x / float(ObjWidth), InObjPos.y / float(ObjHeight), 1, 1);\n"  // l:164
+"    if (OnScreenPos.y >= float(YClipEnd)) {\n"  // l:154
+"        discard;\n"  // l:155
+"    }\n"  // l:156
+"\n"  // l:157
+"    uint scanline = uint(OnScreenPos.y);\n"  // l:158
+"    uint DISPCNT      = readIOreg(0x00u, scanline);\n"  // l:159
+"    bool OAM2DMapping = (DISPCNT & (0x0040u)) != 0;\n"  // l:160
+"\n"  // l:161
+"    switch (OBJ.attr0 & 0x0300u) {\n"  // l:162
+"        case 0x0000u:\n"  // l:163
+"            FragColor = RegularObject(OAM2DMapping, scanline);\n"  // l:164
 "            break;\n"  // l:165
-"    }\n"  // l:166
-"}\n"  // l:167
-"\n"  // l:168
+"        default:\n"  // l:166
+"            FragColor = vec4(InObjPos.x / float(ObjWidth), InObjPos.y / float(ObjHeight), 1, 1);\n"  // l:167
+"            break;\n"  // l:168
+"    }\n"  // l:169
+"}\n"  // l:170
+"\n"  // l:171
 ;
 
 

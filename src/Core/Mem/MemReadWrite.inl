@@ -139,6 +139,10 @@ void Mem::Write(u32 address, T value) {
             return;
         case MemoryRegion::OAM:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::OAM>(); }
+            if constexpr(std::is_same_v<T, u8>) {
+                // byte writes are ignored
+                return;
+            }
 #ifdef CHECK_INVALID_REFLUSHES
             if constexpr(do_reflush) {
                 if (unlikely(NEAR_PC(0x3ff))) {
@@ -147,6 +151,7 @@ void Mem::Write(u32 address, T value) {
                 }
             }
 #endif
+            DirtyOAM |= ReadArray<T>(OAM, (address & 0x3ff) != value);
             WriteArray<T>(OAM, address & 0x3ff, value);
             return;
         case MemoryRegion::ROM_L1:

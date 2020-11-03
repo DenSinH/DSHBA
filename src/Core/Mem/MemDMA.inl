@@ -155,38 +155,58 @@ void Mem::DoDMA(s_DMAData* DMA) {
     switch(dma_action) {
         case DMAAction::Medium:
             // Invalidate VRAM, we do this before the transfer because the transfer updates DMA*
-            if (static_cast<MemoryRegion>(DMA->DAD >> 24) == MemoryRegion::VRAM) {
-                u32 low  = MaskVRAMAddress(DMA->DAD);
-                u32 high = MaskVRAMAddress(DMA->DAD + length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)));
+            switch (static_cast<MemoryRegion>(DMA->DAD >> 24)) {
+                case MemoryRegion::VRAM:
+                {
+                    u32 low  = MaskVRAMAddress(DMA->DAD);
+                    u32 high = MaskVRAMAddress(DMA->DAD + length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)));
 
-                if (unlikely(high < low)) {
-                    // decrementing DMA
-                    std::swap(high, low);
-                }
+                    if (unlikely(high < low)) {
+                        // decrementing DMA
+                        std::swap(high, low);
+                    }
 
-                if ((high + sizeof(T)) > VRAMUpdate.max) {
-                    VRAMUpdate.max = high + sizeof(T);
+                    if ((high + sizeof(T)) > VRAMUpdate.max) {
+                        VRAMUpdate.max = high + sizeof(T);
+                    }
+                    if (low < VRAMUpdate.min) {
+                        VRAMUpdate.min = low;
+                    }
+                    break;
                 }
-                if (low < VRAMUpdate.min) {
-                    VRAMUpdate.min = low;
-                }
+                case MemoryRegion::OAM:
+                    DirtyOAM = true;
+                    break;
+                default:
+                    break;
             }
+
             MediumDMA<T, intermittent_events>(DMA);
             break;
         case DMAAction::Fast:
-            // invalidate VRAM, we do this before the transfer because the transfer updates DMA*
+            // invalidate VRAM and OAM, we do this before the transfer because the transfer updates DMA*
             // for fast DMAs, we know both address controls are increasing
-            if (static_cast<MemoryRegion>(DMA->DAD >> 24) == MemoryRegion::VRAM) {
-                u32 low  = MaskVRAMAddress(DMA->DAD);
-                u32 high = MaskVRAMAddress(DMA->DAD + length * sizeof(T));
+            switch (static_cast<MemoryRegion>(DMA->DAD >> 24)) {
+                case MemoryRegion::VRAM:
+                {
+                    u32 low  = MaskVRAMAddress(DMA->DAD);
+                    u32 high = MaskVRAMAddress(DMA->DAD + length * sizeof(T));
 
-                if ((high + sizeof(T)) > VRAMUpdate.max) {
-                    VRAMUpdate.max = high + sizeof(T);
+                    if ((high + sizeof(T)) > VRAMUpdate.max) {
+                        VRAMUpdate.max = high + sizeof(T);
+                    }
+                    if (low < VRAMUpdate.min) {
+                        VRAMUpdate.min = low;
+                    }
+                    break;
                 }
-                if (low < VRAMUpdate.min) {
-                    VRAMUpdate.min = low;
-                }
+                case MemoryRegion::OAM:
+                    DirtyOAM = true;
+                    break;
+                default:
+                    break;
             }
+
             FastDMA<T, intermittent_events>(DMA);
             return;
         case DMAAction::Slow:
