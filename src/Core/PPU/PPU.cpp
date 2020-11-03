@@ -71,11 +71,14 @@ void GBAPPU::BufferScanline(u32 scanline) {
     CurrentScanlineBatch = scanline;
     ScanlineBatchSizes[BufferFrame][CurrentScanlineBatch] = 1;
 #endif
-    memcpy(
-        OAMBuffer[BufferFrame][scanline],
-        Memory->OAM,
-        sizeof(OAMMEM)
-    );
+    // OAM snapshot
+    if (scanline == (VISIBLE_SCREEN_HEIGHT >> 1)) {
+        memcpy(
+                OAMBuffer[BufferFrame],
+                Memory->OAM,
+                sizeof(OAMMEM)
+        );
+    }
     memcpy(
         LCDIOBuffer[BufferFrame][scanline],
         Memory->IO->Registers,
@@ -217,20 +220,6 @@ void GBAPPU::InitBGBuffers() {
 
     BGPALLocation = glGetUniformLocation(BGProgram, "PAL");
 
-    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
-    glGenTextures(1, &OAMTexture);
-    glBindTexture(GL_TEXTURE_2D, OAMTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    // dimensions need to be a power of 2. Since VISIBLE_SCREEN_HEIGHT is not, we have to pick the next highest one
-    // OAM holds 4 shorts per "index", so we store those in vec4s
-    // therefore, the dimension should be sizeof(OAMMEM) / (2 * 4 bytes per OAM entry)
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16UI, sizeof(OAMMEM) >> 3, 256, 0, GL_RGBA_INTEGER,
-                 GL_UNSIGNED_SHORT, nullptr);
-
-    BGOAMLocation = glGetUniformLocation(BGProgram, "OAM");
-
     // Initially buffer the buffers with some data so we don't have to reallocate memory every time
     glGenBuffers(1, &VRAMSSBO);
 
@@ -264,7 +253,6 @@ void GBAPPU::InitBGBuffers() {
 
     glUseProgram(BGProgram);
     glUniform1i(BGPALLocation, static_cast<u32>(BufferBindings::PAL));
-    glUniform1i(BGOAMLocation, static_cast<u32>(BufferBindings::OAM));
     glUniform1i(BGIOLocation, static_cast<u32>(BufferBindings::LCDIO));
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
@@ -283,10 +271,8 @@ void GBAPPU::InitObjBuffers() {
     glGenBuffers(1, &ObjVBO);
     glBindBuffer(GL_ARRAY_BUFFER, ObjVBO);
 
-    glVertexAttribIPointer(0, 1, GL_UNSIGNED_SHORT, sizeof(u32), (void*)0);  // OBJ_ATTR0
+    glVertexAttribIPointer(0, 4, GL_UNSIGNED_SHORT, sizeof(u64), (void*)0);  // OBJ_ATTR0
     glEnableVertexAttribArray(0);
-    glVertexAttribIPointer(1, 1, GL_UNSIGNED_SHORT, sizeof(u32), (void*)2);  // OBJ_ATTR1
-    glEnableVertexAttribArray(1);
 
     // buffer elements
     glGenBuffers(1, &ObjEBO);
@@ -298,10 +284,6 @@ void GBAPPU::InitObjBuffers() {
     glBindTexture(GL_TEXTURE_2D, PALTexture);
     ObjPALLocation = glGetUniformLocation(ObjProgram, "PAL");
 
-    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
-    glBindTexture(GL_TEXTURE_2D, OAMTexture);
-    ObjOAMLocation = glGetUniformLocation(ObjProgram, "OAM");
-
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
     ObjIOLocation = glGetUniformLocation(ObjProgram, "IO");
@@ -310,7 +292,6 @@ void GBAPPU::InitObjBuffers() {
 
     glUseProgram(ObjProgram);
     glUniform1i(ObjPALLocation, static_cast<u32>(BufferBindings::PAL));
-    glUniform1i(ObjOAMLocation, static_cast<u32>(BufferBindings::OAM));
     glUniform1i(ObjIOLocation, static_cast<u32>(BufferBindings::LCDIO));
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
@@ -341,7 +322,7 @@ void GBAPPU::DrawObjects() {
     if (!NumberOfObjVerts) {
         return;
     }
-    // log_debug("%d objects enabled", NumberOfObjVerts >> 2);
+    log_ppu("%d objects enabled", NumberOfObjVerts >> 2);
 
     glUseProgram(ObjProgram);
     glBindVertexArray(ObjVAO);
@@ -349,14 +330,11 @@ void GBAPPU::DrawObjects() {
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glBindTexture(GL_TEXTURE_2D, PALTexture);
 
-    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
-    glBindTexture(GL_TEXTURE_2D, OAMTexture);
-
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
 
     glBindBuffer(GL_ARRAY_BUFFER, ObjVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(u32) * NumberOfObjVerts, ObjAttr01Buffer, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttr01Buffer, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ObjEBO);
     glEnable(GL_PRIMITIVE_RESTART);
@@ -409,9 +387,6 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glBindTexture(GL_TEXTURE_2D, PALTexture);
 
-    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
-    glBindTexture(GL_TEXTURE_2D, OAMTexture);
-
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
 
@@ -449,12 +424,6 @@ struct s_framebuffer GBAPPU::Render() {
     glBindTexture(GL_TEXTURE_2D, PALTexture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeof(PALMEM) >> 1, VISIBLE_SCREEN_HEIGHT,
                     GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, PALBuffer[BufferFrame ^ 1]);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
-    glBindTexture(GL_TEXTURE_2D, OAMTexture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeof(OAMMEM) >> 3, VISIBLE_SCREEN_HEIGHT,
-                    GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, OAMBuffer[BufferFrame ^ 1]);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));

@@ -6,6 +6,7 @@
 #include "shaders/GX_constants.h"
 
 #include "default.h"
+#include "helpers.h"
 
 #include <glad/glad.h>
 
@@ -35,7 +36,7 @@ private:
     PALMEM PALBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
     VRAMMEM VRAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
     s_UpdateRange VRAMRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
-    VRAMMEM OAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
+    OAMMEM OAMBuffer[2] = {};
 
     u32 ScanlineBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
     u32 CurrentScanlineBatch = 0;
@@ -51,7 +52,6 @@ private:
     GLuint Framebuffer;
 
     GLuint IOTexture, BGIOLocation;
-    GLuint OAMTexture, BGOAMLocation;
     GLuint PALTexture, BGPALLocation;
     GLuint VRAMSSBO;
 
@@ -59,7 +59,7 @@ private:
     GLuint BGVBO;  // for drawing a batch of scanlines
 
     static const constexpr auto ObjIndices = [] {
-        std::array<u16, ((128 * 5) >> 2)> table = {0};
+        std::array<u16, ((sizeof(OAMMEM) * 5) >> 2)> table = {0};
 
         u16 index = 0;
         for (int i = 0; i < table.size(); i += 5) {
@@ -75,10 +75,9 @@ private:
 
     // buffer attribute 0 and 1 (positions) to send to the vertex shader
     u32 NumberOfObjVerts = 0;
-    u32 ObjAttr01Buffer[sizeof(OAMMEM)];
+    u64 ObjAttr01Buffer[sizeof(OAMMEM)];
     GLuint ObjProgram;
     GLuint ObjIOLocation;
-    GLuint ObjOAMLocation;
     GLuint ObjPALLocation;
 
     GLuint ObjVAO;
@@ -104,17 +103,15 @@ private:
 template<bool ObjWindow>
 void GBAPPU::BufferObjects(u32 buffer) {
     NumberOfObjVerts = 0;
-    for (int i = 0; i < (sizeof(OAMMEM) >> 3); i++) {
-        // search halfway through the frame
-        u32 Attr01 = *(u32*)&OAMBuffer[buffer][VISIBLE_SCREEN_HEIGHT >> 1][i << 3];
-
-        if ((Attr01 & 0x0300) == 0x0200) {
+    // buffer in reverse for object priority
+    for (int i = sizeof(OAMMEM) - sizeof(u64); i >= 0; i -= sizeof(u64)) {
+        if ((OAMBuffer[buffer][i + 1] & 0x03) == 0x02) {
             // rendering disabled
             continue;
         }
 
         if constexpr(!ObjWindow) {
-            if ((Attr01 & 0x0c00) == 0x0800) {
+            if ((OAMBuffer[buffer][i + 1] & 0x0c) == 0x08) {
                 // part of object window, dont buffer now
                 continue;
             }
@@ -124,6 +121,7 @@ void GBAPPU::BufferObjects(u32 buffer) {
             break;
         }
 
+        u64 Attr01 = *(u64*)&OAMBuffer[buffer][i];
         ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;
         ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;
         ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;

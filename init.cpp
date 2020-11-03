@@ -115,16 +115,16 @@ u8* Initializer::ValidAddressMask(u32 address) {
 
 static void ParseInput(struct s_controller* controller) {
     u16 KEYINPUT = 0;
-    if (controller->A)      KEYINPUT |= static_cast<u16>(KeypadButton::A);
-    if (controller->B)      KEYINPUT |= static_cast<u16>(KeypadButton::B);
-    if (controller->start)  KEYINPUT |= static_cast<u16>(KeypadButton::Start);
-    if (controller->select) KEYINPUT |= static_cast<u16>(KeypadButton::Select);
-    if (controller->left)   KEYINPUT |= static_cast<u16>(KeypadButton::Left);
-    if (controller->right)  KEYINPUT |= static_cast<u16>(KeypadButton::Right);
-    if (controller->down)   KEYINPUT |= static_cast<u16>(KeypadButton::Down);
-    if (controller->up)     KEYINPUT |= static_cast<u16>(KeypadButton::Up);
-    if (controller->L)      KEYINPUT |= static_cast<u16>(KeypadButton::L);
-    if (controller->R)      KEYINPUT |= static_cast<u16>(KeypadButton::R);
+    if (controller->A | controller->X) KEYINPUT |= static_cast<u16>(KeypadButton::A);
+    if (controller->B | controller->Y) KEYINPUT |= static_cast<u16>(KeypadButton::B);
+    if (controller->start)             KEYINPUT |= static_cast<u16>(KeypadButton::Start);
+    if (controller->select)            KEYINPUT |= static_cast<u16>(KeypadButton::Select);
+    if (controller->left)              KEYINPUT |= static_cast<u16>(KeypadButton::Left);
+    if (controller->right)             KEYINPUT |= static_cast<u16>(KeypadButton::Right);
+    if (controller->down)              KEYINPUT |= static_cast<u16>(KeypadButton::Down);
+    if (controller->up)                KEYINPUT |= static_cast<u16>(KeypadButton::Up);
+    if (controller->L)                 KEYINPUT |= static_cast<u16>(KeypadButton::L);
+    if (controller->R)                 KEYINPUT |= static_cast<u16>(KeypadButton::R);
 
     // bits are flipped
     gba->IO.KEYINPUT = ~KEYINPUT;

@@ -26,6 +26,7 @@ enum class LCDIORegs : unsigned int {
 
 enum class DPSCNTBits : unsigned int {
     DPFrameSelect = 0x0010u,
+    OAM2DMap      = 0x0040u,
     DisplayBG0    = 0x0100u,
     DisplayBG1    = 0x0200u,
     DisplayBG2    = 0x0400u,

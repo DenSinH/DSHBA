@@ -7,10 +7,11 @@
 #define attr2 z
 #define attr3 w
 
-layout (location = 0) in uint ObjAttr0;
-layout (location = 1) in uint ObjAttr1;
+layout (location = 0) in uvec4 InOBJ;
 
 out vec2 InObjPos;
+out vec2 OnScreenPos;
+flat out uvec4 OBJ;
 flat out uint ObjWidth;
 flat out uint ObjHeight;
 
@@ -35,16 +36,29 @@ const s_Position PositionTable[4] = {
 };
 
 void main() {
+    OBJ = InOBJ;
     s_Position Position = PositionTable[gl_VertexID & 3];
 
-    uint Shape = ObjAttr0 >> 14;
-    uint Size  = ObjAttr1 >> 14;
+    uint Shape = OBJ.attr0 >> 14;
+    uint Size  = OBJ.attr1 >> 14;
 
     s_ObjSize ObjSize = ObjSizeTable[Shape][Size];
     ObjWidth = ObjSize.width;
     ObjHeight = ObjSize.height;
 
-    ivec2 ScreenPos = ivec2(ObjAttr1 & 0x1ffu, ObjAttr0 & 0xffu);
+    // todo: double affine rendering: dimensions * 2
+
+    ivec2 ScreenPos = ivec2(OBJ.attr1 & 0x1ffu, OBJ.attr0 & 0xffu);
+
+    // correct position for screen wrapping
+    if (ScreenPos.x > int(++VISIBLE_SCREEN_WIDTH++)) {
+        ScreenPos.x -= 0x200;
+    }
+
+    if (ScreenPos.y > int(++VISIBLE_SCREEN_HEIGHT++)) {
+        ScreenPos.y -= 0x100;
+    }
+
     InObjPos = uvec2(0, 0);
     if (Position.right) {
         InObjPos.x  += ObjWidth;
@@ -57,7 +71,19 @@ void main() {
     }
 
     // todo: if mirrored: ObjWidth - InObjPos.x
+    if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_REG++) {
+        if ((OBJ.attr1 & ++ATTR1_VF++) != 0) {
+            // VFlip
+            InObjPos.y = ObjHeight - InObjPos.y;
+        }
 
+        if ((OBJ.attr1 & ++ATTR1_HF++) != 0) {
+            // HFlip
+            InObjPos.x = ObjWidth - InObjPos.x;
+        }
+    }
+
+    OnScreenPos = vec2(ScreenPos);
     gl_Position = vec4(
         -1.0 + 2.0 * float(ScreenPos.x) / float(++VISIBLE_SCREEN_WIDTH++),
         1.0 - 2.0 * float(ScreenPos.y) / float(++VISIBLE_SCREEN_HEIGHT++),

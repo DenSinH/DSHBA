@@ -13,7 +13,6 @@ out float gl_FragDepth;
 out vec4 FragColor;
 
 uniform sampler2D PAL;
-uniform usampler2D OAM;
 uniform usampler2D IO;
 
 layout (std430, binding = ++VRAMSSBO++) readonly buffer VRAMSSBO
@@ -51,12 +50,6 @@ vec4 readPALentry(uint index, uint scanline) {
     // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:
     return texelFetch(
         PAL, ivec2(index, scanline), 0
-    );
-}
-
-uvec4 readOAMentry(uint index, uint scanline) {
-    return texelFetch(
-        OAM, ivec2(index, scanline), 0
     );
 }
 
