@@ -14,14 +14,20 @@ MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
     Memory = memory;
     Scheduler = scheduler;
 
-    HBlankFlag = {
-        .callback = HBlankFlagEvent,
+    HBlank = {
+        .callback = HBlankEvent,
         .caller   = this,
         .time = 960 // (see below)
     };
 
-    VBlankFlag = {
-        .callback = VBlankFlagEvent,
+    HBlankFlag = {
+        .callback = HBlankFlagEvent,
+        .caller   = this,
+        // time is set by HBlank event
+    };
+
+    VBlank = {
+        .callback = VBlankEvent,
         .caller   = this,
         .time     = CYCLES_PER_SCANLINE * VISIBLE_SCREEN_HEIGHT
     };
@@ -48,8 +54,8 @@ MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
         .caller   = this,
     };
 
-    add_event(scheduler, &HBlankFlag);
-    add_event(scheduler, &VBlankFlag);
+    add_event(scheduler, &HBlank);
+    add_event(scheduler, &VBlank);
 }
 
 void MMIO::TriggerInterrupt(u16 interrupt) {
@@ -132,18 +138,21 @@ void MMIO::TriggerDMATiming(DMACNT_HFlags start_timing) {
     }
 }
 
-SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
+SCHEDULER_EVENT(MMIO::HBlankEvent) {
     /*
-     * HBlank IRQ is requested after 960 cycles <- todo
+     * HBlank IRQ is requested after 960 cycles
      * HBlank flag is clear for 1006 cycles
      * Then for the rest of the scanline (226 cycles), HBlank flag is set
      * */
     auto IO = (MMIO*)caller;
 
-    IO->DISPSTAT ^= static_cast<u16>(DISPSTATFlags::HBLank);
-    if (IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::HBLank)) {
-        // HBlank was set, clear after 226 cycles
-        event->time += CYCLES_HBLANK_SET;
+    if (!(IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::HBLank))) {
+        // HBlank, set flag after 46 cycles
+        IO->HBlankFlag.time = event->time + CYCLES_HBLANK_FLAG_DELAY;
+        add_event(scheduler, &IO->HBlankFlag);
+
+        // clear after 226 cycles
+        event->time += CYCLES_HBLANK;
         add_event(scheduler, event);
 
         if (IO->VCount < VISIBLE_SCREEN_HEIGHT) {
@@ -160,7 +169,8 @@ SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
     }
     else {
         // HBlank was cleared, set after 1006 cycles
-        event->time += CYCLES_HBLANK_CLEAR;
+        IO->DISPSTAT &= ~static_cast<u16>(DISPSTATFlags::HBLank);
+        event->time += CYCLES_HDRAW;
         add_event(scheduler, event);
 
         // increment VCount
@@ -183,7 +193,13 @@ SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
     }
 }
 
-SCHEDULER_EVENT(MMIO::VBlankFlagEvent) {
+SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
+    auto IO = (MMIO*)caller;
+
+    IO->DISPSTAT |= static_cast<u16>(DISPSTATFlags::HBLank);
+}
+
+SCHEDULER_EVENT(MMIO::VBlankEvent) {
     /*
      * VBlank is set after 160 scanlines, set for the rest of the frame
      * */

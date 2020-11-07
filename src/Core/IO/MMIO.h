@@ -89,10 +89,12 @@ private:
     u16 VCount   = 0;
 
     void CheckVCountMatch();
+    static SCHEDULER_EVENT(HBlankEvent);
+    s_event HBlank = {};
+    static SCHEDULER_EVENT(VBlankEvent);
+    s_event VBlank = {};
     static SCHEDULER_EVENT(HBlankFlagEvent);
     s_event HBlankFlag = {};
-    static SCHEDULER_EVENT(VBlankFlagEvent);
-    s_event VBlankFlag = {};
 
     READ_PRECALL(ReadDISPSTAT);
     WRITE_CALLBACK(WriteDISPSTAT);
