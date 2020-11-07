@@ -232,7 +232,8 @@ u32 ARM7TDMI::adcs_cv(u32 op1, u32 op2, u32 carry_in) {
     CPSR |= ((op1 + op2 + carry_in) > 0xffff'ffffULL) ? static_cast<u32>(CPSRFlags::C) : 0;
 #endif // addc
 
-#if defined(FAST_ADD_SUB) && __has_builtin(__builtin_sadd_overflow)
+    // todo: overflow detection seemed broken for edge cases
+#if 0 && defined(FAST_ADD_SUB) && __has_builtin(__builtin_sadd_overflow)
     int _; // we already have the result
     if (__builtin_sadd_overflow(op1 + carry_in, op2, &_) || unlikely(carry_in && (op1 == 0x7fff'ffff))) {
         CPSR |= static_cast<u32>(CPSRFlags::V);
@@ -265,9 +266,10 @@ u32 ARM7TDMI::sbcs_cv(u32 op1, u32 op2, u32 carry_in) {
     CPSR |= ((op2 + 1 - carry_in) <= op1) ? static_cast<u32>(CPSRFlags::C) : 0;
 #endif // addc
 
-#if defined(FAST_ADD_SUB) && __has_builtin(__builtin_ssub_overflow)
+    // todo: overflow detection seemed broken for edge cases
+#if 0 && defined(FAST_ADD_SUB) && __has_builtin(__builtin_ssub_overflow)
     int _;  // we already have the result
-    if (__builtin_ssub_overflow(op1, op2 + 1 - carry_in, &_) || unlikely(!carry_in && (op2 == 0x7fff'ffff))) {
+    if (__builtin_ssub_overflow(op1, op2, &_)) {
         CPSR |= static_cast<u32>(CPSRFlags::V);
     }
 #else

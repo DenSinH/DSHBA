@@ -81,8 +81,28 @@ void MultiplyLong(u32 instruction) {
         CPSR |= ((Registers[rdhi] == 0) && (Registers[rdlo] == 0)) ? static_cast<u32>(CPSRFlags::Z) : 0;
     }
 
-    // todo: timings
-    timer++;
+
+    u32 cycles;
+    if constexpr(A) {
+        cycles = 5;
+    }
+    else {
+        cycles = 4;
+    }
+
+    u32 operand_bit_comparison = Rs | (Rs << 1);
+
+    if (unlikely(!(operand_bit_comparison & 0xfe00'0000))) {
+        cycles--;
+        if (unlikely(!(operand_bit_comparison & 0xfffe'0000))) {
+            cycles--;
+            if (unlikely(!(operand_bit_comparison & 0xffff'fe00))) {
+                cycles--;
+            }
+        }
+    }
+
+    timer += cycles;
 }
 
 #ifndef INLINED_INCLUDES

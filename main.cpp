@@ -65,13 +65,13 @@ int main() {
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/RotationScaling/OBJAffineSet/BIOSOBJAFFINESET.gba");
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Arithmetic/ARCTAN/BIOSARCTAN.gba");
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/tonc/bigmap.gba");
-    // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/suite.gba");
+    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/suite.gba");
     // gba->Memory.LoadROM("D:/User/Downloads/Kirby - Nightmare in Dream Land (USA).gba");
-    gba->Memory.LoadROM("D:/User/Downloads/Pokemon - Emerald Version (USA, Europe).gba");
+    // gba->Memory.LoadROM("D:/User/Downloads/Pokemon - Emerald Version (USA, Europe).gba");
     // gba->Memory.LoadROM("D:/User/Downloads/Legend of Zelda, The - The Minish Cap (USA).gba");
     // gba->Memory.LoadROM("D:/User/Downloads/Pokemon - Ruby Version (USA, Europe) (Rev 2).gba");
     // gba->Memory.LoadROM("D:/User/Downloads/WarioWare, Inc. - Mega Microgame$! (USA).gba");
-    // gba->Memory.LoadROM("D:/User/Downloads/memory.gba");
+    // gba->Memory.LoadROM("D:/User/Downloads/nes.gba");
     gba->Run();
 
     ui_thread.join();
