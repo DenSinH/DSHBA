@@ -277,7 +277,7 @@ const char* FragmentShaderMode3Source =
 "    Color.b = PackedColor & 0x1fu;\n"  // l:31
 "\n"  // l:32
 "    uint Priority = readIOreg(0x0cu, y);\n"  // l:33
-"    gl_FragDepth = float(Priority) / 4.0;\n"  // l:34
+"    gl_FragDepth = (2 * float(Priority) + 1) / 8.0;\n"  // l:34
 "\n"  // l:35
 "    return Color / 32.0;\n"  // l:36
 "}\n"  // l:37
@@ -319,7 +319,7 @@ const char* FragmentShaderMode4Source =
 "\n"  // l:30
 "    vec4 Color = readPALentry(PaletteIndex, y);\n"  // l:31
 "    uint Priority = readIOreg(0x0cu, y);\n"  // l:32
-"    gl_FragDepth = float(Priority) / 4.0;\n"  // l:33
+"    gl_FragDepth = (2 * float(Priority) + 1) / 8.0;\n"  // l:33
 "\n"  // l:34
 "    // We already converted to BGR when buffering data\n"  // l:35
 "    return vec4(Color.rgb, 1.0);\n"  // l:36

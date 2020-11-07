@@ -119,9 +119,16 @@ void Mem::Write(u32 address, T value) {
                 }
             }
 #endif
-            WriteArray<T>(PAL, address & 0x3ff, value);
+            if constexpr(std::is_same_v<T, u8>) {
+                // mirrored byte writes
+                WriteArray<u16>(PAL, address & 0x3ff, (u16)value | ((u16)value << 8));
+            }
+            else {
+                WriteArray<T>(PAL, address & 0x3ff, value);
+            }
             return;
-        case MemoryRegion::VRAM:
+        case MemoryRegion::VRAM: {
+            u32 masked_address = MaskVRAMAddress(address);
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::VRAM>(); }
 #ifdef CHECK_INVALID_REFLUSHES
             if constexpr(do_reflush) {
@@ -134,9 +141,25 @@ void Mem::Write(u32 address, T value) {
             }
 #endif
 
-            WriteVRAM<T>(MaskVRAMAddress(address), value);
-            WriteArray<T>(VRAM, MaskVRAMAddress(address), value);
+            if constexpr(std::is_same_v<T, u8>) {
+                if (unlikely(((IO->DISPSTAT & 0x7) >= 3) && (masked_address >= 0x1'4000))) {
+                    // ignore VRAM byte stores in BM modes
+                }
+                else if (unlikely((IO->DISPSTAT & 0x7) < 3 && (masked_address >= 0x1'0000))) {
+                    // ignore byte writes in non-bitmap modes
+                }
+                else {
+                    // mirrored byte writes
+                    WriteVRAM<u16>(masked_address, value);
+                    WriteArray<u16>(VRAM, masked_address, (u16)value | ((u16)value << 8));
+                }
+            }
+            else {
+                WriteVRAM<T>(masked_address, value);
+                WriteArray<T>(VRAM, masked_address, value);
+            }
             return;
+        }
         case MemoryRegion::OAM:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::OAM>(); }
             if constexpr(std::is_same_v<T, u8>) {

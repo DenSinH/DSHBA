@@ -33,7 +33,7 @@ vec4 mode3(uint x, uint y) {
     Color.b = PackedColor & 0x1fu;
 
     uint Priority = readIOreg(++BG2CNT++, y);
-    gl_FragDepth = float(Priority) / 4.0;
+    gl_FragDepth = (2 * float(Priority) + 1) / 8.0;
 
     return Color / 32.0;
 }

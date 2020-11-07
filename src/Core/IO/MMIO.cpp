@@ -172,12 +172,13 @@ SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
         if (IO->VCount == IO->DISPSTAT >> 8) {
             // VCount match
             IO->DISPSTAT |= static_cast<u16>(DISPSTATFlags::VCount);
+            if (IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::VCountIRQ)) {
+                IO->TriggerInterrupt(static_cast<u16>(Interrupt::VCount));
+            }
         }
         else {
             IO->DISPSTAT &= ~static_cast<u16>(DISPSTATFlags::VCount);
         }
-
-        IO->CheckVCountMatch();
     }
 }
 
@@ -208,15 +209,6 @@ SCHEDULER_EVENT(MMIO::VBlankFlagEvent) {
     }
 }
 
-void MMIO::CheckVCountMatch() {
-    // VCount interrupts
-    if (DISPSTAT & static_cast<u16>(DISPSTATFlags::VCountIRQ)) {
-        if ((DISPSTAT >> 8) == VCount) {
-            TriggerInterrupt(static_cast<u16>(Interrupt::VCount));
-        }
-    }
-}
-
 READ_PRECALL(MMIO::ReadDISPSTAT) {
     return DISPSTAT;
 }
@@ -226,7 +218,11 @@ WRITE_CALLBACK(MMIO::WriteDISPSTAT) {
     DISPSTAT = (DISPSTAT & 0x7) | (value & ~0x7);
 
     // VCount interrupt might happen with the newly written value
-    CheckVCountMatch();
+    if (DISPSTAT & static_cast<u16>(DISPSTATFlags::VCountIRQ)) {
+        if ((DISPSTAT >> 8) == VCount) {
+            TriggerInterrupt(static_cast<u16>(Interrupt::VCount));
+        }
+    }
 }
 
 READ_PRECALL(MMIO::ReadVCount) {
@@ -267,4 +263,8 @@ WRITE_CALLBACK(MMIO::WriteIF) {
 
 READ_PRECALL(MMIO::ReadIF) {
     return CPU->IF;
+}
+
+WRITE_CALLBACK(MMIO::WriteHALTCNT) {
+    // log_debug("Halted");
 }

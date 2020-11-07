@@ -192,6 +192,7 @@ GBA* Initializer::init() {
 
     add_register_data("DISPCNT", &gba->IO.Registers[0], 2, IO_tab);
     add_register_data("DISPSTAT", &gba->IO.DISPSTAT, 2, IO_tab);
+    add_register_data("VCOUNT", &gba->IO.VCount, 2, IO_tab);
     add_register_data("KEYINPUT", &gba->IO.KEYINPUT, 2, IO_tab);
     add_register_data("IME", &gba->CPU.IME, 2, IO_tab);
     add_register_data("IE", &gba->CPU.IE, 2, IO_tab);
