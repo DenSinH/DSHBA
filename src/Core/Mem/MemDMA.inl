@@ -70,6 +70,7 @@ void Mem::MediumDMA(s_DMAData* DMA) {
     i32 delta_sad = DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl));
 
     log_dma("Medium DMA %x -> %x (len: %x, control: %04x)", DMA->SAD, DMA->DAD, length, DMA->CNT_H);
+    log_dma("ddad = %x, dsad = %x", delta_dad, delta_sad);
     if constexpr(!intermittent_events) {
         // direct memcpy
         log_dma("Medium DMA, no intermissions");

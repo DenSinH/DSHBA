@@ -105,6 +105,7 @@ private:
     void TriggerDMAChannel(u32 x);
     void TriggerDMATiming(DMACNT_HFlags start_timing);
     template<u8 x> WRITE_CALLBACK(WriteDMAxCNT_H);
+    template<u8 x> READ_PRECALL(ReadDMAxCNT_H);
 
     /*============= Timers =============*/
     s_TimerData Timer[4]     = {};
@@ -169,6 +170,11 @@ private:
         table[static_cast<u32>(IORegister::DISPSTAT) >> 1] = &MMIO::ReadDISPSTAT;
         table[static_cast<u32>(IORegister::VCOUNT)   >> 1] = &MMIO::ReadVCount;
 
+        table[static_cast<u32>(IORegister::DMA0CNT_H) >> 1] = &MMIO::ReadDMAxCNT_H<0>;
+        table[static_cast<u32>(IORegister::DMA1CNT_H) >> 1] = &MMIO::ReadDMAxCNT_H<1>;
+        table[static_cast<u32>(IORegister::DMA2CNT_H) >> 1] = &MMIO::ReadDMAxCNT_H<2>;
+        table[static_cast<u32>(IORegister::DMA3CNT_H) >> 1] = &MMIO::ReadDMAxCNT_H<3>;
+
         table[static_cast<u32>(IORegister::TM0CNT_L) >> 1] = &MMIO::ReadTMxCNT_L<0>;
         table[static_cast<u32>(IORegister::TM1CNT_L) >> 1] = &MMIO::ReadTMxCNT_L<1>;
         table[static_cast<u32>(IORegister::TM2CNT_L) >> 1] = &MMIO::ReadTMxCNT_L<2>;
@@ -209,9 +215,9 @@ private:
         table[(static_cast<u32>(IORegister::DMA2DAD) >> 1) + 1] = 0x07ff;  // upper part
         table[(static_cast<u32>(IORegister::DMA3DAD) >> 1) + 1] = 0x0fff;  // upper part
 
-        table[(static_cast<u32>(IORegister::DMA0CNT_L) >> 1) + 1] = 0x3fff;
-        table[(static_cast<u32>(IORegister::DMA1CNT_L) >> 1) + 1] = 0x3fff;
-        table[(static_cast<u32>(IORegister::DMA2CNT_L) >> 1) + 1] = 0x3fff;
+        table[(static_cast<u32>(IORegister::DMA0CNT_L) >> 1)] = 0x3fff;
+        table[(static_cast<u32>(IORegister::DMA1CNT_L) >> 1)] = 0x3fff;
+        table[(static_cast<u32>(IORegister::DMA2CNT_L) >> 1)] = 0x3fff;
 
         return table;
     }();

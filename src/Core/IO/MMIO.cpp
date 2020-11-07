@@ -126,6 +126,7 @@ void MMIO::TriggerDMATiming(DMACNT_HFlags start_timing) {
         }
 
         if ((DMAData[i].CNT_H & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(start_timing)) {
+            log_dma("Triggering DMA %x start timing %x", i, static_cast<u16>(start_timing));
             TriggerDMAChannel(i);
         }
     }

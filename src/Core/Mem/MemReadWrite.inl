@@ -41,7 +41,11 @@ T Mem::Read(u32 address) {
             return ReadArray<T>(ROM, address & 0x01ff'ffff);
         case MemoryRegion::SRAM:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::SRAM>(); }
-            log_warn("SRAM read @0x%08x", address);
+            // todo: remove flash stub:
+            if (address == 0x0e00'0000) return 0xc2;
+            if (address == 0x0e00'0001) return 0x09;
+
+            // log_warn("SRAM read @0x%08x", address);
             return 0;
         default:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::OOB>(); }
@@ -188,7 +192,7 @@ void Mem::Write(u32 address, T value) {
             return;
         case MemoryRegion::SRAM:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::SRAM>(); }
-            log_warn("SRAM write @0x%08x", address);
+            // log_warn("SRAM write @0x%08x", address);
             return;
         default:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::OOB>(); }

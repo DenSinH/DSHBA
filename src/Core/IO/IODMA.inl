@@ -3,10 +3,10 @@ template<u8 x>
 WRITE_CALLBACK(MMIO::WriteDMAxCNT_H) {
     bool was_enabled = (DMAData[x].CNT_H & static_cast<u16>(DMACNT_HFlags::Enable)) != 0;
     DMAData[x].CNT_H = value;
+    log_dma("Wrote to DMA%dCNT_H: %04x", x, value);
 
     if (!was_enabled && (value & static_cast<u16>(DMACNT_HFlags::Enable))) {
         // DMA enable, store DMASAD/DAD/CNT_L registers in shadow registers
-        log_dma("Wrote to DMA%dCNT_H: %04x", x, value);
         log_dma("Settings: SAD: %08x, DAD: %08x, CNT_L: %04x",
                 ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0SAD) + x * 0xc),
                 ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0DAD) + x * 0xc),
@@ -37,4 +37,9 @@ WRITE_CALLBACK(MMIO::WriteDMAxCNT_H) {
             DMAEnabled[x] = true;
         }
     }
+}
+
+template<u8 x>
+READ_PRECALL(MMIO::ReadDMAxCNT_H) {
+    return DMAData[x].CNT_H;
 }
