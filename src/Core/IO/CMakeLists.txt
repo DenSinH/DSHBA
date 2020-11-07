@@ -3,7 +3,8 @@ add_library(IO STATIC
         MMIO.cpp
         Registers.h
         IOFlags.h
-        Interrupts.h)
+        Interrupts.h
+)
 
 # for logging / stuff I want to use in all files
 include_directories(

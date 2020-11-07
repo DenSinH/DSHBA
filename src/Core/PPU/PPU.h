@@ -38,6 +38,9 @@ private:
     s_UpdateRange VRAMRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
     OAMMEM OAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
 
+    u32 ReferenceLine2Buffer[2][VISIBLE_SCREEN_HEIGHT] = {};
+    u32 ReferenceLine3Buffer[2][VISIBLE_SCREEN_HEIGHT] = {};
+
     u32 ScanlineVRAMBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
     u32 CurrentVRAMScanlineBatch = 0;
     u32 ScanlineOAMBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
@@ -54,6 +57,7 @@ private:
     GLuint Framebuffer;
 
     GLuint IOTexture, BGIOLocation;
+    GLuint ReferenceLine2Location, ReferenceLine3Location;
     GLuint PALTexture, BGPALLocation;
     GLuint VRAMSSBO;
 

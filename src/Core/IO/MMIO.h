@@ -88,7 +88,6 @@ private:
     u16 DISPSTAT = 0;
     u16 VCount   = 0;
 
-    void CheckVCountMatch();
     static SCHEDULER_EVENT(HBlankEvent);
     s_event HBlank = {};
     static SCHEDULER_EVENT(VBlankEvent);
@@ -96,6 +95,9 @@ private:
     static SCHEDULER_EVENT(HBlankFlagEvent);
     s_event HBlankFlag = {};
 
+    u32 ReferenceLine2 = 0;
+    u32 ReferenceLine3 = 0;
+    template<bool BG2> WRITE_CALLBACK(WriteReferencePoint);
     READ_PRECALL(ReadDISPSTAT);
     WRITE_CALLBACK(WriteDISPSTAT);
     READ_PRECALL(ReadVCount);
@@ -144,6 +146,16 @@ private:
     static constexpr auto WriteCallback = [] {
         std::array<IOWriteCallback, (0x400 >> 1)> table = {nullptr};
         table[static_cast<u32>(IORegister::DISPSTAT) >> 1]  = &MMIO::WriteDISPSTAT;
+
+        table[static_cast<u32>(IORegister::BG2X) >> 1] = &MMIO::WriteReferencePoint<true>;
+        table[(static_cast<u32>(IORegister::BG2X) >> 1) + 1] = &MMIO::WriteReferencePoint<true>;  // upper part
+        table[static_cast<u32>(IORegister::BG2Y) >> 1] = &MMIO::WriteReferencePoint<true>;
+        table[(static_cast<u32>(IORegister::BG2Y) >> 1) + 1] = &MMIO::WriteReferencePoint<true>;  // upper part
+
+        table[static_cast<u32>(IORegister::BG3X) >> 1] = &MMIO::WriteReferencePoint<false>;
+        table[(static_cast<u32>(IORegister::BG3X) >> 1) + 1] = &MMIO::WriteReferencePoint<false>;  // upper part
+        table[static_cast<u32>(IORegister::BG3Y) >> 1] = &MMIO::WriteReferencePoint<false>;
+        table[(static_cast<u32>(IORegister::BG3Y) >> 1) + 1] = &MMIO::WriteReferencePoint<false>;  // upper part
 
         table[static_cast<u32>(IORegister::TM0CNT_L) >> 1] = &MMIO::WriteTMxCNT_L<0>;
         table[static_cast<u32>(IORegister::TM1CNT_L) >> 1] = &MMIO::WriteTMxCNT_L<1>;
@@ -202,6 +214,11 @@ private:
         table[(static_cast<u32>(IORegister::BG0CNT) >> 1)] = 0xdfff;
         table[(static_cast<u32>(IORegister::BG1CNT) >> 1)] = 0xdfff;
 
+        table[(static_cast<u32>(IORegister::BG2X) >> 1) + 1] = 0x0fff;    // upper part
+        table[(static_cast<u32>(IORegister::BG2Y) >> 1) + 1] = 0x0fff;    // upper part
+        table[(static_cast<u32>(IORegister::BG3X) >> 1) + 1] = 0x0fff;    // upper part
+        table[(static_cast<u32>(IORegister::BG3Y) >> 1) + 1] = 0x0fff;    // upper part
+
         table[(static_cast<u32>(IORegister::TM0CNT_H) >> 1)] = 0x00c3;
         table[(static_cast<u32>(IORegister::TM1CNT_H) >> 1)] = 0x00c7;
         table[(static_cast<u32>(IORegister::TM2CNT_H) >> 1)] = 0x00c7;
@@ -224,6 +241,19 @@ private:
         return table;
     }();
 };
+
+template<bool BG2>
+WRITE_CALLBACK(MMIO::WriteReferencePoint) {
+    // through little endianness, we can write this here
+    if (VCount < VISIBLE_SCREEN_HEIGHT) {
+        if constexpr(BG2) {
+            ReferenceLine2 = VCount;
+        }
+        else {
+            ReferenceLine3 = VCount;
+        }
+    }
+}
 
 #include "IOReadWrite.inl"  // Read/Write templated functions
 #include "IODMA.inl"        // DMA related inlined functions

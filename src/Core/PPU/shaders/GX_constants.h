@@ -13,7 +13,7 @@ enum class VMEMSizes : unsigned int {
     OAMSize = 0x400u,
     VRAMSize = 0x18000u,
     // todo: only display MMIO
-    IOSize = 0x54u
+    IOSize = 0x60u
 };
 
 enum class LCDIORegs : unsigned int {
@@ -22,6 +22,24 @@ enum class LCDIORegs : unsigned int {
     BG2CNT  = 0x0cu,
     BG0HOFS = 0x10u,
     BG0VOFS = 0x12u,
+
+    BG2PA = 0x20u,
+    BG2PB = 0x22u,
+    BG2PC = 0x24u,
+    BG2PD = 0x26u,
+    BG2X_L = 0x28u,
+    BG2X_H = 0x2au,
+    BG2Y_L = 0x2cu,
+    BG2Y_H = 0x2eu,
+
+    BG3PA = 0x30u,
+    BG3PB = 0x32u,
+    BG3PC = 0x34u,
+    BG3PD = 0x36u,
+    BG3X_L = 0x38u,
+    BG3X_H = 0x3au,
+    BG3Y_L = 0x3cu,
+    BG3Y_H = 0x3eu,
 };
 
 enum class DPSCNTBits : unsigned int {

@@ -155,6 +155,7 @@ SCHEDULER_EVENT(MMIO::HBlankEvent) {
         event->time += CYCLES_HBLANK;
         add_event(scheduler, event);
 
+        // buffer scanline
         if (IO->VCount < VISIBLE_SCREEN_HEIGHT) {
             IO->PPU->BufferScanline(IO->VCount);
         }
@@ -178,6 +179,10 @@ SCHEDULER_EVENT(MMIO::HBlankEvent) {
 
         if (IO->VCount == TOTAL_SCREEN_HEIGHT) {
             IO->VCount = 0;
+
+            // reset reference scanline for frame
+            IO->ReferenceLine2 = 0;
+            IO->ReferenceLine3 = 0;
         }
 
         if (IO->VCount == IO->DISPSTAT >> 8) {

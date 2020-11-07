@@ -67,7 +67,7 @@ inline void MMIO::Write<u8>(u32 address, u8 value) {
         WriteArray<u8>(Registers, address, value & (WriteMask[address >> 1] >> 8));
     }
 
-    // todo: if there is also a special readcallback
+    // todo: if there is also a special readcallback, the value read is not up to date
     if (unlikely(WriteCallback[address >> 1])) {
         // We have to be careful with this:
         // writemask is already applied

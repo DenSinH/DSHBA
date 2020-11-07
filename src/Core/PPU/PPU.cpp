@@ -101,6 +101,10 @@ void GBAPPU::BufferScanline(u32 scanline) {
         sizeof(LCDIO)
     );
 
+    // copy over reference line data
+    ReferenceLine2Buffer[BufferFrame][scanline] = Memory->IO->ReferenceLine2;
+    ReferenceLine3Buffer[BufferFrame][scanline] = Memory->IO->ReferenceLine3;
+
     DrawMutex.lock();
     if (unlikely(scanline == (VISIBLE_SCREEN_HEIGHT - 1))) {
         Frame++;
@@ -168,6 +172,10 @@ void GBAPPU::InitBGProgram() {
     glShaderSource(modeShaders[0], 1, &FragmentShaderMode0Source, nullptr);
     CompileShader(modeShaders[0], "modeShaders[0]");
 
+    modeShaders[1] = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(modeShaders[1], 1, &FragmentShaderMode1Source, nullptr);
+    CompileShader(modeShaders[1], "modeShaders[1]");
+
     modeShaders[3] = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(modeShaders[3], 1, &FragmentShaderMode3Source, nullptr);
     CompileShader(modeShaders[3], "modeShaders[3]");
@@ -181,6 +189,7 @@ void GBAPPU::InitBGProgram() {
     glAttachShader(BGProgram, vertexShader);
     glAttachShader(BGProgram, fragmentShader);
     glAttachShader(BGProgram, modeShaders[0]);
+    glAttachShader(BGProgram, modeShaders[1]);
     glAttachShader(BGProgram, modeShaders[3]);
     glAttachShader(BGProgram, modeShaders[4]);
     LinkProgram(BGProgram);
@@ -189,6 +198,7 @@ void GBAPPU::InitBGProgram() {
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
     glDeleteShader(modeShaders[0]);
+    glDeleteShader(modeShaders[1]);
     glDeleteShader(modeShaders[3]);
     glDeleteShader(modeShaders[4]);
 }
@@ -264,6 +274,9 @@ void GBAPPU::InitBGBuffers() {
 
     glGenBuffers(1, &BGVBO);
     glBindBuffer(GL_ARRAY_BUFFER, BGVBO);
+
+    ReferenceLine2Location = glGetUniformLocation(BGProgram, "ReferenceLine2");
+    ReferenceLine3Location = glGetUniformLocation(BGProgram, "ReferenceLine3");
 
     // position attribute
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
@@ -440,20 +453,24 @@ struct s_framebuffer GBAPPU::Render() {
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // draw scanlines that are available
     DrawMutex.lock();
-    // bind PAL texture
+    // buffer PAL texture
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glBindTexture(GL_TEXTURE_2D, PALTexture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeof(PALMEM) >> 1, VISIBLE_SCREEN_HEIGHT,
                     GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, PALBuffer[BufferFrame ^ 1]);
     glBindTexture(GL_TEXTURE_2D, 0);
 
+    // buffer IO texture
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeof(LCDIO) >> 1, VISIBLE_SCREEN_HEIGHT,
                     GL_RED_INTEGER, GL_UNSIGNED_SHORT, LCDIOBuffer[BufferFrame ^ 1]);
     glBindTexture(GL_TEXTURE_2D, 0);
+
+    // buffer reference points for affine backgrounds
+    glUniform1uiv(ReferenceLine2Location, VISIBLE_SCREEN_HEIGHT, ReferenceLine2Buffer[BufferFrame ^ 1]);
+    glUniform1uiv(ReferenceLine3Location, VISIBLE_SCREEN_HEIGHT, ReferenceLine3Buffer[BufferFrame ^ 1]);
 
     size_t VRAM_scanline = 0, OAM_scanline = 0;
     do {

@@ -8,7 +8,7 @@
 typedef u8 PALMEM[0x400];
 typedef u8 OAMMEM[0x400];
 typedef u8 VRAMMEM[0x1'8000];
-typedef u8 LCDIO[0x54];
+typedef u8 LCDIO[0x60];  // a few excess bytes
 
 /*
  * Every time we draw a scanline, we buffer the video memory data to a separate array, to be read in another thread
