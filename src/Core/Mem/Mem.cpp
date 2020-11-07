@@ -47,7 +47,11 @@ Mem::~Mem() {
 }
 
 void Mem::LoadROM(const std::string& file_path) {
-    LoadFileTo(reinterpret_cast<char *>(ROM), file_path, 0x0200'0000);
+    ROMSize = LoadFileTo(reinterpret_cast<char *>(ROM), file_path, 0x0200'0000);
+    for (size_t addr = ROMSize; addr < sizeof(ROM); addr += 2) {
+        // out of bounds ROM accesses
+        WriteArray<u16>(ROM, addr, addr >> 1);
+    }
 }
 
 void Mem::LoadBIOS(const std::string& file_path) {

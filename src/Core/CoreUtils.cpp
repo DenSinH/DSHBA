@@ -4,7 +4,7 @@
 
 #include <fstream>
 
-void LoadFileTo(char* buffer, const std::string& file_name, size_t max_length) {
+size_t LoadFileTo(char* buffer, const std::string& file_name, size_t max_length) {
     std::ifstream infile(file_name, std::ios::binary);
 
     if (infile.fail()) {
@@ -21,4 +21,5 @@ void LoadFileTo(char* buffer, const std::string& file_name, size_t max_length) {
 
     infile.read(buffer, length);
     log_info("Loaded %x bytes from file %s", length, file_name.c_str());
+    return length;
 }

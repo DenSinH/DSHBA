@@ -4,7 +4,7 @@
 
 #include <string>
 
-void LoadFileTo(char* buffer, const std::string& file_name, size_t max_length);
+size_t LoadFileTo(char* buffer, const std::string& file_name, size_t max_length);
 
 template <typename T, T Begin, class Func, T ...Is>
 static constexpr void static_for_impl(Func&& f, std::integer_sequence<T, Is...>) {

@@ -164,6 +164,7 @@ private:
     VRAMMEM VRAM             = {};
     OAMMEM OAM               = {};
     u8 ROM   [0x0200'0000]   = {};
+    size_t ROMSize = 0;
 
 #define INLINED_INCLUDES
 #include "MemDMAUtil.inl"
