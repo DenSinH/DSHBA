@@ -68,7 +68,7 @@ struct s_scheduler {
 
     void DoEvents() {
         s_event* first = queue.top();
-        while (!this->queue.empty() && first->time < *timer) {
+        while (!this->queue.empty() && first->time <= *timer) {
             first->active = false;
 
             queue.pop();

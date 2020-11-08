@@ -5,9 +5,6 @@
 #include "../ARM7TDMI/ARM7TDMI.h"
 #include "../Mem/Mem.h"
 
-// needed for frame size data:
-#include "../PPU/shaders/GX_constants.h"
-
 MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
     PPU = ppu;
     CPU = cpu;
@@ -287,6 +284,12 @@ READ_PRECALL(MMIO::ReadIF) {
     return CPU->IF;
 }
 
-WRITE_CALLBACK(MMIO::WriteHALTCNT) {
-    // log_debug("Halted");
+WRITE_CALLBACK(MMIO::WritePOSTFLG_HALTCNT) {
+    if (value & 0xff00) {
+        CPU->Halted = true;
+        while (CPU->Halted) {
+            CPU->timer = peek_event(Scheduler);
+            do_events(Scheduler);
+        }
+    }
 }

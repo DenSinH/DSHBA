@@ -110,6 +110,7 @@ private:
     u16 IME      = 0;
     u16 IF       = 0;
     u16 IE       = 0;
+    bool Halted  = false;
 
     // only buffer pipeline on STR(|H|B)/STM instructions near PC
     // we still keep PC ahead of course

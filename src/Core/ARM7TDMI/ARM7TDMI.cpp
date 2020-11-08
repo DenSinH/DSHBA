@@ -124,6 +124,7 @@ SCHEDULER_EVENT(ARM7TDMI::InterruptPollEvent) {
 
     if (cpu->IF & cpu->IE) {
         // disable halt state
+        cpu->Halted = false;
         log_cpu("Interrupt requested and in IE");
         if (cpu->IME && !(cpu->CPSR & static_cast<u32>(CPSRFlags::I))) {
             log_cpu("Interrupt!");

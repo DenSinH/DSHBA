@@ -125,7 +125,7 @@ private:
     WRITE_CALLBACK(WriteIE);
     WRITE_CALLBACK(WriteIF);  // IF has special writes
     READ_PRECALL(ReadIF);     // and can be changed externally
-    WRITE_CALLBACK(WriteHALTCNT);
+    WRITE_CALLBACK(WritePOSTFLG_HALTCNT);
 
     u16 KEYINPUT = 0xffff;  // flipped
 
@@ -175,7 +175,7 @@ private:
         table[static_cast<u32>(IORegister::IME)      >> 1]  = &MMIO::WriteIME;
         table[static_cast<u32>(IORegister::IE)       >> 1]  = &MMIO::WriteIE;
         table[static_cast<u32>(IORegister::IF)       >> 1]  = &MMIO::WriteIF;
-        table[static_cast<u32>(IORegister::HALTCNT)  >> 1]  = &MMIO::WriteHALTCNT;
+        table[static_cast<u32>(IORegister::HALTCNT)  >> 1]  = &MMIO::WritePOSTFLG_HALTCNT;
         return table;
     }();
 
