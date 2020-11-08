@@ -119,6 +119,9 @@ private:
     template<u8 x> WRITE_CALLBACK(WriteTMxCNT_H);
     template<u8 x> READ_PRECALL(ReadTMxCNT_L);
 
+    /*=============== COM ===============*/
+    WRITE_CALLBACK(WriteSIOCNT);  // mostly used to just generate an IRQ whenever necessary
+
     /*============ Interrupts ===========*/
     // IE/IME we won't read back, data can't be changed externally
     WRITE_CALLBACK(WriteIME);
@@ -171,6 +174,10 @@ private:
         table[static_cast<u32>(IORegister::DMA1CNT_H) >> 1] = &MMIO::WriteDMAxCNT_H<1>;
         table[static_cast<u32>(IORegister::DMA2CNT_H) >> 1] = &MMIO::WriteDMAxCNT_H<2>;
         table[static_cast<u32>(IORegister::DMA3CNT_H) >> 1] = &MMIO::WriteDMAxCNT_H<3>;
+
+#ifdef STUB_SIO
+        table[static_cast<u32>(IORegister::SIOCNT) >> 1] = &MMIO::WriteSIOCNT;
+#endif
 
         table[static_cast<u32>(IORegister::IME)      >> 1]  = &MMIO::WriteIME;
         table[static_cast<u32>(IORegister::IE)       >> 1]  = &MMIO::WriteIE;

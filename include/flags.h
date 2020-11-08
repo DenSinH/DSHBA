@@ -16,6 +16,8 @@
 #define COMPONENT_DMA         0x20
 #define COMPONENT_TIMERS      0x40
 
+#define STUB_SIO
+
 #ifndef NDEBUG
 // change to change verbosity / component logging:
 #define VERBOSITY VERBOSITY_DEBUG

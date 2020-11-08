@@ -248,6 +248,18 @@ READ_PRECALL(MMIO::ReadVCount) {
     return VCount;
 }
 
+WRITE_CALLBACK(MMIO::WriteSIOCNT) {
+    if (value & 0x80) {
+        // started, clear start bit:
+        Registers[static_cast<u32>(IORegister::SIOCNT)] &= ~0x80;
+
+        if (value & 0x4000) {
+            // IRQ enabled
+            TriggerInterrupt(static_cast<u16>(Interrupt::SIO));
+        }
+    }
+}
+
 u16 MMIO::ReadKEYINPUT() {
     // todo: poll KEYCNT for interrupts
     return KEYINPUT;
