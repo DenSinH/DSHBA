@@ -302,10 +302,22 @@ void GBAPPU::InitObjBuffers() {
     glGenBuffers(1, &ObjVBO);
     glBindBuffer(GL_ARRAY_BUFFER, ObjVBO);
 
-    glVertexAttribIPointer(0, 4, GL_UNSIGNED_SHORT, sizeof(u64), (void*)0);  // OBJ_ATTR0
+    glVertexAttribIPointer(0, 4, GL_UNSIGNED_SHORT, sizeof(u64), (void*)0);  // OBJ attributes
     glEnableVertexAttribArray(0);
 
-    // buffer elements
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
+    glGenTextures(1, &OAMTexture);
+    glBindTexture(GL_TEXTURE_1D, OAMTexture);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    // dimensions need to be a power of 2. Since VISIBLE_SCREEN_HEIGHT is not, we have to pick the next highest one
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA16I, sizeof(OAMMEM) >> 3, 0, GL_RGBA_INTEGER,
+                 GL_SHORT, nullptr);
+
+    OAMLocation = glGetUniformLocation(ObjProgram, "OAM");
+
+    // buffer elements, we only need to do this once
     glGenBuffers(1, &ObjEBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ObjEBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, ObjIndices.size(), ObjIndices.data(), GL_STATIC_COPY);
@@ -324,6 +336,7 @@ void GBAPPU::InitObjBuffers() {
     glUseProgram(ObjProgram);
     glUniform1i(ObjPALLocation, static_cast<u32>(BufferBindings::PAL));
     glUniform1i(ObjIOLocation, static_cast<u32>(BufferBindings::LCDIO));
+    glUniform1i(OAMLocation, static_cast<u32>(BufferBindings::OAM));
 
     YClipStartLocation = glGetUniformLocation(ObjProgram, "YClipStart");
     YClipEndLocation   = glGetUniformLocation(ObjProgram, "YClipEnd");
@@ -351,11 +364,22 @@ void GBAPPU::VideoInit() {
 }
 
 void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
+    BufferObjects<false>(BufferFrame ^ 1, scanline, amount);
+    if (!NumberOfObjVerts) {
+        return;
+    }
+
     glUseProgram(ObjProgram);
     glBindVertexArray(ObjVAO);
 
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glBindTexture(GL_TEXTURE_2D, PALTexture);
+
+    // bind and buffer OAM texture
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
+    glBindTexture(GL_TEXTURE_1D, OAMTexture);
+    glTexSubImage1D(GL_TEXTURE_1D, 0, 0, sizeof(OAMMEM) >> 3,
+                    GL_RGBA_INTEGER, GL_SHORT, OAMBuffer[BufferFrame ^ 1][scanline]);
 
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
@@ -366,23 +390,20 @@ void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
     glEnable(GL_PRIMITIVE_RESTART);
     glPrimitiveRestartIndex(0xffff);
 
-    BufferObjects<false>(BufferFrame ^ 1, scanline, amount);
+    glUniform1ui(YClipStartLocation, scanline);
+    glUniform1ui(YClipEndLocation, scanline + amount);
 
-    if (NumberOfObjVerts) {
-        glUniform1ui(YClipStartLocation, scanline);
-        glUniform1ui(YClipEndLocation, scanline + amount);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttrBuffer, GL_STATIC_DRAW);
+    // * 5 for the restartindex
+    glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
 
-        glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttr01Buffer, GL_STATIC_DRAW);
-        // * 5 for the restartindex
-        glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
-    }
-
-    log_ppu("%d objects enabled", NumberOfObjVerts >> 2);
+    log_ppu("%d objects enabled in lines %d - %d", NumberOfObjVerts >> 2, scanline, scanline + amount);
 
     glDisable(GL_PRIMITIVE_RESTART);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_1D, 0);
     glBindVertexArray(0);
     glUseProgram(0);
 }
@@ -465,7 +486,7 @@ struct s_framebuffer GBAPPU::Render() {
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeof(LCDIO) >> 1, VISIBLE_SCREEN_HEIGHT,
-                    GL_RED_INTEGER, GL_UNSIGNED_SHORT, LCDIOBuffer[BufferFrame ^ 1]);
+                    GL_RED_INTEGER, GL_SHORT, LCDIOBuffer[BufferFrame ^ 1]);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     // buffer reference points for affine backgrounds

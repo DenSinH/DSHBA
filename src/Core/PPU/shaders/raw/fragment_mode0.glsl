@@ -42,6 +42,8 @@ vec4 mode0(uint x, uint y) {
         }
     }
 
+    // highest frag depth
+    gl_FragDepth = 1;
     return vec4(readPALentry(0, y).xyz, 1);
 }
 

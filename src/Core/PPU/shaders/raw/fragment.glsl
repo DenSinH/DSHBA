@@ -212,7 +212,6 @@ vec4 affineBGPixel(uint BGCNT, uint BG, vec2 screen_pos) {
     bool ColorMode;
 
     CBB       = (BGCNT >> 2) & 3u;
-    ColorMode = (BGCNT & 0x80u) != 0;  // 0: 4bpp, 1: 8bpp
     SBB       = (BGCNT >> 8) & 0x1fu;
     Size      = AffineBGSizeTable[(BGCNT >> 14) & 3u];
 

@@ -87,10 +87,11 @@ private:
 
     // buffer attribute 0 and 1 (positions) to send to the vertex shader
     u32 NumberOfObjVerts = 0;
-    u64 ObjAttr01Buffer[sizeof(OAMMEM)];
+    u64 ObjAttrBuffer[sizeof(OAMMEM)];
     GLuint ObjProgram;
     GLuint ObjIOLocation;
     GLuint ObjPALLocation;
+    GLuint OAMTexture, OAMLocation;
     GLuint YClipStartLocation, YClipEndLocation;
 
     GLuint ObjVAO;
@@ -142,15 +143,20 @@ void GBAPPU::BufferObjects(u32 buffer, i32 scanline, i32 batch_size) {
         }
 
         height = ObjHeight[OAMBuffer[buffer][scanline][i + 1] >> 6][OAMBuffer[buffer][scanline][i + 3] >> 6];
+        if ((OAMBuffer[buffer][scanline][i + 1] & 0x3) == 0x3) {
+            // double rendering
+            height <<= 1;
+        }
+
         if (((y + height) < scanline) || (y >= (scanline + batch_size))) {
             // not in frame
             continue;
         }
 
-        u64 Attr01 = *(u64*)&OAMBuffer[buffer][scanline][i];
-        ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;
-        ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;
-        ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;
-        ObjAttr01Buffer[NumberOfObjVerts++] = Attr01;
+        u64 Attrs = *(u64*)&OAMBuffer[buffer][scanline][i];
+        ObjAttrBuffer[NumberOfObjVerts++] = Attrs;
+        ObjAttrBuffer[NumberOfObjVerts++] = Attrs;
+        ObjAttrBuffer[NumberOfObjVerts++] = Attrs;
+        ObjAttrBuffer[NumberOfObjVerts++] = Attrs;
     }
 }

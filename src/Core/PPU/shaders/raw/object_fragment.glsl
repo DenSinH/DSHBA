@@ -15,6 +15,7 @@ flat in uint ObjHeight;
 
 uniform sampler2D PAL;
 uniform usampler2D IO;
+uniform isampler1D OAM;
 
 uniform uint YClipStart;
 uniform uint YClipEnd;
@@ -55,6 +56,12 @@ uint readIOreg(uint address, uint scanline) {
     ).r;
 }
 
+ivec4 readOAMentry(uint index) {
+    return texelFetch(
+        OAM, int(index), 0
+    );
+}
+
 vec4 readPALentry(uint index, uint scanline) {
     // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:
     return texelFetch(
@@ -67,14 +74,13 @@ vec4 RegularObject(bool OAM2DMapping, uint scanline) {
     uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;
     gl_FragDepth = float(Priority) / 4.0;
 
-    uint PaletteBank = OBJ.attr2 >> 12;
-
     // todo: mosaic
     uint dx = uint(InObjPos.x);
     uint dy = uint(InObjPos.y);
 
     uint PixelAddress;
     if ((OBJ.attr0 & ++ATTR0_CM++) == ++ATTR0_4BPP++) {
+        uint PaletteBank = OBJ.attr2 >> 12;
         PixelAddress = TID << 5;
 
         // get base address for line of tiles (vertically)
@@ -90,8 +96,8 @@ vec4 RegularObject(bool OAM2DMapping, uint scanline) {
         PixelAddress = (PixelAddress & 0x7fffu) | 0x10000u;
 
         // horizontal offset:
-        PixelAddress += (dx >> 3) << 5;  // of tile
-        PixelAddress += ((dx & 7u) >> 1);       // in tile
+        PixelAddress += (dx >> 3) << 5;    // of tile
+        PixelAddress += ((dx & 7u) >> 1);  // in tile
 
         uint VRAMEntry = readVRAM8(PixelAddress);
         if ((dx & 1u) != 0) {
@@ -103,7 +109,7 @@ vec4 RegularObject(bool OAM2DMapping, uint scanline) {
         }
 
         if (VRAMEntry != 0) {
-            return vec4(readPALentry(0x100 + (PaletteBank << 4) + VRAMEntry, scanline).xyz, 1);
+            return vec4(readPALentry(0x100 + (PaletteBank << 4) + VRAMEntry, scanline).rgb, 1);
         }
         else {
             // transparent
@@ -131,9 +137,109 @@ vec4 RegularObject(bool OAM2DMapping, uint scanline) {
 
         uint VRAMEntry = readVRAM8(PixelAddress);
 
+        if (VRAMEntry != 0) {
+            return vec4(readPALentry(0x100 + VRAMEntry, scanline).rgb, 1);
+        }
+        else {
+            // transparent
+            discard;
+        }
+    }
+}
+
+bool InsideBox(vec2 v, vec2 bottomLeft, vec2 topRight) {
+    vec2 s = step(bottomLeft, v) - step(topRight, v);
+    return (s.x * s.y) != 0.0;
+}
+
+vec4 AffineObject(bool OAM2DMapping, uint scanline) {
+    uint TID = OBJ.attr2 & ++ATTR2_TID++;
+    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;
+    gl_FragDepth = float(Priority) / 4.0;
+
+    uint AffineIndex = (OBJ.attr1 & 0x3e00u) >> 9;
+    AffineIndex <<= 2;  // goes in groups of 4
+
+    // scaling parameters
+    int PA = readOAMentry(AffineIndex).attr3;
+    int PB = readOAMentry(AffineIndex + 1).attr3;
+    int PC = readOAMentry(AffineIndex + 2).attr3;
+    int PD = readOAMentry(AffineIndex + 3).attr3;
+
+    // todo: mosaic
+    // reference point
+    vec2 p0 = vec2(
+        float(ObjWidth  >> 1),
+        float(ObjHeight >> 1)
+    );
+
+    vec2 p1;
+    if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_AFF_DBL++) {
+        // double rendering
+        p1 = 2 * p0;
+    }
+    else {
+        p1 = p0;
+    }
+
+    mat2x2 rotscale = mat2x2(
+        float(PA), float(PC),
+        float(PB), float(PD)
+    ) / 256.0;  // fixed point stuff
+
+    ivec2 pos = ivec2(rotscale * (InObjPos - p1) + p0);
+    if (!InsideBox(pos, vec2(0, 0), vec2(ObjWidth, ObjHeight))) {
+        // out of bounds
+        discard;
+    }
+
+    // get actual pixel
+    uint PixelAddress = 0x10000;  // OBJ VRAM starts at 0x10000 in VRAM
+    PixelAddress += TID << 5;
+    if (OAM2DMapping) {
+        PixelAddress += ObjWidth * (pos.y & ~7) >> 1;
+    }
+    else {
+        PixelAddress += 32 * 0x20 * (pos.y >> 3);
+    }
+
+    // the rest is very similar to regular sprites:
+    if ((OBJ.attr0 & ++ATTR0_CM++) == ++ATTR0_4BPP++) {
+        uint PaletteBank = OBJ.attr2 >> 12;
+        PixelAddress += (pos.y & 7) << 2; // offset within tile for sliver
+
+        // horizontal offset:
+        PixelAddress += (pos.x >> 3) << 5;    // of tile
+        PixelAddress += (pos.x & 7) >> 1;  // in tile
+
+        uint VRAMEntry = readVRAM8(PixelAddress);
+        if ((pos.x & 1) != 0) {
+            // upper nibble
+            VRAMEntry >>= 4;
+        }
+        else {
+            VRAMEntry &= 0x0fu;
+        }
 
         if (VRAMEntry != 0) {
-            return vec4(readPALentry(0x100 + VRAMEntry, scanline).xyz, 1);
+            return vec4(readPALentry(0x100 + (PaletteBank << 4) + VRAMEntry, scanline).rgb, 1);
+        }
+        else {
+            // transparent
+            discard;
+        }
+    }
+    else {
+        PixelAddress += (uint(pos.y) & 7u) << 3; // offset within tile for sliver
+
+        // horizontal offset:
+        PixelAddress += (pos.x >> 3) << 6;  // of tile
+        PixelAddress += (pos.x & 7);        // in tile
+
+        uint VRAMEntry = readVRAM8(PixelAddress);
+
+        if (VRAMEntry != 0) {
+            return vec4(readPALentry(0x100 + VRAMEntry, scanline).rgb, 1);
         }
         else {
             // transparent
@@ -161,14 +267,13 @@ void main() {
     uint DISPCNT      = readIOreg(++DISPCNT++, scanline);
     bool OAM2DMapping = (DISPCNT & (++OAM2DMap++)) != 0;
 
-    switch (OBJ.attr0 & ++ATTR0_OM++) {
-        case ++ATTR0_REG++:
-            FragColor = RegularObject(OAM2DMapping, scanline);
-            break;
-        default:
-            FragColor = vec4(InObjPos.x / float(ObjWidth), InObjPos.y / float(ObjHeight), 1, 1);
-            break;
+    if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_REG++) {
+        FragColor = RegularObject(OAM2DMapping, scanline);
     }
+    else{
+        FragColor = AffineObject(OAM2DMapping, scanline);
+    }
+    // FragColor = vec4(InObjPos.x / float(ObjWidth), InObjPos.y / float(ObjHeight), 1, 1);
 }
 
 // END ObjectFragmentShaderSource

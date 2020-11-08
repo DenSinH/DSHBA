@@ -46,8 +46,6 @@ void main() {
     ObjWidth = ObjSize.width;
     ObjHeight = ObjSize.height;
 
-    // todo: double affine rendering: dimensions * 2
-
     ivec2 ScreenPos = ivec2(OBJ.attr1 & 0x1ffu, OBJ.attr0 & 0xffu);
 
     // correct position for screen wrapping
@@ -63,14 +61,26 @@ void main() {
     if (Position.right) {
         InObjPos.x  += ObjWidth;
         ScreenPos.x += int(ObjWidth);
+
+        if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_AFF_DBL++) {
+            // double rendering
+            InObjPos.x  += ObjWidth;
+            ScreenPos.x += int(ObjWidth);
+        }
     }
 
     if (Position.low) {
         InObjPos.y  += ObjHeight;
         ScreenPos.y += int(ObjHeight);
+
+        if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_AFF_DBL++) {
+            // double rendering
+            InObjPos.y  += ObjHeight;
+            ScreenPos.y += int(ObjHeight);
+        }
     }
 
-    // todo: if mirrored: ObjWidth - InObjPos.x
+    // flipping only applies to regular sprites
     if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_REG++) {
         if ((OBJ.attr1 & ++ATTR1_VF++) != 0) {
             // VFlip
@@ -85,9 +95,10 @@ void main() {
 
     OnScreenPos = vec2(ScreenPos);
     gl_Position = vec4(
-        -1.0 + 2.0 * float(ScreenPos.x) / float(++VISIBLE_SCREEN_WIDTH++),
-        1.0 - 2.0 * float(ScreenPos.y) / float(++VISIBLE_SCREEN_HEIGHT++),
-        0, 1
+        -1.0 + 2.0 * OnScreenPos.x / float(++VISIBLE_SCREEN_WIDTH++),
+        1.0 - 2.0 * OnScreenPos.y / float(++VISIBLE_SCREEN_HEIGHT++),
+        0,
+        1
     );
 }
 
