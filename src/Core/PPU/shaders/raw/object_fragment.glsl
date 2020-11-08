@@ -276,6 +276,11 @@ void main() {
     }
 
     uint DISPCNT      = readIOreg(++DISPCNT++);
+    if ((DISPCNT & ++DisplayOBJ++) == 0) {
+        // objects disabled in this scanline
+        discard;
+    }
+
     bool OAM2DMapping = (DISPCNT & (++OAM2DMap++)) != 0;
 
     if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_REG++) {

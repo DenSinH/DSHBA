@@ -564,7 +564,7 @@ const char* FragmentShaderMode4Source =
 ;
 
 
-// ObjectFragmentShaderSource (from object_fragment.glsl, lines 2 to 289)
+// ObjectFragmentShaderSource (from object_fragment.glsl, lines 2 to 294)
 const char* ObjectFragmentShaderSource = 
 "#version 430 core\n"  // l:1
 "\n"  // l:2
@@ -842,17 +842,22 @@ const char* ObjectFragmentShaderSource =
 "    }\n"  // l:274
 "\n"  // l:275
 "    uint DISPCNT      = readIOreg(0x00u);\n"  // l:276
-"    bool OAM2DMapping = (DISPCNT & (0x0040u)) != 0;\n"  // l:277
-"\n"  // l:278
-"    if ((OBJ.attr0 & 0x0300u) == 0x0000u) {\n"  // l:279
-"        FragColor = RegularObject(OAM2DMapping);\n"  // l:280
-"    }\n"  // l:281
-"    else{\n"  // l:282
-"        FragColor = AffineObject(OAM2DMapping);\n"  // l:283
-"    }\n"  // l:284
-"    // FragColor = vec4(InObjPos.x / float(ObjWidth), InObjPos.y / float(ObjHeight), 1, 1);\n"  // l:285
-"}\n"  // l:286
-"\n"  // l:287
+"    if ((DISPCNT & 0x1000u) == 0) {\n"  // l:277
+"        // objects disabled in this scanline\n"  // l:278
+"        discard;\n"  // l:279
+"    }\n"  // l:280
+"\n"  // l:281
+"    bool OAM2DMapping = (DISPCNT & (0x0040u)) != 0;\n"  // l:282
+"\n"  // l:283
+"    if ((OBJ.attr0 & 0x0300u) == 0x0000u) {\n"  // l:284
+"        FragColor = RegularObject(OAM2DMapping);\n"  // l:285
+"    }\n"  // l:286
+"    else{\n"  // l:287
+"        FragColor = AffineObject(OAM2DMapping);\n"  // l:288
+"    }\n"  // l:289
+"    // FragColor = vec4(InObjPos.x / float(ObjWidth), InObjPos.y / float(ObjHeight), 1, 1);\n"  // l:290
+"}\n"  // l:291
+"\n"  // l:292
 ;
 
 

@@ -78,7 +78,7 @@ void GBAPPU::BufferScanline(u32 scanline) {
     CurrentVRAMScanlineBatch = scanline;
     ScanlineVRAMBatchSizes[BufferFrame][CurrentVRAMScanlineBatch] = 1;
 #endif
-    if (Memory->PrevDirtyOAM || unlikely(scanline == 0)) {
+    if (Memory->PrevDirtyOAM || (scanline == 0)) {
         memcpy(
                 OAMBuffer[BufferFrame][scanline],
                 Memory->OAM,
@@ -464,6 +464,7 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     };
     glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), quad, GL_STATIC_DRAW);
     for (u32 BG = 0; BG <= 4; BG++) {
+        // draw each of the backgrounds separately
         glUniform1ui(BGLocation, BG);
         glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
     }
