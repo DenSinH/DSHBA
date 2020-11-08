@@ -85,7 +85,7 @@ template<bool B, bool L, u8 Offs5>
 void LoadStoreImmOffs(u16 instruction) {
     u8 rd = (instruction & 0x7);
     u8 rb = (instruction & 0x38) >> 3;
-    log_cpu_verbose("L/SH [r%d, #%x] B=%d, L=%d", rb, Offs5, B, L);
+    log_cpu_verbose("L/S [r%d, #%x] B=%d, L=%d", rb, Offs5, B, L);
 
     u32 address;
     if constexpr(B) {
@@ -286,7 +286,7 @@ void PCRelativeLoad(u16 instruction) {
 
 template<bool L, u8 rd>
 void SPRelativeLoadStore(u16 instruction) {
-    u8 word8 = (instruction & 0xff) << 2;
+    u16 word8 = (instruction & 0xff) << 2;
 
     if constexpr(L) {
         u32 loaded = Memory->Read<u32, true>(sp + word8);

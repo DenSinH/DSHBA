@@ -24,7 +24,7 @@
 #define COMPONENT_FLAGS (0)
 
 // very intense testing variables:
-#undef TRACE_LOG
+#define TRACE_LOG
 #undef ALWAYS_TRACE_LOG
 #undef FULL_VRAM_BUFFER
 #undef DUMP_MEM // VRAM

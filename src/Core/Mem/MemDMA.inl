@@ -69,7 +69,7 @@ void Mem::MediumDMA(s_DMAData* DMA) {
     i32 delta_dad = DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl));
     i32 delta_sad = DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl));
 
-    log_dma("Medium DMA %x -> %x (len: %x, control: %04x)", DMA->SAD, DMA->DAD, length, DMA->CNT_H);
+    log_dma("Medium DMA %x -> %x (len: %x, control: %04x), size %d", DMA->SAD, DMA->DAD, length, DMA->CNT_H, sizeof(T));
     log_dma("ddad = %x, dsad = %x", delta_dad, delta_sad);
     if constexpr(!intermittent_events) {
         // direct memcpy
@@ -77,6 +77,7 @@ void Mem::MediumDMA(s_DMAData* DMA) {
         for (size_t i = 0; i < length; i++) {
             *(T*)dest = *(T*)src;
 
+            log_debug("Transferred %x", *(T*)src);
             dest += delta_dad;
             src  += delta_sad;
         }

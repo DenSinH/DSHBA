@@ -26,4 +26,6 @@ with open("./mgba.log", "r") as mGBA:
                 print("Difference in line", lineno)
                 print("   mGBA: ", mGBA_line)
                 print("   DSHBA:", DSHBA_line)
-                input()
+                print("press any key to continue...")
+                sys.stdin.read(1)
+                print("ok")
