@@ -50,9 +50,9 @@ uint readVRAM32(uint address) {
     return VRAM[address >> 2];
 }
 
-uint readIOreg(uint address, uint scanline) {
+uint readIOreg(uint address) {
     return texelFetch(
-        IO, ivec2(address >> 1u, scanline), 0
+        IO, ivec2(address >> 1u, uint(OnScreenPos.y)), 0
     ).r;
 }
 
@@ -62,21 +62,27 @@ ivec4 readOAMentry(uint index) {
     );
 }
 
-vec4 readPALentry(uint index, uint scanline) {
+vec4 readPALentry(uint index) {
     // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:
     return texelFetch(
-        PAL, ivec2(index, scanline), 0
+        PAL, ivec2(index, uint(OnScreenPos.y)), 0
     );
 }
 
-vec4 RegularObject(bool OAM2DMapping, uint scanline) {
+vec4 RegularObject(bool OAM2DMapping) {
     uint TID = OBJ.attr2 & ++ATTR2_TID++;
     uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;
     gl_FragDepth = float(Priority) / 4.0;
 
-    // todo: mosaic
     uint dx = uint(InObjPos.x);
     uint dy = uint(InObjPos.y);
+
+    // mosaic effect
+    if ((OBJ.attr0 & ++ATTR0_MOSAIC++) != 0) {
+        uint MOSAIC = readIOreg(++MOSAIC++);
+        dx -= dx % (((MOSAIC & 0xf00u) >> 8) + 1);
+        dy -= dy % (((MOSAIC & 0xf000u) >> 12) + 1);
+    }
 
     uint PixelAddress;
     if ((OBJ.attr0 & ++ATTR0_CM++) == ++ATTR0_4BPP++) {
@@ -109,7 +115,7 @@ vec4 RegularObject(bool OAM2DMapping, uint scanline) {
         }
 
         if (VRAMEntry != 0) {
-            return vec4(readPALentry(0x100 + (PaletteBank << 4) + VRAMEntry, scanline).rgb, 1);
+            return vec4(readPALentry(0x100 + (PaletteBank << 4) + VRAMEntry).rgb, 1);
         }
         else {
             // transparent
@@ -138,7 +144,7 @@ vec4 RegularObject(bool OAM2DMapping, uint scanline) {
         uint VRAMEntry = readVRAM8(PixelAddress);
 
         if (VRAMEntry != 0) {
-            return vec4(readPALentry(0x100 + VRAMEntry, scanline).rgb, 1);
+            return vec4(readPALentry(0x100 + VRAMEntry).rgb, 1);
         }
         else {
             // transparent
@@ -152,7 +158,7 @@ bool InsideBox(vec2 v, vec2 bottomLeft, vec2 topRight) {
     return (s.x * s.y) != 0.0;
 }
 
-vec4 AffineObject(bool OAM2DMapping, uint scanline) {
+vec4 AffineObject(bool OAM2DMapping) {
     uint TID = OBJ.attr2 & ++ATTR2_TID++;
     uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;
     gl_FragDepth = float(Priority) / 4.0;
@@ -166,7 +172,6 @@ vec4 AffineObject(bool OAM2DMapping, uint scanline) {
     int PC = readOAMentry(AffineIndex + 2).attr3;
     int PD = readOAMentry(AffineIndex + 3).attr3;
 
-    // todo: mosaic
     // reference point
     vec2 p0 = vec2(
         float(ObjWidth  >> 1),
@@ -191,6 +196,13 @@ vec4 AffineObject(bool OAM2DMapping, uint scanline) {
     if (!InsideBox(pos, vec2(0, 0), vec2(ObjWidth, ObjHeight))) {
         // out of bounds
         discard;
+    }
+
+    // mosaic effect
+    if ((OBJ.attr0 & ++ATTR0_MOSAIC++) != 0) {
+        uint MOSAIC = readIOreg(++MOSAIC++);
+        pos.x -= pos.x % int(((MOSAIC & 0xf00u) >> 8) + 1);
+        pos.y -= pos.y % int(((MOSAIC & 0xf000u) >> 12) + 1);
     }
 
     // get actual pixel
@@ -222,7 +234,7 @@ vec4 AffineObject(bool OAM2DMapping, uint scanline) {
         }
 
         if (VRAMEntry != 0) {
-            return vec4(readPALentry(0x100 + (PaletteBank << 4) + VRAMEntry, scanline).rgb, 1);
+            return vec4(readPALentry(0x100 + (PaletteBank << 4) + VRAMEntry).rgb, 1);
         }
         else {
             // transparent
@@ -239,7 +251,7 @@ vec4 AffineObject(bool OAM2DMapping, uint scanline) {
         uint VRAMEntry = readVRAM8(PixelAddress);
 
         if (VRAMEntry != 0) {
-            return vec4(readPALentry(0x100 + VRAMEntry, scanline).rgb, 1);
+            return vec4(readPALentry(0x100 + VRAMEntry).rgb, 1);
         }
         else {
             // transparent
@@ -263,15 +275,14 @@ void main() {
         discard;
     }
 
-    uint scanline = uint(OnScreenPos.y);
-    uint DISPCNT      = readIOreg(++DISPCNT++, scanline);
+    uint DISPCNT      = readIOreg(++DISPCNT++);
     bool OAM2DMapping = (DISPCNT & (++OAM2DMap++)) != 0;
 
     if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_REG++) {
-        FragColor = RegularObject(OAM2DMapping, scanline);
+        FragColor = RegularObject(OAM2DMapping);
     }
     else{
-        FragColor = AffineObject(OAM2DMapping, scanline);
+        FragColor = AffineObject(OAM2DMapping);
     }
     // FragColor = vec4(InObjPos.x / float(ObjWidth), InObjPos.y / float(ObjHeight), 1, 1);
 }

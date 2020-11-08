@@ -40,6 +40,8 @@ enum class LCDIORegs : unsigned int {
     BG3X_H = 0x3au,
     BG3Y_L = 0x3cu,
     BG3Y_H = 0x3eu,
+
+    MOSAIC = 0x4cu,
 };
 
 enum class DPSCNTBits : unsigned int {
@@ -49,6 +51,17 @@ enum class DPSCNTBits : unsigned int {
     DisplayBG1    = 0x0200u,
     DisplayBG2    = 0x0400u,
     DisplayBG3    = 0x0800u,
+};
+
+enum class BGCNTBits : unsigned int {
+    BG_PRIORITY         = 0x0003u,
+    BG_MOSAIC           = 0x0040u,
+
+    BG_CM               = 0x0080u,
+    BG_4BPP             = 0x0000u,
+    BG_8BPP             = 0x0080u,
+
+    BG_DISPLAY_OVERFLOW = 0x2000u,
 };
 
 enum class OBJ_ATTR0 : unsigned int {

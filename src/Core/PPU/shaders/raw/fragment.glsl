@@ -152,12 +152,19 @@ vec4 regularBGPixel(uint BGCNT, uint x, uint y) {
     VOFS  = readIOreg(++BG0VOFS++ + (BG << 2)) & 0x1ffu;
 
     CBB       = (BGCNT >> 2) & 3u;
-    ColorMode = (BGCNT & 0x80u) != 0;  // 0: 4bpp, 1: 8bpp
+    ColorMode = (BGCNT & ++BG_CM++) == ++BG_8BPP++;  // 0: 4bpp, 1: 8bpp
     SBB       = (BGCNT >> 8) & 0x1fu;
     Size      = (BGCNT >> 14) & 3u;
 
     uint x_eff = (x + HOFS) & 0xffffu;
     uint y_eff = (y + VOFS) & 0xffffu;
+
+    // mosaic effect
+    if ((BGCNT & ++BG_MOSAIC++) != 0) {
+        uint MOSAIC = readIOreg(++MOSAIC++);
+        x_eff -= x_eff % ((MOSAIC & 0xfu) + 1);
+        y_eff -= y_eff % (((MOSAIC & 0xf0u) >> 4) + 1);
+    }
 
     uint ScreenEntryIndex = VRAMIndex(x_eff >> 3u, y_eff >> 3u, Size);
     ScreenEntryIndex += (SBB << 11u);
@@ -235,7 +242,7 @@ vec4 affineBGPixel(uint BGCNT, vec2 screen_pos) {
     y_eff >>= 8;
 
     if ((x_eff < 0) || (x_eff > Size) || (y_eff < 0) || (y_eff > Size)) {
-        if ((BGCNT & 0x2000u) == 0) {
+        if ((BGCNT & ++BG_DISPLAY_OVERFLOW++) == 0) {
             // no display area overflow
             discard;
         }
@@ -243,6 +250,13 @@ vec4 affineBGPixel(uint BGCNT, vec2 screen_pos) {
         // wrapping
         x_eff &= int(Size - 1);
         y_eff &= int(Size - 1);
+    }
+
+    // mosaic effect
+    if ((BGCNT & ++BG_MOSAIC++) != 0) {
+        uint MOSAIC = readIOreg(++MOSAIC++);
+        x_eff -= x_eff % int((MOSAIC & 0xfu) + 1);
+        y_eff -= y_eff % int(((MOSAIC & 0xf0u) >> 4) + 1);
     }
 
     uint TIDAddress = (SBB << 11u);  // base
