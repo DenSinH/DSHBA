@@ -51,7 +51,7 @@ vec4 mode1(uint x, uint y, vec2 screen_pos) {
 
     // highest frag depth
     gl_FragDepth = 1;
-    return vec4(readPALentry(0, y).xyz, 1);
+    return vec4(readPALentry(0, y).rgb, 1);
 }
 
 // END FragmentShaderMode1Source

@@ -343,7 +343,7 @@ const char* FragmentShaderMode0Source =
 "\n"  // l:42
 "    // highest frag depth\n"  // l:43
 "    gl_FragDepth = 1;\n"  // l:44
-"    return vec4(readPALentry(0, y).xyz, 1);\n"  // l:45
+"    return vec4(readPALentry(0, y).rgb, 1);\n"  // l:45
 "}\n"  // l:46
 "\n"  // l:47
 ;
@@ -402,13 +402,13 @@ const char* FragmentShaderMode1Source =
 "\n"  // l:49
 "    // highest frag depth\n"  // l:50
 "    gl_FragDepth = 1;\n"  // l:51
-"    return vec4(readPALentry(0, y).xyz, 1);\n"  // l:52
+"    return vec4(readPALentry(0, y).rgb, 1);\n"  // l:52
 "}\n"  // l:53
 "\n"  // l:54
 ;
 
 
-// FragmentShaderMode2Source (from fragment_mode2.glsl, lines 2 to 51)
+// FragmentShaderMode2Source (from fragment_mode2.glsl, lines 2 to 60)
 const char* FragmentShaderMode2Source = 
 "#version 430 core\n"  // l:1
 "\n"  // l:2
@@ -428,37 +428,46 @@ const char* FragmentShaderMode2Source =
 "\n"  // l:16
 "    uint BGCNT[4];\n"  // l:17
 "\n"  // l:18
-"    for (uint BG = 2; BG <= 3; BG++) {\n"  // l:19
-"        BGCNT[BG] = readIOreg(0x08u + (BG << 1), y);\n"  // l:20
-"    }\n"  // l:21
-"\n"  // l:22
-"    vec4 Color;\n"  // l:23
-"    for (uint priority = 0; priority < 4; priority++) {\n"  // l:24
-"        // BG0 and BG1 are normal, BG2 is affine\n"  // l:25
-"        for (uint BG = 2; BG <= 3; BG++) {\n"  // l:26
-"            if ((DISPCNT & (0x0100u << BG)) == 0) {\n"  // l:27
-"                continue;  // background disabled\n"  // l:28
-"            }\n"  // l:29
-"\n"  // l:30
-"            if ((BGCNT[BG] & 0x3u) != priority) {\n"  // l:31
-"                // background priority\n"  // l:32
-"                continue;\n"  // l:33
-"            }\n"  // l:34
-"\n"  // l:35
-"            Color = affineBGPixel(BGCNT[BG], BG, screen_pos);\n"  // l:36
-"\n"  // l:37
-"            if (Color.w != 0) {\n"  // l:38
-"                gl_FragDepth = (2 * float(priority) + 1) / 8.0;\n"  // l:39
-"                return Color;\n"  // l:40
-"            }\n"  // l:41
-"        }\n"  // l:42
-"    }\n"  // l:43
+"    BGCNT[2] = readIOreg(0x08u + (2 << 1), y);\n"  // l:19
+"    BGCNT[3] = readIOreg(0x08u + (3 << 1), y);\n"  // l:20
+"\n"  // l:21
+"    vec4 Color;\n"  // l:22
+"    if ((BGCNT[3] & 0x3u) < (BGCNT[2] & 0x3u)) {\n"  // l:23
+"        // BG3 has higher priority\n"  // l:24
+"        for (uint BG = 3; BG >= 2; BG--) {\n"  // l:25
+"            if ((DISPCNT & (0x0100u << BG)) == 0) {\n"  // l:26
+"                continue;  // background disabled\n"  // l:27
+"            }\n"  // l:28
+"\n"  // l:29
+"            Color = affineBGPixel(BGCNT[BG], BG, screen_pos);\n"  // l:30
+"\n"  // l:31
+"            if (Color.w != 0) {\n"  // l:32
+"                gl_FragDepth = (2 * float((BGCNT[BG] & 0x3u)) + 1) / 8.0;\n"  // l:33
+"                return Color;\n"  // l:34
+"            }\n"  // l:35
+"        }\n"  // l:36
+"    }\n"  // l:37
+"    else {\n"  // l:38
+"        // BG2 has higher or equal priority\n"  // l:39
+"        for (uint BG = 2; BG <= 3; BG++) {\n"  // l:40
+"            if ((DISPCNT & (0x0100u << BG)) == 0) {\n"  // l:41
+"                continue;  // background disabled\n"  // l:42
+"            }\n"  // l:43
 "\n"  // l:44
-"    // highest frag depth\n"  // l:45
-"    gl_FragDepth = 1;\n"  // l:46
-"    return vec4(readPALentry(0, y).xyz, 1);\n"  // l:47
-"}\n"  // l:48
-"\n"  // l:49
+"            Color = affineBGPixel(BGCNT[BG], BG, screen_pos);\n"  // l:45
+"\n"  // l:46
+"            if (Color.w != 0) {\n"  // l:47
+"                gl_FragDepth = (2 * float((BGCNT[BG] & 0x3u)) + 1) / 8.0;\n"  // l:48
+"                return Color;\n"  // l:49
+"            }\n"  // l:50
+"        }\n"  // l:51
+"    }\n"  // l:52
+"\n"  // l:53
+"    // highest frag depth\n"  // l:54
+"    gl_FragDepth = 1;\n"  // l:55
+"    return vec4(readPALentry(0, y).rgb, 1);\n"  // l:56
+"}\n"  // l:57
+"\n"  // l:58
 ;
 
 

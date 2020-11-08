@@ -18,27 +18,36 @@ vec4 mode2(uint x, uint y, vec2 screen_pos) {
 
     uint BGCNT[4];
 
-    for (uint BG = 2; BG <= 3; BG++) {
-        BGCNT[BG] = readIOreg(++BG0CNT++ + (BG << 1), y);
-    }
+    BGCNT[2] = readIOreg(++BG0CNT++ + (2 << 1), y);
+    BGCNT[3] = readIOreg(++BG0CNT++ + (3 << 1), y);
 
     vec4 Color;
-    for (uint priority = 0; priority < 4; priority++) {
-        // BG0 and BG1 are normal, BG2 is affine
-        for (uint BG = 2; BG <= 3; BG++) {
+    if ((BGCNT[3] & 0x3u) < (BGCNT[2] & 0x3u)) {
+        // BG3 has higher priority
+        for (uint BG = 3; BG >= 2; BG--) {
             if ((DISPCNT & (++DisplayBG0++ << BG)) == 0) {
                 continue;  // background disabled
-            }
-
-            if ((BGCNT[BG] & 0x3u) != priority) {
-                // background priority
-                continue;
             }
 
             Color = affineBGPixel(BGCNT[BG], BG, screen_pos);
 
             if (Color.w != 0) {
-                gl_FragDepth = (2 * float(priority) + 1) / 8.0;
+                gl_FragDepth = (2 * float((BGCNT[BG] & 0x3u)) + 1) / 8.0;
+                return Color;
+            }
+        }
+    }
+    else {
+        // BG2 has higher or equal priority
+        for (uint BG = 2; BG <= 3; BG++) {
+            if ((DISPCNT & (++DisplayBG0++ << BG)) == 0) {
+                continue;  // background disabled
+            }
+
+            Color = affineBGPixel(BGCNT[BG], BG, screen_pos);
+
+            if (Color.w != 0) {
+                gl_FragDepth = (2 * float((BGCNT[BG] & 0x3u)) + 1) / 8.0;
                 return Color;
             }
         }
@@ -46,7 +55,7 @@ vec4 mode2(uint x, uint y, vec2 screen_pos) {
 
     // highest frag depth
     gl_FragDepth = 1;
-    return vec4(readPALentry(0, y).xyz, 1);
+    return vec4(readPALentry(0, y).rgb, 1);
 }
 
 // END FragmentShaderMode2Source
