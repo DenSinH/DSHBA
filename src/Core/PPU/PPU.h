@@ -56,6 +56,8 @@ private:
     GLuint BGProgram;
     GLuint Framebuffer;
 
+    GLuint BGLocation;
+
     GLuint IOTexture, BGIOLocation;
     GLuint ReferenceLine2Location, ReferenceLine3Location;
     GLuint PALTexture, BGPALLocation;

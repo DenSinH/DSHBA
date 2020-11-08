@@ -9,7 +9,6 @@
 
 in vec2 screenCoord;
 
-out float gl_FragDepth;
 out vec4 FragColor;
 
 uniform sampler2D PAL;
@@ -17,6 +16,9 @@ uniform usampler2D IO;
 
 uniform uint ReferenceLine2[++VISIBLE_SCREEN_HEIGHT++];
 uniform uint ReferenceLine3[++VISIBLE_SCREEN_HEIGHT++];
+
+// BG 0 - 3 or 4 for backdrop
+uniform uint BG;
 
 layout (std430, binding = ++VRAMSSBO++) readonly buffer VRAMSSBO
 {
@@ -43,17 +45,21 @@ uint readVRAM32(uint address) {
     return VRAM[address >> 2];
 }
 
-uint readIOreg(uint address, uint scanline) {
+uint readIOreg(uint address) {
     return texelFetch(
-        IO, ivec2(address >> 1u, scanline), 0
+        IO, ivec2(address >> 1u, uint(screenCoord.y)), 0
     ).r;
 }
 
-vec4 readPALentry(uint index, uint scanline) {
+vec4 readPALentry(uint index) {
     // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:
     return texelFetch(
-        PAL, ivec2(index, scanline), 0
+        PAL, ivec2(index, uint(screenCoord.y)), 0
     );
+}
+
+float getDepth(uint BGCNT) {
+    return ((2 * float(BGCNT & 3u)) / 8.0) + (float(1 + BG) / 32.0);
 }
 
 uint VRAMIndex(uint Tx, uint Ty, uint Size) {
@@ -87,7 +93,7 @@ uint VRAMIndex(uint Tx, uint Ty, uint Size) {
     return temp;
 }
 
-vec4 regularScreenEntryPixel(uint dx, uint dy, uint scanline, uint ScreenEntry, uint CBB, bool ColorMode) {
+vec4 regularScreenEntryPixel(uint dx, uint dy, uint ScreenEntry, uint CBB, bool ColorMode) {
     uint PaletteBank = ScreenEntry >> 12;  // 16 bits, we need top 4
     if ((ScreenEntry & 0x0800u) != 0) {
         // VFlip
@@ -117,7 +123,7 @@ vec4 regularScreenEntryPixel(uint dx, uint dy, uint scanline, uint ScreenEntry, 
         }
 
         if (VRAMEntry != 0) {
-            return vec4(readPALentry((PaletteBank << 4) + VRAMEntry, scanline).rgb, 1);
+            return vec4(readPALentry((PaletteBank << 4) + VRAMEntry).rgb, 1);
         }
     }
     else {
@@ -129,21 +135,21 @@ vec4 regularScreenEntryPixel(uint dx, uint dy, uint scanline, uint ScreenEntry, 
         uint VRAMEntry = readVRAM8(Address);
 
         if (VRAMEntry != 0) {
-            return vec4(readPALentry(VRAMEntry, scanline).rgb, 1);
+            return vec4(readPALentry(VRAMEntry).rgb, 1);
         }
     }
 
     // transparent
-    return vec4(0, 0, 0, 0);
+    discard;
 }
 
-vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y) {
+vec4 regularBGPixel(uint BGCNT, uint x, uint y) {
     uint HOFS, VOFS;
     uint CBB, SBB, Size;
     bool ColorMode;
 
-    HOFS  = readIOreg(++BG0HOFS++ + (BG << 2), y) & 0x1ffu;
-    VOFS  = readIOreg(++BG0VOFS++ + (BG << 2), y) & 0x1ffu;
+    HOFS  = readIOreg(++BG0HOFS++ + (BG << 2)) & 0x1ffu;
+    VOFS  = readIOreg(++BG0VOFS++ + (BG << 2)) & 0x1ffu;
 
     CBB       = (BGCNT >> 2) & 3u;
     ColorMode = (BGCNT & 0x80u) != 0;  // 0: 4bpp, 1: 8bpp
@@ -157,14 +163,14 @@ vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y) {
     ScreenEntryIndex += (SBB << 11u);
     uint ScreenEntry = readVRAM16(ScreenEntryIndex);  // always halfword aligned
 
-    return regularScreenEntryPixel(x_eff & 7u, y_eff & 7u, y, ScreenEntry, CBB, ColorMode);
+    return regularScreenEntryPixel(x_eff & 7u, y_eff & 7u, ScreenEntry, CBB, ColorMode);
 }
 
 const uint AffineBGSizeTable[4] = {
     128, 256, 512, 1024
 };
 
-vec4 affineBGPixel(uint BGCNT, uint BG, vec2 screen_pos) {
+vec4 affineBGPixel(uint BGCNT, vec2 screen_pos) {
     uint x = uint(screen_pos.x);
     uint y = uint(screen_pos.y);
 
@@ -174,26 +180,26 @@ vec4 affineBGPixel(uint BGCNT, uint BG, vec2 screen_pos) {
     if (BG == 2) {
         ReferenceLine = ReferenceLine2[y];
 
-        BGX_raw  = readIOreg(++BG2X_L++, y);
-        BGX_raw |= readIOreg(++BG2X_H++, y) << 16;
-        BGY_raw  = readIOreg(++BG2Y_L++, y);
-        BGY_raw |= readIOreg(++BG2Y_H++, y) << 16;
-        PA = int(readIOreg(++BG2PA++, y)) << 16;
-        PB = int(readIOreg(++BG2PB++, y)) << 16;
-        PC = int(readIOreg(++BG2PC++, y)) << 16;
-        PD = int(readIOreg(++BG2PD++, y)) << 16;
+        BGX_raw  = readIOreg(++BG2X_L++);
+        BGX_raw |= readIOreg(++BG2X_H++) << 16;
+        BGY_raw  = readIOreg(++BG2Y_L++);
+        BGY_raw |= readIOreg(++BG2Y_H++) << 16;
+        PA = int(readIOreg(++BG2PA++)) << 16;
+        PB = int(readIOreg(++BG2PB++)) << 16;
+        PC = int(readIOreg(++BG2PC++)) << 16;
+        PD = int(readIOreg(++BG2PD++)) << 16;
     }
     else {
         ReferenceLine = ReferenceLine3[y];
 
-        BGX_raw  = readIOreg(++BG3X_L++, y);
-        BGX_raw |= readIOreg(++BG3X_H++, y) << 16;
-        BGY_raw  = readIOreg(++BG3Y_L++, y);
-        BGY_raw |= readIOreg(++BG3Y_H++, y) << 16;
-        PA = int(readIOreg(++BG3PA++, y)) << 16;
-        PB = int(readIOreg(++BG3PB++, y)) << 16;
-        PC = int(readIOreg(++BG3PC++, y)) << 16;
-        PD = int(readIOreg(++BG3PD++, y)) << 16;
+        BGX_raw  = readIOreg(++BG3X_L++);
+        BGX_raw |= readIOreg(++BG3X_H++) << 16;
+        BGY_raw  = readIOreg(++BG3Y_L++);
+        BGY_raw |= readIOreg(++BG3Y_H++) << 16;
+        PA = int(readIOreg(++BG3PA++)) << 16;
+        PB = int(readIOreg(++BG3PB++)) << 16;
+        PC = int(readIOreg(++BG3PC++)) << 16;
+        PD = int(readIOreg(++BG3PD++)) << 16;
     }
 
     // convert to signed
@@ -231,7 +237,7 @@ vec4 affineBGPixel(uint BGCNT, uint BG, vec2 screen_pos) {
     if ((x_eff < 0) || (x_eff > Size) || (y_eff < 0) || (y_eff > Size)) {
         if ((BGCNT & 0x2000u) == 0) {
             // no display area overflow
-            return vec4(0, 0, 0, 0);
+            discard;
         }
 
         // wrapping
@@ -248,10 +254,10 @@ vec4 affineBGPixel(uint BGCNT, uint BG, vec2 screen_pos) {
 
     // transparent
     if (VRAMEntry == 0) {
-        return vec4(0, 0, 0, 0);
+        discard;
     }
 
-    return vec4(readPALentry(VRAMEntry, y).rgb, 1);
+    return vec4(readPALentry(VRAMEntry).rgb, 1);
 }
 
 vec4 mode0(uint, uint);
@@ -261,10 +267,17 @@ vec4 mode3(uint, uint);
 vec4 mode4(uint, uint);
 
 void main() {
+    if (BG >= 4) {
+        // backdrop, highest frag depth
+        gl_FragDepth = 1;
+        FragColor = vec4(readPALentry(0).rgb, 1);
+        return;
+    }
+
     uint x = uint(screenCoord.x);
     uint y = uint(screenCoord.y);
 
-    uint DISPCNT = readIOreg(0, y);
+    uint DISPCNT = readIOreg(0);
 
     vec4 outColor;
     switch(DISPCNT & 7u) {

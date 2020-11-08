@@ -2,17 +2,24 @@
 
 #version 430 core
 
+uniform uint BG;
+
 uint readVRAM8(uint address);
 uint readVRAM16(uint address);
 uint readVRAM32(uint address);
 
-uint readIOreg(uint address, uint scanline);
-vec4 readPALentry(uint index, uint scanline);
-uvec4 readOAMentry(uint index, uint scanline);
+uint readIOreg(uint address);
+vec4 readPALentry(uint index);
+float getDepth(uint BGCNT);
 
 
 vec4 mode3(uint x, uint y) {
-    uint DISPCNT = readIOreg(0, y);
+    if (BG != 2) {
+        // only BG2 is drawn
+        discard;
+    }
+
+    uint DISPCNT = readIOreg(++DISPCNT++);
 
     if ((DISPCNT & ++DisplayBG2++) == 0) {
         // background 2 is disabled
@@ -32,8 +39,8 @@ vec4 mode3(uint x, uint y) {
     PackedColor >>= 5u;
     Color.b = PackedColor & 0x1fu;
 
-    uint Priority = readIOreg(++BG2CNT++, y);
-    gl_FragDepth = (2 * float(Priority) + 1) / 8.0;
+    uint BGCNT = readIOreg(++BG2CNT++);
+    gl_FragDepth = getDepth(BGCNT);
 
     return Color / 32.0;
 }

@@ -60,10 +60,10 @@ void GBAPPU::BufferScanline(u32 scanline) {
         CurrentVRAMScanlineBatch = scanline;
         ScanlineVRAMBatchSizes[BufferFrame][CurrentVRAMScanlineBatch] = 1;
 
-        if (range.max > 0x10000) {
-            // mark OAM as dirty as well if the object VRAM region has been updated
-            Memory->DirtyOAM = true;
-        }
+//        if (range.max > 0x10000) {
+//            // mark OAM as dirty as well if the object VRAM region has been updated
+//            Memory->DirtyOAM = true;
+//        }
     }
     else {
         // we can use the same batch of scanlines since VRAM was not updated
@@ -283,6 +283,7 @@ void GBAPPU::InitBGBuffers() {
 
     ReferenceLine2Location = glGetUniformLocation(BGProgram, "ReferenceLine2");
     ReferenceLine3Location = glGetUniformLocation(BGProgram, "ReferenceLine3");
+    BGLocation             = glGetUniformLocation(BGProgram, "BG");
 
     // position attribute
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
@@ -461,7 +462,10 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
             -1.0, (float)(scanline + amount),  // bottom left
     };
     glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), quad, GL_STATIC_DRAW);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
+    for (u32 BG = 0; BG <= 4; BG++) {
+        glUniform1ui(BGLocation, BG);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
+    }
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glActiveTexture(GL_TEXTURE0);
@@ -492,7 +496,7 @@ struct s_framebuffer GBAPPU::Render() {
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeof(LCDIO) >> 1, VISIBLE_SCREEN_HEIGHT,
-                    GL_RED_INTEGER, GL_SHORT, LCDIOBuffer[BufferFrame ^ 1]);
+                    GL_RED_INTEGER, GL_UNSIGNED_SHORT, LCDIOBuffer[BufferFrame ^ 1]);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     // buffer reference points for affine backgrounds
@@ -501,7 +505,7 @@ struct s_framebuffer GBAPPU::Render() {
 
     size_t VRAM_scanline = 0, OAM_scanline = 0;
     do {
-        if (VRAM_scanline < OAM_scanline) {
+        if (VRAM_scanline <= OAM_scanline) {
             u32 batch_size = ScanlineVRAMBatchSizes[BufferFrame ^ 1][VRAM_scanline];
             DrawScanlines(VRAM_scanline, batch_size);
             VRAM_scanline += batch_size;

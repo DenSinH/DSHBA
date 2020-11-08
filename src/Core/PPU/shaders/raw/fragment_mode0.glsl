@@ -2,49 +2,38 @@
 
 #version 430 core
 
+uniform uint BG;
+
 uint readVRAM8(uint address);
 uint readVRAM16(uint address);
 uint readVRAM32(uint address);
 
-uint readIOreg(uint address, uint scanline);
-vec4 readPALentry(uint index, uint scanline);
-uvec4 readOAMentry(uint index, uint scanline);
+uint readIOreg(uint address);
+vec4 readPALentry(uint index);
 
-vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y);
+vec4 regularBGPixel(uint BGCNT, uint x, uint y);
+float getDepth(uint BGCNT);
 
 vec4 mode0(uint x, uint y) {
-    uint DISPCNT = readIOreg(++DISPCNT++, y);
+    uint DISPCNT = readIOreg(++DISPCNT++);
 
-    uint BGCNT[4];
-
-    for (uint BG = 0; BG < 4; BG++) {
-        BGCNT[BG] = readIOreg(++BG0CNT++ + (BG << 1), y);
-    }
+    uint BGCNT = readIOreg(++BG0CNT++ + (BG << 1));
 
     vec4 Color;
-    for (uint priority = 0; priority < 4; priority++) {
-        for (uint BG = 0; BG < 4; BG++) {
-            if ((DISPCNT & (++DisplayBG0++ << BG)) == 0) {
-                continue;  // background disabled
-            }
-
-            if ((BGCNT[BG] & 0x3u) != priority) {
-                // background priority
-                continue;
-            }
-
-            Color = regularBGPixel(BGCNT[BG], BG, x, y);
-
-            if (Color.w != 0) {
-                gl_FragDepth = (2 * float(priority) + 1) / 8.0;
-                return Color;
-            }
-        }
+    if ((DISPCNT & (++DisplayBG0++ << BG)) == 0) {
+        discard;  // background disabled
     }
 
-    // highest frag depth
-    gl_FragDepth = 1;
-    return vec4(readPALentry(0, y).rgb, 1);
+    Color = regularBGPixel(BGCNT, x, y);
+
+    if (Color.w != 0) {
+        // priority
+        gl_FragDepth = getDepth(BGCNT);
+        return Color;
+    }
+    else {
+        discard;
+    }
 }
 
 // END FragmentShaderMode0Source

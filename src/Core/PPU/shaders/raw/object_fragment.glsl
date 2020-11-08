@@ -259,7 +259,7 @@ void main() {
     if (OnScreenPos.y < float(YClipStart)) {
         discard;
     }
-    if (OnScreenPos.y >= float(YClipEnd)) {
+    if (OnScreenPos.y > float(YClipEnd)) {
         discard;
     }
 
