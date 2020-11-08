@@ -256,6 +256,7 @@ vec4 affineBGPixel(uint BGCNT, uint BG, vec2 screen_pos) {
 
 vec4 mode0(uint, uint);
 vec4 mode1(uint, uint, vec2);
+vec4 mode2(uint, uint, vec2);
 vec4 mode3(uint, uint);
 vec4 mode4(uint, uint);
 
@@ -272,6 +273,9 @@ void main() {
             break;
         case 1u:
             outColor = mode1(x, y, screenCoord);
+            break;
+        case 2u:
+            outColor = mode2(x, y, screenCoord);
             break;
         case 3u:
             outColor = mode3(x, y);

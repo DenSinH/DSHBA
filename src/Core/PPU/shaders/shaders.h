@@ -1,7 +1,7 @@
 #ifndef GC__SHADER_H
 #define GC__SHADER_H
 
-// FragmentShaderSource (from fragment.glsl, lines 2 to 289)
+// FragmentShaderSource (from fragment.glsl, lines 2 to 293)
 const char* FragmentShaderSource = 
 "#version 430 core\n"  // l:1
 "\n"  // l:2
@@ -259,37 +259,41 @@ const char* FragmentShaderSource =
 "\n"  // l:254
 "vec4 mode0(uint, uint);\n"  // l:255
 "vec4 mode1(uint, uint, vec2);\n"  // l:256
-"vec4 mode3(uint, uint);\n"  // l:257
-"vec4 mode4(uint, uint);\n"  // l:258
-"\n"  // l:259
-"void main() {\n"  // l:260
-"    uint x = uint(screenCoord.x);\n"  // l:261
-"    uint y = uint(screenCoord.y);\n"  // l:262
-"\n"  // l:263
-"    uint DISPCNT = readIOreg(0, y);\n"  // l:264
-"\n"  // l:265
-"    vec4 outColor;\n"  // l:266
-"    switch(DISPCNT & 7u) {\n"  // l:267
-"        case 0u:\n"  // l:268
-"            outColor = mode0(x, y);\n"  // l:269
-"            break;\n"  // l:270
-"        case 1u:\n"  // l:271
-"            outColor = mode1(x, y, screenCoord);\n"  // l:272
-"            break;\n"  // l:273
-"        case 3u:\n"  // l:274
-"            outColor = mode3(x, y);\n"  // l:275
-"            break;\n"  // l:276
-"        case 4u:\n"  // l:277
-"            outColor = mode4(x, y);\n"  // l:278
-"            break;\n"  // l:279
-"        default:\n"  // l:280
-"            outColor = vec4(float(x) / float(240), float(y) / float(160), 1, 1);\n"  // l:281
-"            break;\n"  // l:282
-"    }\n"  // l:283
-"\n"  // l:284
-"    FragColor = outColor;\n"  // l:285
-"}\n"  // l:286
-"\n"  // l:287
+"vec4 mode2(uint, uint, vec2);\n"  // l:257
+"vec4 mode3(uint, uint);\n"  // l:258
+"vec4 mode4(uint, uint);\n"  // l:259
+"\n"  // l:260
+"void main() {\n"  // l:261
+"    uint x = uint(screenCoord.x);\n"  // l:262
+"    uint y = uint(screenCoord.y);\n"  // l:263
+"\n"  // l:264
+"    uint DISPCNT = readIOreg(0, y);\n"  // l:265
+"\n"  // l:266
+"    vec4 outColor;\n"  // l:267
+"    switch(DISPCNT & 7u) {\n"  // l:268
+"        case 0u:\n"  // l:269
+"            outColor = mode0(x, y);\n"  // l:270
+"            break;\n"  // l:271
+"        case 1u:\n"  // l:272
+"            outColor = mode1(x, y, screenCoord);\n"  // l:273
+"            break;\n"  // l:274
+"        case 2u:\n"  // l:275
+"            outColor = mode2(x, y, screenCoord);\n"  // l:276
+"            break;\n"  // l:277
+"        case 3u:\n"  // l:278
+"            outColor = mode3(x, y);\n"  // l:279
+"            break;\n"  // l:280
+"        case 4u:\n"  // l:281
+"            outColor = mode4(x, y);\n"  // l:282
+"            break;\n"  // l:283
+"        default:\n"  // l:284
+"            outColor = vec4(float(x) / float(240), float(y) / float(160), 1, 1);\n"  // l:285
+"            break;\n"  // l:286
+"    }\n"  // l:287
+"\n"  // l:288
+"    FragColor = outColor;\n"  // l:289
+"}\n"  // l:290
+"\n"  // l:291
 ;
 
 
@@ -365,7 +369,7 @@ const char* FragmentShaderMode1Source =
 "\n"  // l:16
 "    uint BGCNT[4];\n"  // l:17
 "\n"  // l:18
-"    for (uint BG = 0; BG < 4; BG++) {\n"  // l:19
+"    for (uint BG = 0; BG <= 2; BG++) {\n"  // l:19
 "        BGCNT[BG] = readIOreg(0x08u + (BG << 1), y);\n"  // l:20
 "    }\n"  // l:21
 "\n"  // l:22
@@ -401,6 +405,60 @@ const char* FragmentShaderMode1Source =
 "    return vec4(readPALentry(0, y).xyz, 1);\n"  // l:52
 "}\n"  // l:53
 "\n"  // l:54
+;
+
+
+// FragmentShaderMode2Source (from fragment_mode2.glsl, lines 2 to 51)
+const char* FragmentShaderMode2Source = 
+"#version 430 core\n"  // l:1
+"\n"  // l:2
+"uint readVRAM8(uint address);\n"  // l:3
+"uint readVRAM16(uint address);\n"  // l:4
+"uint readVRAM32(uint address);\n"  // l:5
+"\n"  // l:6
+"uint readIOreg(uint address, uint scanline);\n"  // l:7
+"vec4 readPALentry(uint index, uint scanline);\n"  // l:8
+"uvec4 readOAMentry(uint index, uint scanline);\n"  // l:9
+"\n"  // l:10
+"vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y);\n"  // l:11
+"vec4 affineBGPixel(uint BGCNT, uint BG, vec2 screen_pos);\n"  // l:12
+"\n"  // l:13
+"vec4 mode2(uint x, uint y, vec2 screen_pos) {\n"  // l:14
+"    uint DISPCNT = readIOreg(0x00u, y);\n"  // l:15
+"\n"  // l:16
+"    uint BGCNT[4];\n"  // l:17
+"\n"  // l:18
+"    for (uint BG = 2; BG <= 3; BG++) {\n"  // l:19
+"        BGCNT[BG] = readIOreg(0x08u + (BG << 1), y);\n"  // l:20
+"    }\n"  // l:21
+"\n"  // l:22
+"    vec4 Color;\n"  // l:23
+"    for (uint priority = 0; priority < 4; priority++) {\n"  // l:24
+"        // BG0 and BG1 are normal, BG2 is affine\n"  // l:25
+"        for (uint BG = 2; BG <= 3; BG++) {\n"  // l:26
+"            if ((DISPCNT & (0x0100u << BG)) == 0) {\n"  // l:27
+"                continue;  // background disabled\n"  // l:28
+"            }\n"  // l:29
+"\n"  // l:30
+"            if ((BGCNT[BG] & 0x3u) != priority) {\n"  // l:31
+"                // background priority\n"  // l:32
+"                continue;\n"  // l:33
+"            }\n"  // l:34
+"\n"  // l:35
+"            Color = affineBGPixel(BGCNT[BG], BG, screen_pos);\n"  // l:36
+"\n"  // l:37
+"            if (Color.w != 0) {\n"  // l:38
+"                gl_FragDepth = (2 * float(priority) + 1) / 8.0;\n"  // l:39
+"                return Color;\n"  // l:40
+"            }\n"  // l:41
+"        }\n"  // l:42
+"    }\n"  // l:43
+"\n"  // l:44
+"    // highest frag depth\n"  // l:45
+"    gl_FragDepth = 1;\n"  // l:46
+"    return vec4(readPALentry(0, y).xyz, 1);\n"  // l:47
+"}\n"  // l:48
+"\n"  // l:49
 ;
 
 

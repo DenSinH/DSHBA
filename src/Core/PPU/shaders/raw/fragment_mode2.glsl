@@ -1,4 +1,4 @@
-// BEGIN FragmentShaderMode1Source
+// BEGIN FragmentShaderMode2Source
 
 #version 430 core
 
@@ -13,19 +13,19 @@ uvec4 readOAMentry(uint index, uint scanline);
 vec4 regularBGPixel(uint BGCNT, uint BG, uint x, uint y);
 vec4 affineBGPixel(uint BGCNT, uint BG, vec2 screen_pos);
 
-vec4 mode1(uint x, uint y, vec2 screen_pos) {
+vec4 mode2(uint x, uint y, vec2 screen_pos) {
     uint DISPCNT = readIOreg(++DISPCNT++, y);
 
     uint BGCNT[4];
 
-    for (uint BG = 0; BG <= 2; BG++) {
+    for (uint BG = 2; BG <= 3; BG++) {
         BGCNT[BG] = readIOreg(++BG0CNT++ + (BG << 1), y);
     }
 
     vec4 Color;
     for (uint priority = 0; priority < 4; priority++) {
         // BG0 and BG1 are normal, BG2 is affine
-        for (uint BG = 0; BG <= 2; BG++) {
+        for (uint BG = 2; BG <= 3; BG++) {
             if ((DISPCNT & (++DisplayBG0++ << BG)) == 0) {
                 continue;  // background disabled
             }
@@ -35,12 +35,7 @@ vec4 mode1(uint x, uint y, vec2 screen_pos) {
                 continue;
             }
 
-            if (BG < 2) {
-                Color = regularBGPixel(BGCNT[BG], BG, x, y);
-            }
-            else {
-                Color = affineBGPixel(BGCNT[BG], BG, screen_pos);
-            }
+            Color = affineBGPixel(BGCNT[BG], BG, screen_pos);
 
             if (Color.w != 0) {
                 gl_FragDepth = (2 * float(priority) + 1) / 8.0;
@@ -54,4 +49,4 @@ vec4 mode1(uint x, uint y, vec2 screen_pos) {
     return vec4(readPALentry(0, y).xyz, 1);
 }
 
-// END FragmentShaderMode1Source
+// END FragmentShaderMode2Source
