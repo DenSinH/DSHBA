@@ -78,7 +78,7 @@ void GBAPPU::BufferScanline(u32 scanline) {
     CurrentVRAMScanlineBatch = scanline;
     ScanlineVRAMBatchSizes[BufferFrame][CurrentVRAMScanlineBatch] = 1;
 #endif
-    if (Memory->DirtyOAM || unlikely(scanline == 0)) {
+    if (Memory->PrevDirtyOAM || unlikely(scanline == 0)) {
         memcpy(
                 OAMBuffer[BufferFrame][scanline],
                 Memory->OAM,
@@ -87,14 +87,15 @@ void GBAPPU::BufferScanline(u32 scanline) {
         // go to next batch
         CurrentOAMScanlineBatch = scanline;
         ScanlineOAMBatchSizes[BufferFrame][CurrentOAMScanlineBatch] = 1;
-
-        // reset dirty OAM status
-        Memory->DirtyOAM = false;
     }
     else {
         // we can use the same batch of scanlines since OAM was not updated
         ScanlineOAMBatchSizes[BufferFrame][CurrentOAMScanlineBatch]++;
     }
+    // reset dirty OAM status
+    Memory->PrevDirtyOAM = Memory->DirtyOAM;
+    Memory->DirtyOAM = false;
+
     memcpy(
         LCDIOBuffer[BufferFrame][scanline],
         Memory->IO->Registers,

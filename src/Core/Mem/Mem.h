@@ -154,7 +154,8 @@ private:
     u64* timer;
     std::function<void(void)> Reflush;
     s_UpdateRange VRAMUpdate = { .min=sizeof(VRAMMEM), .max=0 };
-    bool DirtyOAM = false;
+    bool DirtyOAM     = false;
+    bool PrevDirtyOAM = false;  // OAM update delay
 
     u8 BIOS  [0x4000]        = {};
     u8 eWRAM [0x4'0000]      = {};
