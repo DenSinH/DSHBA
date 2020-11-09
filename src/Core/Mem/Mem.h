@@ -138,7 +138,8 @@ public:
     }
 
 private:
-    friend class GBAPPU;  // allow VMEM to be buffered
+    friend class GBAPPU;   // allow VMEM to be buffered
+    friend class MEM_INL;  // to cheese IDEs
     friend class Initializer;
 
     template<typename T> ALWAYS_INLINE void WriteVRAM(u32 address, T value);

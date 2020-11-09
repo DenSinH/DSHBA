@@ -43,3 +43,10 @@ template<u8 x>
 READ_PRECALL(MMIO::ReadDMAxCNT_H) {
     return DMAData[x].CNT_H;
 }
+
+template<u8 x>
+SCHEDULER_EVENT(MMIO::DMAStartEvent) {
+    auto IO = (MMIO*)caller;
+
+    IO->RunDMAChannel(x);
+}

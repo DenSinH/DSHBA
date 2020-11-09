@@ -34,6 +34,23 @@ MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
     DMAData[2].CNT_L_MAX = 0x4000;
     DMAData[3].CNT_L_MAX = 0x10000;
 
+    DMAStart[0] = (s_event) {
+        .callback = DMAStartEvent<0>,
+        .caller = this,
+    };
+    DMAStart[1] = (s_event) {
+        .callback = DMAStartEvent<1>,
+        .caller = this,
+    };
+    DMAStart[2] = (s_event) {
+        .callback = DMAStartEvent<2>,
+        .caller = this,
+    };
+    DMAStart[3] = (s_event) {
+        .callback = DMAStartEvent<3>,
+        .caller = this,
+    };
+
     Timer[0].Overflow = (s_event) {
         .callback = TimerOverflowEvent<0>,
         .caller   = this,
@@ -60,7 +77,7 @@ void MMIO::TriggerInterrupt(u16 interrupt) {
     CPU->ScheduleInterruptPoll();
 }
 
-void MMIO::TriggerDMAChannel(u32 x) {
+void MMIO::RunDMAChannel(u8 x) {
     const u16 control = DMAData[x].CNT_H;
 
     bool other_dma_active = false;
@@ -94,7 +111,7 @@ void MMIO::TriggerDMAChannel(u32 x) {
 
     // non-repeating or immediate DMAs get disabled
     if (!(control & static_cast<u16>(DMACNT_HFlags::Repeat)) ||
-            (control & static_cast<u16>(DMACNT_HFlags::StartTiming)) != static_cast<u16>(DMACNT_HFlags::StartImmediate)
+            (control & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(DMACNT_HFlags::StartImmediate)
     ) {
         DMAData[x].CNT_H &= ~static_cast<u16>(DMACNT_HFlags::Enable);
         DMAEnabled[x] = false;

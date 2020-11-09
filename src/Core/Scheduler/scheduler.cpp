@@ -6,6 +6,11 @@ void add_event(s_scheduler *scheduler, s_event *event) {
     scheduler->AddEvent(event);
 }
 
+void add_event_after(s_scheduler *scheduler, s_event *event, u64 dt) {
+    event->time = *scheduler->timer + dt;
+    scheduler->AddEvent(event);
+}
+
 void remove_event(s_scheduler *scheduler, s_event *event) {
     scheduler->RemoveEvent(event);
 }

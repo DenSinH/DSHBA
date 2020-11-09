@@ -106,7 +106,13 @@ private:
     /*============== DMA ==============*/
     bool DMAEnabled[4]       = {};
     s_DMAData DMAData[4]     = {};  // shadow registers on DMA enable
-    void TriggerDMAChannel(u32 x);
+    s_event DMAStart[4]      = {};  // starting needs to be delayed because of immediate DMAs (might be mid-instruction)
+    template<u8 x> static SCHEDULER_EVENT(DMAStartEvent);
+    void RunDMAChannel(u8 x);
+    inline void TriggerDMAChannel(u8 x) {
+        // account for startup delay todo: ROM extra cycles
+        add_event_after(Scheduler, &DMAStart[x], 2);
+    };
     void TriggerDMATiming(DMACNT_HFlags start_timing);
     template<u8 x> WRITE_CALLBACK(WriteDMAxCNT_H);
     template<u8 x> READ_PRECALL(ReadDMAxCNT_H);

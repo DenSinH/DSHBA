@@ -11,8 +11,8 @@ void Mem::FastDMA(s_DMAData* DMA) {
     // align addresses
     u8* dest   = GetPtr(DMA->DAD & ~(sizeof(T) - 1));
     u8* src    = GetPtr(DMA->SAD & ~(sizeof(T) - 1));
-    u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
-    log_dma("Fast DMA %x -> %x (len: %x, control: %04x)", DMA->SAD, DMA->DAD, length, DMA->CNT_H);
+    const u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
+    log_dma("Fast DMA %x -> %x (len: %x, control: %04x), size %d", DMA->SAD, DMA->DAD, length, DMA->CNT_H, sizeof(T));
 
     if constexpr(!intermittent_events) {
         // direct memcpy
@@ -27,9 +27,10 @@ void Mem::FastDMA(s_DMAData* DMA) {
     else {
         log_dma("Fast DMA with intermissions");
         // intermittent memcpy
-        while (length != 0) {
+        u32 units_left = length;
+        while (units_left != 0) {
             u16 accesses_until_next_event = (peek_event(Scheduler) / cycles_per_access) + 1; // + 1 to get over the limit
-            accesses_until_next_event = MIN(length, accesses_until_next_event);
+            accesses_until_next_event = MIN(units_left, accesses_until_next_event);
 
             log_dma("DMAing chunk of length %x", accesses_until_next_event);
             memcpy(
@@ -40,7 +41,7 @@ void Mem::FastDMA(s_DMAData* DMA) {
             (*timer) += accesses_until_next_event * cycles_per_access;
             do_events(Scheduler);
 
-            length -= accesses_until_next_event;
+            units_left -= accesses_until_next_event;
             dest += accesses_until_next_event * sizeof(T);
             src  += accesses_until_next_event * sizeof(T);
         }
@@ -64,10 +65,16 @@ void Mem::MediumDMA(s_DMAData* DMA) {
     // align addresses
     u8* dest   = GetPtr(DMA->DAD & ~(sizeof(T) - 1));
     u8* src    = GetPtr(DMA->SAD & ~(sizeof(T) - 1));
-    u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
+    const u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
 
     i32 delta_dad = DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl));
-    i32 delta_sad = DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl));
+    i32 delta_sad;
+    if (DMA->SAD < 0x0800'0000) {
+        delta_sad = DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl));
+    }
+    else {
+        delta_sad = sizeof(T);
+    }
 
     log_dma("Medium DMA %x -> %x (len: %x, control: %04x), size %d", DMA->SAD, DMA->DAD, length, DMA->CNT_H, sizeof(T));
     log_dma("ddad = %x, dsad = %x", delta_dad, delta_sad);
@@ -77,7 +84,6 @@ void Mem::MediumDMA(s_DMAData* DMA) {
         for (size_t i = 0; i < length; i++) {
             *(T*)dest = *(T*)src;
 
-            log_debug("Transferred %x", *(T*)src);
             dest += delta_dad;
             src  += delta_sad;
         }
@@ -86,9 +92,10 @@ void Mem::MediumDMA(s_DMAData* DMA) {
     else {
         log_dma("Medium DMA with intermissions");
         // intermittent memcpy
-        while (length != 0) {
+        u32 units_left = length;
+        while (units_left != 0) {
             u16 accesses_until_next_event = (peek_event(Scheduler) / cycles_per_access) + 1; // + 1 to get over the limit
-            accesses_until_next_event = MIN(length, accesses_until_next_event);
+            accesses_until_next_event = MIN(units_left, accesses_until_next_event);
 
             log_dma("DMAing chunk of length %x", accesses_until_next_event);
             for (size_t i = 0; i < accesses_until_next_event; i++) {
@@ -100,7 +107,7 @@ void Mem::MediumDMA(s_DMAData* DMA) {
             (*timer) += accesses_until_next_event * cycles_per_access;
             do_events(Scheduler);
 
-            length -= accesses_until_next_event;
+            units_left -= accesses_until_next_event;
         }
     }
 
@@ -109,6 +116,7 @@ void Mem::MediumDMA(s_DMAData* DMA) {
         DMA->DAD += length * delta_dad;
     }
     DMA->SAD += length * delta_sad;
+    log_dma("Post medium SAD %x, DAD %x", DMA->SAD, DMA->DAD);
 }
 #endif
 
@@ -121,7 +129,14 @@ void Mem::SlowDMA(s_DMAData* DMA) {
     const u16 control = DMA->CNT_H;
 
     i32 delta_dad = DeltaXAD<T>(control & static_cast<u16>(DMACNT_HFlags::DestAddrControl));
-    i32 delta_sad = DeltaXAD<T>(control & static_cast<u16>(DMACNT_HFlags::SrcAddrControl));
+
+    i32 delta_sad;
+    if (DMA->SAD < 0x0800'0000) {
+        delta_sad = DeltaXAD<T>(control & static_cast<u16>(DMACNT_HFlags::SrcAddrControl));
+    }
+    else {
+        delta_sad = sizeof(T);
+    }
 
     log_dma("Slow DMA %x -> %x (len: %x, control: %04x)", sad, dad, DMA->CNT_L, control);
 
@@ -215,6 +230,7 @@ void Mem::DoDMA(s_DMAData* DMA) {
             SlowDMA<T, intermittent_events>(DMA);
             return;
         case DMAAction::Skip: {
+            log_dma("Skipping DMA");
             u32 cycles_per_access = GetAccessTime<T>(static_cast<MemoryRegion>(DMA->DAD >> 24));
             cycles_per_access += GetAccessTime<T>(static_cast<MemoryRegion>(DMA->SAD >> 24));
 

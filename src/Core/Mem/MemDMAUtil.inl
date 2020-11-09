@@ -151,7 +151,7 @@ static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 
         return DMAAction::Medium;
     }
 
-    if (DeltaXAD<T>(control & static_cast<u16>(DMACNT_HFlags::SrcAddrControl)) <= 0) {
+    if (DeltaXAD<T>(control & static_cast<u16>(DMACNT_HFlags::SrcAddrControl)) <= 0 && (dar < MemoryRegion::ROM_L)) {
         // decrement/fixed source
         return DMAAction::Medium;
     }

@@ -39,11 +39,11 @@ inline void MMIO::Write<u32>(u32 address, u32 value) {
     // 32 bit writes are a little different
     // Remember Little Endianness!
     WriteArray<u16>(Registers, address, value & WriteMask[address >> 1]);
-    WriteArray<u16>(Registers, address + 2, (value >> 16) & WriteMask[(address >> 1) + 1]);
-
     if (unlikely(WriteCallback[address >> 1])) {
         (this->*WriteCallback[address >> 1])(value & WriteMask[address >> 1]);
     }
+
+    WriteArray<u16>(Registers, address + 2, (value >> 16) & WriteMask[(address >> 1) + 1]);
     if (unlikely(WriteCallback[1 + (address >> 1)])) {
         (this->*WriteCallback[1 + (address >> 1)])((value >> 16) & WriteMask[(address >> 1) + 1]);
     }

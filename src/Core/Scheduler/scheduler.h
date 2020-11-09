@@ -31,6 +31,7 @@ typedef struct s_event {
  * (function pointers can be compared anyway)
  * */
 void add_event(s_scheduler *scheduler, s_event *event);
+void add_event_after(s_scheduler *scheduler, s_event *event, u64 dt);
 void remove_event(s_scheduler *scheduler, s_event *event);
 void reschedule_event(s_scheduler *scheduler, s_event *event, u64 new_time);
 void do_events(s_scheduler* scheduler);
