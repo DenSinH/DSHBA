@@ -169,18 +169,16 @@ SCHEDULER_EVENT(MMIO::HBlankEvent) {
         event->time += CYCLES_HBLANK;
         add_event(scheduler, event);
 
-        // buffer scanline
+        // buffer scanline & HBlank DMAs
         if (IO->VCount < VISIBLE_SCREEN_HEIGHT) {
             IO->PPU->BufferScanline(IO->VCount);
+            IO->TriggerDMATiming(DMACNT_HFlags::StartHBlank);
         }
 
         // HBlank interrupts
         if (IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::HBLankIRQ)) {
             IO->TriggerInterrupt(static_cast<u16>(Interrupt::HBlank));
         }
-
-        // HBlank DMAs
-        IO->TriggerDMATiming(DMACNT_HFlags::StartHBlank);
     }
     else {
         // HBlank was cleared, set after 1006 cycles
@@ -191,12 +189,26 @@ SCHEDULER_EVENT(MMIO::HBlankEvent) {
         // increment VCount
         IO->VCount++;
 
-        if (IO->VCount == TOTAL_SCREEN_HEIGHT) {
+        if (unlikely(IO->VCount == TOTAL_SCREEN_HEIGHT)) {
             IO->VCount = 0;
 
             // reset reference scanline for frame
             IO->ReferenceLine2 = 0;
             IO->ReferenceLine3 = 0;
+        }
+        else if (unlikely(IO->VCount == 1)) {
+            // Video capture DMA
+            if (IO->DMAEnabled[3]) {
+                if ((IO->DMAData[3].CNT_H & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(DMACNT_HFlags::StartSpecial)) {
+                    // todo: stop DMA at scanline 162
+                    log_dma("Triggering video capture DMA");
+                    IO->TriggerDMAChannel(3);
+                }
+            }
+        }
+        else if (unlikely(IO->VCount == (TOTAL_SCREEN_HEIGHT - 1))) {
+            // VBlank flag is cleared in scanline 227 as opposed to scanline 0
+            IO->DISPSTAT &= ~static_cast<u16>(DISPSTATFlags::VBlank);
         }
 
         if (IO->VCount == IO->DISPSTAT >> 8) {
@@ -224,8 +236,9 @@ SCHEDULER_EVENT(MMIO::VBlankEvent) {
      * */
     auto IO = (MMIO*)caller;
 
-    IO->DISPSTAT ^= static_cast<u16>(DISPSTATFlags::VBlank);
-    if (IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::VBlank)) {
+    IO->LCDVBlank ^= true;
+    if (IO->LCDVBlank) {
+        IO->DISPSTAT |= static_cast<u16>(DISPSTATFlags::VBlank);
         // VBlank was set, clear after 68 scanlines (total frame height - visible frame height)
         event->time += CYCLES_PER_SCANLINE * (TOTAL_SCREEN_HEIGHT - VISIBLE_SCREEN_HEIGHT);
         add_event(scheduler, event);
@@ -239,7 +252,7 @@ SCHEDULER_EVENT(MMIO::VBlankEvent) {
         IO->TriggerDMATiming(DMACNT_HFlags::StartVBlank);
     }
     else {
-        // VBlank was cleared, set after visible frame
+        // no longer in VBlank, set again after visible frame
         event->time += CYCLES_PER_SCANLINE * VISIBLE_SCREEN_HEIGHT;
         add_event(scheduler, event);
     }

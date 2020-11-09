@@ -92,6 +92,7 @@ private:
     s_event HBlank = {};
     static SCHEDULER_EVENT(VBlankEvent);
     s_event VBlank = {};
+    bool LCDVBlank = false;  // does not correspond to the flag
     static SCHEDULER_EVENT(HBlankFlagEvent);
     s_event HBlankFlag = {};
 
