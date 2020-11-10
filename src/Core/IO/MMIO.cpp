@@ -189,26 +189,38 @@ SCHEDULER_EVENT(MMIO::HBlankEvent) {
         // increment VCount
         IO->VCount++;
 
-        if (unlikely(IO->VCount == TOTAL_SCREEN_HEIGHT)) {
-            IO->VCount = 0;
+        switch (IO->VCount) {
+            case TOTAL_SCREEN_HEIGHT:
+                IO->VCount = 0;
 
-            // reset reference scanline for frame
-            IO->ReferenceLine2 = 0;
-            IO->ReferenceLine3 = 0;
-        }
-        else if (unlikely(IO->VCount == 1)) {
-            // Video capture DMA
-            if (IO->DMAEnabled[3]) {
-                if ((IO->DMAData[3].CNT_H & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(DMACNT_HFlags::StartSpecial)) {
-                    // todo: stop DMA at scanline 162
-                    log_dma("Triggering video capture DMA");
-                    IO->TriggerDMAChannel(3);
+                // reset reference scanline for frame
+                IO->ReferenceLine2 = 0;
+                IO->ReferenceLine3 = 0;
+                break;
+            case (TOTAL_SCREEN_HEIGHT - 1):
+                // VBlank flag is cleared in scanline 227 as opposed to scanline 0
+                IO->DISPSTAT &= ~static_cast<u16>(DISPSTATFlags::VBlank);
+                break;
+            case 162:
+                // disable video capture DMA
+                if (IO->DMAEnabled[3]) {
+                    if ((IO->DMAData[3].CNT_H & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(DMACNT_HFlags::StartSpecial)) {
+                        log_dma("Triggering video capture DMA");
+                        IO->DMAData[3].CNT_H &= ~static_cast<u16>(DMACNT_HFlags::Enable);
+                        IO->DMAEnabled[3] = false;
+                    }
                 }
-            }
-        }
-        else if (unlikely(IO->VCount == (TOTAL_SCREEN_HEIGHT - 1))) {
-            // VBlank flag is cleared in scanline 227 as opposed to scanline 0
-            IO->DISPSTAT &= ~static_cast<u16>(DISPSTATFlags::VBlank);
+            default:
+                if (IO->VCount >= 2 && IO->VCount < 162) {
+                    // Video capture DMA
+                    if (IO->DMAEnabled[3]) {
+                        if ((IO->DMAData[3].CNT_H & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(DMACNT_HFlags::StartSpecial)) {
+                            log_dma("Triggering video capture DMA");
+                            IO->TriggerDMAChannel(3);
+                        }
+                    }
+                }
+                break;
         }
 
         if (IO->VCount == IO->DISPSTAT >> 8) {
