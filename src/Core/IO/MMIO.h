@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Registers.h"
+#include "IORegisters.h"
 #include "IOFlags.h"
 #include "Interrupts.h"
 
@@ -104,21 +104,28 @@ private:
     READ_PRECALL(ReadVCount);
 
     /*============== DMA ==============*/
+    u8 DMAsActive            = 0;  // if a DMA is active, another DMA won't have delay
     bool DMAEnabled[4]       = {};
     s_DMAData DMAData[4]     = {};  // shadow registers on DMA enable
     s_event DMAStart[4]      = {};  // starting needs to be delayed because of immediate DMAs (might be mid-instruction)
     template<u8 x> static SCHEDULER_EVENT(DMAStartEvent);
     void RunDMAChannel(u8 x);
     inline void TriggerDMAChannel(u8 x) {
-        // account for startup delay todo: ROM extra cycles
-        add_event_after(Scheduler, &DMAStart[x], 2);
+        if (DMAsActive) {
+            // if other DMAs are active, there is no delay
+            add_event_after(Scheduler, &DMAStart[x], 0);
+        }
+        else {
+            // account for startup delay todo: ROM extra cycles
+            add_event_after(Scheduler, &DMAStart[x], 2);
+        }
     };
     void TriggerDMATiming(DMACNT_HFlags start_timing);
     template<u8 x> WRITE_CALLBACK(WriteDMAxCNT_H);
     template<u8 x> READ_PRECALL(ReadDMAxCNT_H);
 
     /*============= Timers =============*/
-    s_TimerData Timer[4]     = {};
+    s_TimerData Timers[4]     = {};
     template<u8 x> static SCHEDULER_EVENT(TimerOverflowEvent);
     template<u8 x> void OverflowTimer();  // return next timestamp of overflow
     template<u8 x> WRITE_CALLBACK(WriteTMxCNT_L);
@@ -276,4 +283,4 @@ WRITE_CALLBACK(MMIO::WriteReferencePoint) {
 
 #include "IOReadWrite.inl"  // Read/Write templated functions
 #include "IODMA.inl"        // DMA related inlined functions
-#include "Timers.inl"
+#include "IOTimers.inl"

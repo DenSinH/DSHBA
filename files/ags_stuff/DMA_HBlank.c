@@ -62,5 +62,6 @@ u32 sub_0800a488() {
     *DISPSTATPtr = DISPSTAT;
 
     // FUN_0800d854
+    // failed in r1 and r0 at 0800cb42
     return failed;
 }

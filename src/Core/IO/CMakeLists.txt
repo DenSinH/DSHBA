@@ -1,7 +1,7 @@
 add_library(IO STATIC
         MMIO.h
         MMIO.cpp
-        Registers.h
+        IORegisters.h
         IOFlags.h
         Interrupts.h
 )

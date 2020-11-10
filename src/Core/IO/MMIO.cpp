@@ -51,19 +51,19 @@ MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
         .caller = this,
     };
 
-    Timer[0].Overflow = (s_event) {
+    Timers[0].Overflow = (s_event) {
         .callback = TimerOverflowEvent<0>,
         .caller   = this,
     };
-    Timer[1].Overflow = (s_event) {
+    Timers[1].Overflow = (s_event) {
         .callback = TimerOverflowEvent<1>,
         .caller   = this,
     };
-    Timer[2].Overflow = (s_event) {
+    Timers[2].Overflow = (s_event) {
         .callback = TimerOverflowEvent<2>,
         .caller   = this,
     };
-    Timer[3].Overflow = (s_event) {
+    Timers[3].Overflow = (s_event) {
         .callback = TimerOverflowEvent<3>,
         .caller   = this,
     };
@@ -92,6 +92,7 @@ void MMIO::RunDMAChannel(u8 x) {
         }
     }
 
+    DMAsActive++;
     if (control & static_cast<u16>(DMACNT_HFlags::WordSized)) {
         if (other_dma_active) {
             Memory->DoDMA<u32, true>(&DMAData[x]);
@@ -108,6 +109,7 @@ void MMIO::RunDMAChannel(u8 x) {
             Memory->DoDMA<u16, false>(&DMAData[x]);
         }
     }
+    DMAsActive--;
 
     // non-repeating or immediate DMAs get disabled
     if (!(control & static_cast<u16>(DMACNT_HFlags::Repeat)) ||
