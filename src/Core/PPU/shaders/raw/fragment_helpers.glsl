@@ -15,8 +15,6 @@ layout (std430, binding = ++VRAMSSBO++) readonly buffer VRAMSSBO
     uint VRAM[++VRAMSize++ >> 2];
 };
 
-/* same stuff as background program: */
-
 uint readVRAM8(uint address) {
     uint alignment = address & 3u;
     uint value = VRAM[address >> 2];

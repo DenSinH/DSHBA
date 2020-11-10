@@ -20,17 +20,15 @@ vec4 readPALentry(uint index);
 void main() {
     uint DISPCNT = readIOreg(++DISPCNT++);
 
-    // OBJ is bg 4 in this case
-
     if ((DISPCNT & 0xe000u) == 0) {
         // windows are disabled, enable all windows
+        // we should have caught this before rendering, but eh, I guess we'll check again...
         FragColor.x = 0x3f;
         return;
     }
+
     uint x = uint(screenCoord.x);
     uint y = uint(screenCoord.y);
-
-    uint WINOUT = readIOreg(++WINOUT++) & 0x3fu;
 
     // window 0 has higher priority
     for (uint window = 0; window < 2; window++) {
@@ -83,7 +81,7 @@ void main() {
         }
     }
 
-    FragColor.x = WINOUT;
+    FragColor.x = readIOreg(++WINOUT++) & 0x3fu;  // WINOUT
 }
 
 // END WindowFragmentShaderSource

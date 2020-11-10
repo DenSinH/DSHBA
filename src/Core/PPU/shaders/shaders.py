@@ -80,7 +80,7 @@ for file in os.listdir(SHADER_DIR):
             # escape backslashes and quotes
             line = line.replace("\\", "\\\\").replace("\"", "\\\"")
 
-            shader.append(f'"{line}\\n"  // l:{i - shader_start + 1}')
+            shader.append(f'"{line}\\n'.ljust(100) + f'"    // l:{i - shader_start + 1}')
             i += 1
 
         if i == len(content):
