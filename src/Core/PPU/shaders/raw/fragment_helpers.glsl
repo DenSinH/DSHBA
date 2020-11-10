@@ -2,11 +2,8 @@
 
 #version 430 core
 
-in vec2 InObjPos;
+/* GENERAL */
 in vec2 OnScreenPos;
-flat in uvec4 OBJ;
-flat in uint ObjWidth;
-flat in uint ObjHeight;
 
 uniform sampler2D PAL;
 uniform usampler2D IO;

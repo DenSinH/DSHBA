@@ -60,10 +60,10 @@ void GBAPPU::BufferScanline(u32 scanline) {
         CurrentVRAMScanlineBatch = scanline;
         ScanlineVRAMBatchSizes[BufferFrame][CurrentVRAMScanlineBatch] = 1;
 
-//        if (range.max > 0x10000) {
-//            // mark OAM as dirty as well if the object VRAM region has been updated
-//            Memory->DirtyOAM = true;
-//        }
+        if (range.max > 0x10000) {
+            // mark OAM as dirty as well if the object VRAM region has been updated
+            Memory->DirtyOAM = true;
+        }
     }
     else {
         // we can use the same batch of scanlines since VRAM was not updated
