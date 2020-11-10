@@ -11,8 +11,8 @@
 #include "log.h"
 #include "const.h"
 
-#define INTERNAL_FRAMEBUFFER_WIDTH 1280
-#define INTERNAL_FRAMEBUFFER_HEIGHT 720
+#define INTERNAL_FRAMEBUFFER_WIDTH 480
+#define INTERNAL_FRAMEBUFFER_HEIGHT 320
 
 
 GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
@@ -147,9 +147,7 @@ void GBAPPU::InitFramebuffers() {
     GLenum draw_buffers[1] = { GL_COLOR_ATTACHMENT0 };
     glDrawBuffers(1, draw_buffers);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        log_fatal("Error initializing general framebuffer");
-    }
+    CheckFramebufferInit("general");
 
     glGenFramebuffers(1, &WinFramebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, WinFramebuffer);
@@ -171,19 +169,7 @@ void GBAPPU::InitFramebuffers() {
     GLenum tex_draw_buffers[1] = { GL_COLOR_ATTACHMENT0 };
     glDrawBuffers(1, tex_draw_buffers);
 
-    GLenum buffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (buffer_status != GL_FRAMEBUFFER_COMPLETE) {
-        switch (buffer_status) {
-            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-                log_fatal("Error initializing window framebuffer, incomplete attachment");
-            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-                log_fatal("Error initializing window framebuffer, missing attachment");
-            case GL_FRAMEBUFFER_UNSUPPORTED:
-                log_fatal("Error initializing window framebuffer, unsupported");
-            default:
-                log_fatal("Error initializing window framebuffer, unknown error %x", buffer_status);
-        }
-    }
+    CheckFramebufferInit("window");
 }
 
 void GBAPPU::InitBGProgram() {

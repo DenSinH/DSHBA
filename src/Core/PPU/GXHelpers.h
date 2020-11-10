@@ -30,4 +30,20 @@ static void LinkProgram(unsigned int program) {
     }
 }
 
+static void CheckFramebufferInit(const char* name) {
+    GLenum buffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (buffer_status != GL_FRAMEBUFFER_COMPLETE) {
+        switch (buffer_status) {
+            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+                log_fatal("Error initializing %s framebuffer, incomplete attachment", name);
+            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+                log_fatal("Error initializing %s framebuffer, missing attachment", name);
+            case GL_FRAMEBUFFER_UNSUPPORTED:
+                log_fatal("Error initializing %s framebuffer, unsupported", name);
+            default:
+                log_fatal("Error initializing %s framebuffer, unknown error %x", name, buffer_status);
+        }
+    }
+}
+
 #endif //DSHBA_GXHELPERS_H
