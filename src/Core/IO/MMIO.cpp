@@ -302,9 +302,30 @@ WRITE_CALLBACK(MMIO::WriteSIOCNT) {
     }
 }
 
-u16 MMIO::ReadKEYINPUT() {
-    // todo: poll KEYCNT for interrupts
+void MMIO::CheckKEYINPUTIRQ() {
+    if (KEYCNT & static_cast<u16>(KEYCNTFlags::IRQEnable)) {
+        u16 mask = KEYCNT & static_cast<u16>(KEYCNTFlags::Mask);
+        if ((KEYCNT & static_cast<u16>(KEYCNTFlags::IRQCondition)) == static_cast<u16>(KEYCNTFlags::IRQAND)) {
+            if ((KEYINPUT & mask) == mask) {
+                TriggerInterrupt(static_cast<u16>(Interrupt::Keypad));
+            }
+        }
+        else {  // IRQOR
+            if (KEYINPUT & mask) {
+                TriggerInterrupt(static_cast<u16>(Interrupt::Keypad));
+            }
+        }
+    }
+}
+
+READ_PRECALL(MMIO::ReadKEYINPUT) {
+    CheckKEYINPUTIRQ();
     return KEYINPUT;
+}
+
+WRITE_CALLBACK(MMIO::WriteKEYCNT) {
+    KEYCNT = value;
+    CheckKEYINPUTIRQ();
 }
 
 WRITE_CALLBACK(MMIO::WriteIME) {

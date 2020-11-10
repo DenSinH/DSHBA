@@ -102,7 +102,6 @@ private:
     READ_PRECALL(ReadDISPSTAT);
     WRITE_CALLBACK(WriteDISPSTAT);
     READ_PRECALL(ReadVCount);
-    READ_PRECALL(ReadKEYINPUT);
 
     /*============== DMA ==============*/
     bool DMAEnabled[4]       = {};
@@ -128,6 +127,11 @@ private:
 
     /*=============== COM ===============*/
     WRITE_CALLBACK(WriteSIOCNT);  // mostly used to just generate an IRQ whenever necessary
+    READ_PRECALL(ReadKEYINPUT);
+
+    u16 KEYCNT = 0;
+    WRITE_CALLBACK(WriteKEYCNT);
+    void CheckKEYINPUTIRQ();
 
     /*============ Interrupts ===========*/
     // IE/IME we won't read back, data can't be changed externally
@@ -182,6 +186,7 @@ private:
         table[static_cast<u32>(IORegister::DMA2CNT_H) >> 1] = &MMIO::WriteDMAxCNT_H<2>;
         table[static_cast<u32>(IORegister::DMA3CNT_H) >> 1] = &MMIO::WriteDMAxCNT_H<3>;
 
+        table[static_cast<u32>(IORegister::KEYCNT) >> 1] = &MMIO::WriteKEYCNT;
 #ifdef STUB_SIO
         table[static_cast<u32>(IORegister::SIOCNT) >> 1] = &MMIO::WriteSIOCNT;
 #endif

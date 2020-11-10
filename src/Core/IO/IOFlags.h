@@ -42,3 +42,12 @@ enum class TMCNT_HFlags : u16 {
     IRQ       = 0x0040,
     Enabled   = 0x0080,
 };
+
+enum class KEYCNTFlags : u16 {
+    Mask         = 0x03ff,
+    IRQEnable    = 0x4000,
+
+    IRQCondition = 0x8000,  // 1 = AND, 0 = OR
+    IRQAND       = 0x8000,
+    IRQOR        = 0x0000,
+};
