@@ -53,11 +53,20 @@ private:
     std::mutex DrawMutex = std::mutex();
 
     // programs for each draw program
+    GLuint WinProgram;
+    GLuint WinVAO;
+    GLuint WinFramebuffer;
+    GLuint WinTexture, WinDepthBuffer;
+    GLuint WinIOLocation;
+    GLuint WinOAMLocation;
+    GLuint WinBGLocation;
+    GLuint WinYClipStartLocation, WinYClipEndLocation;
+
     GLuint BGProgram;
     GLuint Framebuffer;
 
     GLuint BGLocation;
-
+    GLuint BGWindowLocation;
     GLuint IOTexture, BGIOLocation;
     GLuint ReferenceLine2Location, ReferenceLine3Location;
     GLuint PALTexture, BGPALLocation;
@@ -93,8 +102,9 @@ private:
     GLuint ObjProgram;
     GLuint ObjIOLocation;
     GLuint ObjPALLocation;
-    GLuint OAMTexture, OAMLocation;
-    GLuint YClipStartLocation, YClipEndLocation;
+    GLuint ObjWindowLocation;
+    GLuint OAMTexture, ObjOAMLocation;
+    GLuint ObjYClipStartLocation, ObjYClipEndLocation;
 
     GLuint ObjVAO;
     GLuint ObjVBO;
@@ -105,12 +115,15 @@ private:
     void InitFramebuffers();
     void InitBGProgram();
     void InitObjProgram();
+    void InitWinProgram();
     void InitBGBuffers();
     void InitObjBuffers();
+    void InitWinBuffers();
 
     template<bool ObjWindow>
     void BufferObjects(u32 buffer, i32 scanline, i32 batch_size);
 
+    void DrawBGWindow();
     void DrawScanlines(u32 scanline, u32 amount);
     void DrawObjects(u32 scanline, u32 amount);
 };

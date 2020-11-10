@@ -6,6 +6,7 @@ enum class BufferBindings : unsigned int {
     OAM      = 2,
     LCDIO    = 3,
     VRAMSSBO = 4,
+    Window   = 5,
 };
 
 enum class VMEMSizes : unsigned int {
@@ -41,6 +42,14 @@ enum class LCDIORegs : unsigned int {
     BG3Y_L = 0x3cu,
     BG3Y_H = 0x3eu,
 
+    WIN0H = 0x40u,
+    WIN1H = 0x42u,
+    WIN0V = 0x44u,
+    WIN1V = 0x46u,
+
+    WININ  = 0x48u,
+    WINOUT = 0x4au,
+
     MOSAIC = 0x4cu,
 };
 
@@ -52,6 +61,8 @@ enum class DPSCNTBits : unsigned int {
     DisplayBG2    = 0x0400u,
     DisplayBG3    = 0x0800u,
     DisplayOBJ    = 0x1000u,
+    DisplayWin0   = 0x2000u,
+    DisplayWin1   = 0x4000u,
 };
 
 enum class BGCNTBits : unsigned int {

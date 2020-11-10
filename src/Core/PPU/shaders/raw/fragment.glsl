@@ -2,61 +2,23 @@
 
 #version 430 core
 
-#define attr0 x
-#define attr1 y
-#define attr2 z
-#define attr3 w
-
 in vec2 screenCoord;
 
 out vec4 FragColor;
-
-uniform sampler2D PAL;
-uniform usampler2D IO;
-
 uniform uint ReferenceLine2[++VISIBLE_SCREEN_HEIGHT++];
 uniform uint ReferenceLine3[++VISIBLE_SCREEN_HEIGHT++];
 
 // BG 0 - 3 or 4 for backdrop
 uniform uint BG;
 
-layout (std430, binding = ++VRAMSSBO++) readonly buffer VRAMSSBO
-{
-    uint VRAM[++VRAMSize++ >> 2];
-};
+uint readVRAM8(uint address);
+uint readVRAM16(uint address);
 
-uint readVRAM8(uint address) {
-    uint alignment = address & 3u;
-    uint value = VRAM[address >> 2];
-    value = (value) >> (alignment << 3u);
-    value &= 0xffu;
-    return value;
-}
+uint readVRAM32(uint address);
+uint readIOreg(uint address);
+vec4 readPALentry(uint index);
 
-uint readVRAM16(uint address) {
-    uint alignment = address & 2u;
-    uint value = VRAM[address >> 2];
-    value = (value) >> (alignment << 3u);
-    value &= 0xffffu;
-    return value;
-}
-
-uint readVRAM32(uint address) {
-    return VRAM[address >> 2];
-}
-
-uint readIOreg(uint address) {
-    return texelFetch(
-        IO, ivec2(address >> 1u, uint(screenCoord.y)), 0
-    ).r;
-}
-
-vec4 readPALentry(uint index) {
-    // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:
-    return texelFetch(
-        PAL, ivec2(index, uint(screenCoord.y)), 0
-    );
-}
+uint getWindow(uint x, uint y);
 
 float getDepth(uint BGCNT) {
     return ((2 * float(BGCNT & 3u)) / 8.0) + (float(1 + BG) / 32.0);
@@ -290,6 +252,11 @@ void main() {
 
     uint x = uint(screenCoord.x);
     uint y = uint(screenCoord.y);
+
+    // disabled by window
+    if ((getWindow(x, y) & (1u << BG)) == 0) {
+        discard;
+    }
 
     uint DISPCNT = readIOreg(0);
 

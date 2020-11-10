@@ -13,61 +13,20 @@ flat in uvec4 OBJ;
 flat in uint ObjWidth;
 flat in uint ObjHeight;
 
-uniform sampler2D PAL;
-uniform usampler2D IO;
-uniform isampler1D OAM;
-
 uniform uint YClipStart;
 uniform uint YClipEnd;
-
-layout (std430, binding = ++VRAMSSBO++) readonly buffer VRAMSSBO
-{
-    uint VRAM[++VRAMSize++ >> 2];
-};
-
 out vec4 FragColor;
 out float gl_FragDepth;
 
-/* same stuff as background program: */
+uint readVRAM8(uint address);
+uint readVRAM16(uint address);
+uint readVRAM32(uint address);
 
-uint readVRAM8(uint address) {
-    uint alignment = address & 3u;
-    uint value = VRAM[address >> 2];
-    value = (value) >> (alignment << 3u);
-    value &= 0xffu;
-    return value;
-}
+uint readIOreg(uint address);
+ivec4 readOAMentry(uint index);
+vec4 readPALentry(uint index);
 
-uint readVRAM16(uint address) {
-    uint alignment = address & 2u;
-    uint value = VRAM[address >> 2];
-    value = (value) >> (alignment << 3u);
-    value &= 0xffffu;
-    return value;
-}
-
-uint readVRAM32(uint address) {
-    return VRAM[address >> 2];
-}
-
-uint readIOreg(uint address) {
-    return texelFetch(
-        IO, ivec2(address >> 1u, uint(OnScreenPos.y)), 0
-    ).r;
-}
-
-ivec4 readOAMentry(uint index) {
-    return texelFetch(
-        OAM, int(index), 0
-    );
-}
-
-vec4 readPALentry(uint index) {
-    // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:
-    return texelFetch(
-        PAL, ivec2(index, uint(OnScreenPos.y)), 0
-    );
-}
+uint getWindow(uint x, uint y);
 
 vec4 RegularObject(bool OAM2DMapping) {
     uint TID = OBJ.attr2 & ++ATTR2_TID++;
@@ -76,6 +35,11 @@ vec4 RegularObject(bool OAM2DMapping) {
 
     uint dx = uint(InObjPos.x);
     uint dy = uint(InObjPos.y);
+
+    if ((getWindow(uint(OnScreenPos.x), uint(OnScreenPos.y)) & 0x10u) == 0) {
+        // disabled by window
+        discard;
+    }
 
     // mosaic effect
     if ((OBJ.attr0 & ++ATTR0_MOSAIC++) != 0) {
