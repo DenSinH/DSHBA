@@ -5,9 +5,7 @@
 in vec2 screenCoord;
 
 out uvec4 FragColor;
-
-// BG 1 for BG 0 for obj
-uniform uint BG;
+out float gl_FragDepth;
 
 uint readVRAM8(uint address);
 uint readVRAM16(uint address);
@@ -16,7 +14,6 @@ uint readVRAM32(uint address);
 uint readIOreg(uint address);
 vec4 readPALentry(uint index);
 
-
 void main() {
     uint DISPCNT = readIOreg(++DISPCNT++);
 
@@ -24,11 +21,12 @@ void main() {
         // windows are disabled, enable all windows
         // we should have caught this before rendering, but eh, I guess we'll check again...
         FragColor.x = 0x3f;
+        gl_FragDepth = -1.0;
         return;
     }
 
     uint x = uint(screenCoord.x);
-    uint y = uint(screenCoord.y);
+    uint y = ++VISIBLE_SCREEN_HEIGHT++ - uint(screenCoord.y);
 
     // window 0 has higher priority
     for (uint window = 0; window < 2; window++) {
@@ -68,6 +66,7 @@ void main() {
             if (x >= X1 && x < X2) {
                 // pixel in WININ
                 FragColor.x = WININ;
+                gl_FragDepth = 0.0;
                 return;
             }
         }
@@ -76,12 +75,14 @@ void main() {
             if (x < X2 || x >= X1) {
                 // pixel in WININ
                 FragColor.x = WININ;
+                gl_FragDepth = 0.0;
                 return;
             }
         }
     }
 
     FragColor.x = readIOreg(++WINOUT++) & 0x3fu;  // WINOUT
+    gl_FragDepth = -1.0;
 }
 
 // END WindowFragmentShaderSource

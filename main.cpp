@@ -72,7 +72,7 @@ int main() {
     // gba->Memory.LoadROM("D:/User/Downloads/Legend of Zelda, The - The Minish Cap (USA).gba");
     // gba->Memory.LoadROM("D:/User/Downloads/Pokemon - Ruby Version (USA, Europe) (Rev 2).gba");
     // gba->Memory.LoadROM("D:/User/Downloads/WarioWare, Inc. - Mega Microgame$! (USA).gba");
-    // gba->Memory.LoadROM("D:/User/Downloads/gba-niccc.gba");
+    // gba->Memory.LoadROM("D:/User/Downloads/scdspecial.gba");
     gba->Run();
 
     ui_thread.join();

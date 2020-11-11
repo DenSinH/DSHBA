@@ -1,6 +1,7 @@
-// BEGIN ObjectFragmentShaderSource
-
+// externally added
 #version 430 core
+
+// BEGIN ObjectFragmentShaderSource
 
 #define attr0 x
 #define attr1 y
@@ -15,7 +16,13 @@ flat in uint ObjHeight;
 
 uniform uint YClipStart;
 uniform uint YClipEnd;
-out vec4 FragColor;
+
+#ifndef OBJ_WINDOW
+    out vec4 FragColor;
+#else
+    out uvec4 FragColor;
+#endif
+
 out float gl_FragDepth;
 
 uint readVRAM8(uint address);
@@ -35,11 +42,6 @@ vec4 RegularObject(bool OAM2DMapping) {
 
     uint dx = uint(InObjPos.x);
     uint dy = uint(InObjPos.y);
-
-    if ((getWindow(uint(OnScreenPos.x), uint(OnScreenPos.y)) & 0x10u) == 0) {
-        // disabled by window
-        discard;
-    }
 
     // mosaic effect
     if ((OBJ.attr0 & ++ATTR0_MOSAIC++) != 0) {
@@ -239,21 +241,43 @@ void main() {
         discard;
     }
 
-    uint DISPCNT      = readIOreg(++DISPCNT++);
+    uint DISPCNT = readIOreg(++DISPCNT++);
+#ifndef OBJ_WINDOW
     if ((DISPCNT & ++DisplayOBJ++) == 0) {
         // objects disabled in this scanline
         discard;
     }
+    if ((getWindow(uint(OnScreenPos.x), uint(OnScreenPos.y)) & 0x10u) == 0) {
+        // disabled by window
+        discard;
+    }
+#else
+    if ((DISPCNT & ++DisplayWinObj++) == 0) {
+        // object window disabled in this scanline
+        discard;
+    }
+#endif
 
     bool OAM2DMapping = (DISPCNT & (++OAM2DMap++)) != 0;
 
+    vec4 Color;
     if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_REG++) {
-        FragColor = RegularObject(OAM2DMapping);
+        Color = RegularObject(OAM2DMapping);
     }
     else{
-        FragColor = AffineObject(OAM2DMapping);
+        Color = AffineObject(OAM2DMapping);
     }
+
+#ifndef OBJ_WINDOW
+    FragColor = Color;
     // FragColor = vec4(InObjPos.x / float(ObjWidth), InObjPos.y / float(ObjHeight), 1, 1);
+#else
+    // RegularObject/AffineObject will only return if it is nontransparent
+    uint WINOBJ = (readIOreg(++WINOUT++) >> 8) & 0x3fu;
+
+    FragColor.r = WINOBJ;
+    gl_FragDepth = -0.5;  // between WIN1 and WINOUT
+#endif
 }
 
 // END ObjectFragmentShaderSource

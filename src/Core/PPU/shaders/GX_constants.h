@@ -63,6 +63,7 @@ enum class DPSCNTBits : unsigned int {
     DisplayOBJ    = 0x1000u,
     DisplayWin0   = 0x2000u,
     DisplayWin1   = 0x4000u,
+    DisplayWinObj = 0x8000u,
 };
 
 enum class BGCNTBits : unsigned int {

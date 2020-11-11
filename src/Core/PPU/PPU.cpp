@@ -11,6 +11,8 @@
 #include "log.h"
 #include "const.h"
 
+const char* glsl_version = "#version 430 core\n";
+
 #define INTERNAL_FRAMEBUFFER_WIDTH 480
 #define INTERNAL_FRAMEBUFFER_HEIGHT 320
 
@@ -244,13 +246,15 @@ void GBAPPU::InitObjProgram() {
     vertexShader = glCreateShader(GL_VERTEX_SHADER);
 
     // compile it
-    glShaderSource(vertexShader, 1, &ObjectVertexShaderSource, nullptr);
+    const char* vtx_sources[3] = {glsl_version, "#undef OBJ_WINDOW\n", ObjectVertexShaderSource};
+    glShaderSource(vertexShader, 3, vtx_sources, nullptr);
     glCompileShader(vertexShader);
     CompileShader(vertexShader, "ObjectVertexShader");
 
     // create and compile fragmentshaders
     fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &ObjectFragmentShaderSource, nullptr);
+    const char* frag_sources[3] = {glsl_version, "#undef OBJ_WINDOW\n", ObjectFragmentShaderSource};
+    glShaderSource(fragmentShader, 3, frag_sources, nullptr);
     CompileShader(fragmentShader, "ObjectFragmentShader");
 
     fragmentHelpers = glCreateShader(GL_FRAGMENT_SHADER);
@@ -269,15 +273,15 @@ void GBAPPU::InitObjProgram() {
     glDeleteShader(fragmentHelpers);
 }
 
-void GBAPPU::InitWinProgram() {
+void GBAPPU::InitWinBGProgram() {
     GLuint vertexShader;
     GLuint fragmentShader, fragmentHelpers;
 
     // create shader
     vertexShader = glCreateShader(GL_VERTEX_SHADER);
 
-    // compile it
-    glShaderSource(vertexShader, 1, &WindowVertexShaderSource, nullptr);
+    // same vertex shader as BGProgram
+    glShaderSource(vertexShader, 1, &VertexShaderSource, nullptr);
     glCompileShader(vertexShader);
     CompileShader(vertexShader, "WindowVertexShader");
 
@@ -291,11 +295,45 @@ void GBAPPU::InitWinProgram() {
     CompileShader(fragmentHelpers, "WindowFragmentHelper");
 
     // create program object
-    WinProgram = glCreateProgram();
-    glAttachShader(WinProgram, vertexShader);
-    glAttachShader(WinProgram, fragmentShader);
-    glAttachShader(WinProgram, fragmentHelpers);
-    LinkProgram(WinProgram);
+    WinBGProgram = glCreateProgram();
+    glAttachShader(WinBGProgram, vertexShader);
+    glAttachShader(WinBGProgram, fragmentShader);
+    glAttachShader(WinBGProgram, fragmentHelpers);
+    LinkProgram(WinBGProgram);
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+    glDeleteShader(fragmentHelpers);
+}
+
+void GBAPPU::InitWinObjProgram() {
+    GLuint vertexShader;
+    GLuint fragmentShader, fragmentHelpers;
+
+    vertexShader = glCreateShader(GL_VERTEX_SHADER);
+
+    // compile it
+    const char* vtx_sources[3] = {glsl_version, "#define OBJ_WINDOW\n", ObjectVertexShaderSource};
+    glShaderSource(vertexShader, 3, vtx_sources, nullptr);
+    glCompileShader(vertexShader);
+    CompileShader(vertexShader, "WinObjectVertexShader");
+
+    // create and compile fragmentshaders
+    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    const char* frag_sources[3] = {glsl_version, "#define OBJ_WINDOW\n", ObjectFragmentShaderSource};
+    glShaderSource(fragmentShader, 3, frag_sources, nullptr);
+    CompileShader(fragmentShader, "WinObjectFragmentShader");
+
+    fragmentHelpers = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentHelpers, 1, &FragmentHelperSource, nullptr);
+    CompileShader(fragmentHelpers, "WinObjectFragmentHelper");
+
+    // create program object
+    WinObjProgram = glCreateProgram();
+    glAttachShader(WinObjProgram, vertexShader);
+    glAttachShader(WinObjProgram, fragmentShader);
+    glAttachShader(WinObjProgram, fragmentHelpers);
+    LinkProgram(WinObjProgram);
 
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
@@ -432,10 +470,10 @@ void GBAPPU::InitObjBuffers() {
     log_debug("OpenGL error after Obj initialization: %x", glGetError());
 }
 
-void GBAPPU::InitWinBuffers() {
+void GBAPPU::InitWinBGBuffers() {
     // BG buffers are already initialized, so we just need to initialize the actual Obj buffers
-    glGenVertexArrays(1, &WinVAO);
-    glBindVertexArray(WinVAO);
+    glGenVertexArrays(1, &WinBGVAO);
+    glBindVertexArray(WinBGVAO);
 
     // use same buffer for object in object window and BG buffer
     glBindBuffer(GL_ARRAY_BUFFER, BGVBO);
@@ -443,30 +481,64 @@ void GBAPPU::InitWinBuffers() {
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
-    glBindTexture(GL_TEXTURE_1D, OAMTexture);
-    WinOAMLocation = glGetUniformLocation(WinProgram, "OAM");
-
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
-    WinIOLocation = glGetUniformLocation(WinProgram, "IO");
+    WinBGIOLocation = glGetUniformLocation(WinBGProgram, "IO");
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
-
-    glUseProgram(WinProgram);
-    glUniform1i(WinIOLocation, static_cast<u32>(BufferBindings::LCDIO));
-    glUniform1i(WinOAMLocation, static_cast<u32>(BufferBindings::OAM));
-
-    WinYClipStartLocation = glGetUniformLocation(WinProgram, "YClipStart");
-    WinYClipEndLocation   = glGetUniformLocation(WinProgram, "YClipEnd");
-    WinBGLocation         = glGetUniformLocation(WinProgram, "BG");
+    glUseProgram(WinBGProgram);
+    glUniform1i(WinBGIOLocation, static_cast<u32>(BufferBindings::LCDIO));
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    log_debug("OpenGL error after Win initialization: %x", glGetError());
+    log_debug("OpenGL error after Win BG initialization: %x", glGetError());
+}
+
+void GBAPPU::InitWinObjBuffers() {
+    // BG/window buffers are already initialized, so we just need to initialize the actual Obj buffers
+    glGenVertexArrays(1, &WinObjVAO);
+    glBindVertexArray(WinObjVAO);
+
+    // use same buffers as Object program
+    glBindBuffer(GL_ARRAY_BUFFER, ObjVBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ObjEBO);
+
+    glVertexAttribIPointer(0, 4, GL_UNSIGNED_SHORT, sizeof(u64), (void*)0);  // OBJ attributes
+    glEnableVertexAttribArray(0);
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
+    glGenTextures(1, &OAMTexture);
+    glBindTexture(GL_TEXTURE_1D, OAMTexture);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    // dimensions need to be a power of 2. Since VISIBLE_SCREEN_HEIGHT is not, we have to pick the next highest one
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA16I, sizeof(OAMMEM) >> 3, 0, GL_RGBA_INTEGER,
+                 GL_SHORT, nullptr);
+
+    WinObjOAMLocation = glGetUniformLocation(ObjProgram, "OAM");
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
+    glBindTexture(GL_TEXTURE_2D, IOTexture);
+    WinObjIOLocation = glGetUniformLocation(WinObjProgram, "IO");
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
+
+    glUseProgram(WinObjProgram);
+    glUniform1i(WinObjIOLocation, static_cast<u32>(BufferBindings::LCDIO));
+    glUniform1i(WinObjOAMLocation, static_cast<u32>(BufferBindings::OAM));
+
+    WinObjYClipStartLocation = glGetUniformLocation(WinObjProgram, "YClipStart");
+    WinObjYClipEndLocation   = glGetUniformLocation(WinObjProgram, "YClipEnd");
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    log_debug("OpenGL error after Win Obj initialization: %x", glGetError());
 }
 
 void GBAPPU::VideoInit() {
@@ -475,12 +547,14 @@ void GBAPPU::VideoInit() {
 
     InitBGProgram();
     InitObjProgram();
-    InitWinProgram();
+    InitWinBGProgram();
+    InitWinObjProgram();
     log_debug("OpenGL error after program initialization: %x", glGetError());
 
     InitBGBuffers();
     InitObjBuffers();
-    InitWinBuffers();
+    InitWinBGBuffers();
+    InitWinObjBuffers();
 
     glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
     glEnable(GL_DEPTH_TEST);
@@ -489,21 +563,104 @@ void GBAPPU::VideoInit() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void GBAPPU::DrawBGWindow() {
-    u32 DrawFrame = BufferFrame ^ 1;
+void GBAPPU::DrawBGWindow(int win_start, int win_end) {
+    glUseProgram(WinBGProgram);
+    glBindVertexArray(WinBGVAO);
 
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
+    glBindTexture(GL_TEXTURE_2D, IOTexture);
+
+    glBindBuffer(GL_ARRAY_BUFFER, BGVBO);
+    const float quad[8] = {
+            -1.0, (float)win_start,  // top left
+             1.0, (float)win_start,  // top right
+             1.0, (float)win_end,    // bottom right
+            -1.0, (float)win_end,    // bottom left
+    };
+    glBufferSubData(GL_ARRAY_BUFFER, 0, 8 * sizeof(float), quad);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+    glUseProgram(0);
+}
+
+void GBAPPU::DrawObjWindow(int win_start, int win_end) {
+    glUseProgram(WinObjProgram);
+    glBindVertexArray(WinObjVAO);
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
+    glBindTexture(GL_TEXTURE_2D, IOTexture);
+
+    glBindBuffer(GL_ARRAY_BUFFER, ObjVBO);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ObjEBO);
+    glEnable(GL_PRIMITIVE_RESTART);
+    glPrimitiveRestartIndex(0xffff);
+
+    size_t scanline = 0;
+    do {
+        u32 batch_size = ScanlineOAMBatchSizes[BufferFrame ^ 1][scanline];
+
+        if (scanline < win_start) {
+            scanline += batch_size;
+        }
+        else if (scanline > win_end) {
+            break;
+        }
+
+        BufferObjects<true>(BufferFrame ^ 1, scanline, batch_size);
+        if (!NumberOfObjVerts) {
+            scanline += batch_size;
+            continue;
+        }
+
+        // bind and buffer OAM texture
+        glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
+        glBindTexture(GL_TEXTURE_1D, OAMTexture);
+        glTexSubImage1D(GL_TEXTURE_1D, 0, 0, sizeof(OAMMEM) >> 3,
+                        GL_RGBA_INTEGER, GL_SHORT, OAMBuffer[BufferFrame ^ 1][scanline]);
+
+        glUniform1ui(WinObjYClipStartLocation, scanline);
+        glUniform1ui(WinObjYClipEndLocation, scanline + batch_size);
+
+        glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttrBuffer, GL_STATIC_DRAW);
+        // * 5 for the restartindex
+        glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
+
+        log_ppu("%d objects enabled in lines %d - %d of object window", NumberOfObjVerts >> 2, scanline, scanline + batch_size);
+
+        scanline += batch_size;
+
+        log_ppu("%d Object window scanlines batched (accum %d)", batch_size, scanline);
+        // should actually be !=, but just to be sure we don't ever get stuck
+    } while (scanline < VISIBLE_SCREEN_HEIGHT);
+
+    glDisable(GL_PRIMITIVE_RESTART);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_1D, 0);
+    glBindVertexArray(0);
+    glUseProgram(0);
+}
+
+void GBAPPU::DrawWindows() {
     // scanlines in which window is enabled first and last
     int win_start = -1;
     for (int line = 0; line < VISIBLE_SCREEN_HEIGHT; line++) {
-        if (LCDIOBuffer[DrawFrame][line][1] & 0xe0) {
+        if (LCDIOBuffer[BufferFrame ^ 1][line][1] & 0xe0) {
             // top 3 bits of DISPCNT nonzero
             win_start = line;
             break;
         }
     }
 
+    // render BG and object window
     glBindFramebuffer(GL_FRAMEBUFFER, WinFramebuffer);
     glViewport(0, 0, VISIBLE_SCREEN_WIDTH, VISIBLE_SCREEN_HEIGHT);
+
     // window is never enabled
     if (win_start < 0) {
         log_ppu("Window not enabled in frame");
@@ -513,7 +670,7 @@ void GBAPPU::DrawBGWindow() {
     else {
         int win_end = -1;
         for (int line = VISIBLE_SCREEN_HEIGHT - 1; line >= win_start; line--) {
-            if (LCDIOBuffer[DrawFrame][line][1] & 0xe0) {
+            if (LCDIOBuffer[BufferFrame ^ 1][line][1] & 0xe0) {
                 // top 3 bits of DISPCNT nonzero
                 win_end = line;
                 break;
@@ -521,28 +678,10 @@ void GBAPPU::DrawBGWindow() {
         }
 
         log_ppu("Window enabled from %d to %d", win_start, win_end);
-        glUseProgram(WinProgram);
-        glBindVertexArray(WinVAO);
-
-        glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
-        glBindTexture(GL_TEXTURE_2D, IOTexture);
-
-        glBindBuffer(GL_ARRAY_BUFFER, BGVBO);
-        const float quad[8] = {
-                -1.0, (float)win_start,  // top left
-                 1.0, (float)win_start,  // top right
-                 1.0, (float)win_end,    // bottom right
-                -1.0, (float)win_end,    // bottom left
-        };
-        glBufferSubData(GL_ARRAY_BUFFER, 0, 8 * sizeof(float), quad);
-
-        glUniform1ui(WinBGLocation, 1);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
+        DrawBGWindow(win_start, win_end);
+        DrawObjWindow(win_start, win_end);
     }
-
-    // use normal framebuffer again
-    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
-    glViewport(0, 0, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
@@ -594,8 +733,6 @@ void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
 }
 
 void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
-
-    // first render window, then render background
     s_UpdateRange range;
 #ifndef FULL_VRAM_BUFFER
     range = VRAMRanges[BufferFrame ^ 1][scanline];
@@ -659,15 +796,6 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
 }
 
 struct s_framebuffer GBAPPU::Render() {
-
-    // draw command is already ready to be drawn, or is ready withing the specified timeout
-    // bind our framebuffer
-    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
-    glViewport(0, 0, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT);
-
-    glClearColor(0, 0, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     DrawMutex.lock();
     // buffer PAL texture
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
@@ -683,8 +811,14 @@ struct s_framebuffer GBAPPU::Render() {
                     GL_RED_INTEGER, GL_UNSIGNED_SHORT, LCDIOBuffer[BufferFrame ^ 1]);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    // render BG window
-    DrawBGWindow();
+    DrawWindows();
+
+    // use normal framebuffer again
+    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
+    glViewport(0, 0, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT);
+
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // buffer reference points for affine backgrounds
     glUniform1uiv(ReferenceLine2Location, VISIBLE_SCREEN_HEIGHT, ReferenceLine2Buffer[BufferFrame ^ 1]);

@@ -53,14 +53,15 @@ private:
     std::mutex DrawMutex = std::mutex();
 
     // programs for each draw program
-    GLuint WinProgram;
-    GLuint WinVAO;
+    GLuint WinBGProgram, WinObjProgram;
+    GLuint WinBGVAO, WinObjVAO;
     GLuint WinFramebuffer;
     GLuint WinTexture, WinDepthBuffer;
-    GLuint WinIOLocation;
-    GLuint WinOAMLocation;
-    GLuint WinBGLocation;
-    GLuint WinYClipStartLocation, WinYClipEndLocation;
+
+    GLuint WinBGIOLocation, WinObjIOLocation;
+    GLuint WinObjOAMLocation;
+
+    GLuint WinObjYClipStartLocation, WinObjYClipEndLocation;
 
     GLuint BGProgram;
     GLuint Framebuffer;
@@ -115,15 +116,19 @@ private:
     void InitFramebuffers();
     void InitBGProgram();
     void InitObjProgram();
-    void InitWinProgram();
+    void InitWinBGProgram();
+    void InitWinObjProgram();
     void InitBGBuffers();
     void InitObjBuffers();
-    void InitWinBuffers();
+    void InitWinBGBuffers();
+    void InitWinObjBuffers();
 
     template<bool ObjWindow>
     void BufferObjects(u32 buffer, i32 scanline, i32 batch_size);
 
-    void DrawBGWindow();
+    void DrawWindows();
+    void DrawBGWindow(int win_start, int win_end);
+    void DrawObjWindow(int win_start, int win_end);
     void DrawScanlines(u32 scanline, u32 amount);
     void DrawObjects(u32 scanline, u32 amount);
 };
@@ -148,8 +153,10 @@ void GBAPPU::BufferObjects(u32 buffer, i32 scanline, i32 batch_size) {
             }
         }
         else {
-            // todo
-            break;
+            if ((OAMBuffer[buffer][scanline][i + 1] & 0x0c) != 0x08) {
+                // not part of object window, dont buffer now
+                continue;
+            }
         }
 
         y = OAMBuffer[buffer][scanline][i];
