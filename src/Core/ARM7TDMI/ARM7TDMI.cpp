@@ -129,6 +129,11 @@ SCHEDULER_EVENT(ARM7TDMI::InterruptPollEvent) {
         if (cpu->IME && !(cpu->CPSR & static_cast<u32>(CPSRFlags::I))) {
             log_cpu("Interrupt!");
             // actually do interrupt
+            if (cpu->CPSR & static_cast<u32>(CPSRFlags::T)) {
+                // THUMB mode, flush NZ flags
+                cpu->FlushNZ();
+            }
+
             cpu->SPSRBank[static_cast<u8>(Mode::IRQ) & 0xf] = cpu->CPSR;
             cpu->ChangeMode(Mode::IRQ);
             cpu->CPSR |= static_cast<u32>(CPSRFlags::I);
@@ -140,9 +145,8 @@ SCHEDULER_EVENT(ARM7TDMI::InterruptPollEvent) {
             cpu->lr = cpu->pc - ((cpu->CPSR & static_cast<u32>(CPSRFlags::T)) ? 0 : 4);
 
             if (cpu->CPSR & static_cast<u32>(CPSRFlags::T)) {
-                // THUMB mode, enter ARM mode, reflush NZ flags
+                // THUMB mode, enter ARM mode, flush NZ flags
                 cpu->CPSR &= ~static_cast<u32>(CPSRFlags::T);
-                cpu->SetNZ(cpu->LastNZ);
             }
 
             cpu->pc = static_cast<u32>(ExceptionVector::IRQ);

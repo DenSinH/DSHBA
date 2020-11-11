@@ -126,7 +126,7 @@ private:
 
     ALWAYS_INLINE void FlushNZ() {
         if (unlikely(LastNZ & 0x1'0000'0000)) {
-            // value wasn't affected in THUMB mode
+            // value wasn't affected in THUMB mode, has to have been NZ
             CPSR |= static_cast<u32>(CPSRFlags::N) | static_cast<u32>(CPSRFlags::Z);
         }
         else {

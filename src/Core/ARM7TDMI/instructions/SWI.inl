@@ -16,6 +16,11 @@ template<typename T>
 void SWI(T instruction) {
     log_cpu_verbose("SWI %x", instruction);
 
+    if constexpr(std::is_same_v<T, u16>) {
+        // recalculate NZ flags in THUMB mode
+        SetNZ(LastNZ);
+    }
+
     SPSRBank[static_cast<u32>(Mode::Supervisor) & 0xf] = CPSR;
     ChangeMode(Mode::Supervisor);
     CPSR |= static_cast<u32>(CPSRFlags::I);
@@ -30,9 +35,6 @@ void SWI(T instruction) {
     }
     else {
         // THUMB mode
-
-        // recalculate NZ flags
-        SetNZ(LastNZ);
 
         lr = pc - 2;
         // enter ARM mode
