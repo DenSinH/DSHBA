@@ -165,7 +165,8 @@ private:
      * it won't do anything when written to then.
      * */
     static constexpr auto WriteCallback = [] {
-        std::array<IOWriteCallback, (0x400 >> 1)> table = {nullptr};
+        std::array<IOWriteCallback, (0x400 >> 1)> table = {};
+
         table[static_cast<u32>(IORegister::DISPSTAT) >> 1]  = &MMIO::WriteDISPSTAT;
 
         table[static_cast<u32>(IORegister::BG2X) >> 1] = &MMIO::WriteReferencePoint<true>;
@@ -206,7 +207,8 @@ private:
     }();
 
     static constexpr auto ReadPrecall = [] {
-        std::array<IOReadPrecall, (0x400 >> 1)> table = {nullptr};
+        std::array<IOReadPrecall, (0x400 >> 1)> table = {};
+
         table[static_cast<u32>(IORegister::DISPSTAT) >> 1] = &MMIO::ReadDISPSTAT;
         table[static_cast<u32>(IORegister::VCOUNT)   >> 1] = &MMIO::ReadVCount;
 
