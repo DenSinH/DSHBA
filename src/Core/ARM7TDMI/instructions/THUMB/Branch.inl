@@ -14,6 +14,7 @@ class ARM7TDMI_INL : ARM7TDMI {
 
 template<u8 cond>
 void ConditionalBranch(u16 instruction) {
+    FlushNZ();  // calculate NZ flags
     if (CheckCondition(cond)) {
         i32 offset = (i32)((i8)((u8)instruction)) << 1;
 

@@ -30,6 +30,10 @@ void SWI(T instruction) {
     }
     else {
         // THUMB mode
+
+        // recalculate NZ flags
+        SetNZ(LastNZ);
+
         lr = pc - 2;
         // enter ARM mode
         CPSR &= ~static_cast<u32>(CPSRFlags::T);

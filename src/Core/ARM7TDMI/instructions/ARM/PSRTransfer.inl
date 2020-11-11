@@ -70,6 +70,11 @@ void MSR(u32 instruction) {
             ChangeMode(static_cast<Mode>(operand & static_cast<u32>(CPSRFlags::Mode)));
         }
         CPSR = (CPSR & ~mask[flags]) | (operand & mask[flags]);
+        if (CPSR & static_cast<u32>(CPSRFlags::T)) {
+            // entered THUMB mode, correct pc and reload LastNZ
+            pc -= 2;
+            SetLastNZ();
+        }
 
         // I flag might have been set
         ScheduleInterruptPoll();

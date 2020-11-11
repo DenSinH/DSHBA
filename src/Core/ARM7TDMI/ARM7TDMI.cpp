@@ -138,7 +138,12 @@ SCHEDULER_EVENT(ARM7TDMI::InterruptPollEvent) {
             // address of instruction that did not get executed + 4
             // in THUMB mode, we are 4 bytes ahead, in ARM mode, we are 8 bytes ahead
             cpu->lr = cpu->pc - ((cpu->CPSR & static_cast<u32>(CPSRFlags::T)) ? 0 : 4);
-            cpu->CPSR &= ~static_cast<u32>(CPSRFlags::T);  // enter ARM mode
+
+            if (cpu->CPSR & static_cast<u32>(CPSRFlags::T)) {
+                // THUMB mode, enter ARM mode, reflush NZ flags
+                cpu->CPSR &= ~static_cast<u32>(CPSRFlags::T);
+                cpu->SetNZ(cpu->LastNZ);
+            }
 
             cpu->pc = static_cast<u32>(ExceptionVector::IRQ);
             cpu->FakePipelineFlush();

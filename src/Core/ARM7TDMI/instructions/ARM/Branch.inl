@@ -19,6 +19,7 @@ void BranchExchange(u32 instruction) {
     log_cpu_verbose("BX r%d (-> %x, %s state)", rn, target, (CPSR & static_cast<u32>(CPSRFlags::T)) ? "THUMB" : "ARM");
 
     if (!(target & 1)) {
+        // enter ARM mode
 #ifdef BASIC_IDLE_DETECTION
         u32 instruction_address = pc - 8;
 #endif
@@ -26,6 +27,9 @@ void BranchExchange(u32 instruction) {
         FakePipelineFlush();
 
         if (was_thumb) {
+            // reflush NZ
+            FlushNZ();
+
             // correct for adding 2 after instruction because we were in THUMB mode
             pc += 2;
         }
@@ -37,6 +41,7 @@ void BranchExchange(u32 instruction) {
 #endif
     }
     else {
+        // enter THUMB mode
 #ifdef BASIC_IDLE_DETECTION
         u32 instruction_address = pc - 4;
 #endif
@@ -46,6 +51,9 @@ void BranchExchange(u32 instruction) {
         if (!was_thumb) {
             // correct for adding 4 after instruction because we were in ARM mode
             pc -= 2;
+
+            // set default NZ values
+            SetLastNZ();
         }
 #ifdef BASIC_IDLE_DETECTION
         else if (unlikely(target == instruction_address)) {

@@ -144,7 +144,7 @@ void ALUOperations(u16 instruction) {
             log_fatal("Invalid opcode for ALU operations: %x", op);
     }
 
-    SetNZ(result);
+    LastNZ = result;
 }
 
 template<bool I, bool Op, u8 RnOff3>
@@ -171,7 +171,7 @@ void AddSubtract(u16 instruction) {
         Registers[rd] = adds_cv(Registers[rs], operand);
     }
 
-    SetNZ(Registers[rd]);
+    LastNZ = Registers[rd];
 
     if constexpr(I) {
         // internal cycle
@@ -216,7 +216,7 @@ void HiRegOps_BX(u16 instruction) {
             return;
         case HiRegOp::CMP:
             // only opcode that sets condition codes in this category
-            SetNZ(subs_cv(Rd, Rs));
+            LastNZ = subs_cv(Rd, Rs);
             return;
         case HiRegOp::MOV:
             Registers[rd] = Rs;
@@ -246,7 +246,7 @@ void MoveShifted(u16 instruction) {
 
     // fake an immediate shifted data processing operation
     Registers[rd] = ShiftByImmediate<true, Op>(Rs, Offs5);
-    SetNZ(Registers[rd]);
+    LastNZ = Registers[rd];
 
     // internal cycle
     timer++;
@@ -274,7 +274,7 @@ void ALUImmediate(u16 instruction) {
             Registers[rd] = result;
             break;
     }
-    SetNZ(result);
+    LastNZ = result;
 
     // internal cycle
     timer++;

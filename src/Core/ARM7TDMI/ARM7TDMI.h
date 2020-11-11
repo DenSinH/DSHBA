@@ -104,6 +104,36 @@ private:
     u32 FIQBank[2][5]   = {};  // store user mode registers into 0, FIQ registers into 1
     u32 Registers[16]   = {};
 
+    // used to reduce the amount of times we need to set the NZ flags in THUMB mode
+    // basically, we only need to update them when transitioning back to ARM or on conditional branches
+    /*
+     * Transitions back to ARM:
+     *  - IRQ
+     *  - SWI
+     *  - BX
+     * */
+    u64 LastNZ;
+    static constexpr const u64 NZDefault[4] {
+        /* ~N, ~Z */ 1,
+        /* ~N, Z */  0,
+        /* N, ~Z */  0x8000'0000,
+        /* N, Z */   0x1'0000'0000,  // impossible to encode in these bits
+    };
+
+    ALWAYS_INLINE void SetLastNZ() {
+        LastNZ = NZDefault[CPSR >> 30];
+    }
+
+    ALWAYS_INLINE void FlushNZ() {
+        if (unlikely(LastNZ & 0x1'0000'0000)) {
+            // value wasn't affected in THUMB mode
+            CPSR |= static_cast<u32>(CPSRFlags::N) | static_cast<u32>(CPSRFlags::Z);
+        }
+        else {
+            SetNZ(LastNZ);
+        }
+    }
+
     // Manipulated by MMIO
     // the CPU should be able to check for interrupts on its own though, so we need to keep these in here
     // mostly, interrupts will be raised through MMIO

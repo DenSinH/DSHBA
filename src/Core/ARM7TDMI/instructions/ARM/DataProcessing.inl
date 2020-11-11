@@ -373,20 +373,14 @@ void DataProcessing(u32 instruction) {
             // SPSR transfer
             // ChangeMode banks the SPSR, so we have to store SPSR and then transfer it
             u32 spsr = SPSR;
-            u32 old_T = (CPSR & static_cast<u32>(CPSRFlags::T));
 
             ChangeMode(static_cast<Mode>(SPSR & static_cast<u32>(CPSRFlags::Mode)));
             CPSR = spsr;
 
-            if (old_T ^ (CPSR & static_cast<u32>(CPSRFlags::T))) {
-                // mode change
-                if (old_T) {
-                    // was THUMB
-                    pc += 2;  // we add 2 after instruction, should be 4
-                }
-                else {
-                    pc -= 2;  // we add 4 after instruction, should be 2
-                }
+            if (CPSR & static_cast<u32>(CPSRFlags::T)) {
+                // mode change, DP is an ARM instruction, so we were in ARM mode
+                pc -= 2;  // we add 4 after instruction, should be 2
+                SetLastNZ();
             }
         }
         FakePipelineFlush();

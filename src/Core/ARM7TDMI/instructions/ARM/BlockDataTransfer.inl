@@ -27,10 +27,13 @@ void BlockDataTransfer(u32 instruction) {
         log_cpu_verbose("STM%c%c r%d%c {%x}", U ? 'I' : 'D', P ? 'B' : 'A', rn, W ? '!' : ' ', register_list);
     }
 
-    Mode old_mode = static_cast<Mode>(CPSR & static_cast<u32>(CPSRFlags::Mode));
+    Mode old_mode;
     if constexpr(S) {
-        // PSR & force user
-        ChangeMode(Mode::User);
+        if (!L || likely(!(register_list & (1 << 15)))) {
+            old_mode = static_cast<Mode>(CPSR & static_cast<u32>(CPSRFlags::Mode));
+            // force user
+            ChangeMode(Mode::User);
+        }
     }
 
     if (unlikely(!register_list)) {
@@ -131,10 +134,11 @@ void BlockDataTransfer(u32 instruction) {
         }
 
         if (unlikely(register_list & (1 << 15))) {
-            if constexpr(L) {
+            if constexpr(L && !S) {
+                // the L && S case is checked below
                 FakePipelineFlush();
             }
-            else {
+            else if (!L){
                 // we wrote the value of PC + 8, while it should be + 12, so we correct for that now
                 // in case of post-indexing, we need to subtract 4 again because we added this in the end
                 Memory->Mem::Write<u32, true, true>(address - (!(P ^ !U) ? 4 : 0), pc + 4);
@@ -143,8 +147,21 @@ void BlockDataTransfer(u32 instruction) {
     }
 
     if constexpr(S) {
-        // PSR & force user
-        ChangeMode(old_mode);
+        if (!L || likely(!(register_list & (1 << 15)))) {
+            // force user
+            ChangeMode(old_mode);
+        }
+        else {
+            // PSR
+            CPSR = SPSR;
+            if (CPSR & static_cast<u32>(CPSRFlags::T)) {
+                // change into THUMB mode
+                pc -= 2;  // pipeline correction
+                SetLastNZ();
+
+                FakePipelineFlush();
+            }
+        }
     }
 
     if constexpr(L) {
