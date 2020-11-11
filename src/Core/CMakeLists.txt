@@ -3,8 +3,6 @@ add_library(Core STATIC
         system.cpp
         Breakpoints/breakpoints.h
         Breakpoints/breakpoints.c
-        Scheduler/scheduler.cpp
-        Scheduler/scheduler_impl.h
         Scheduler/scheduler.h
         CoreUtils.cpp
         include/CoreUtils.h

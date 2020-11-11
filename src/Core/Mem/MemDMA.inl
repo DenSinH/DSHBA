@@ -29,7 +29,7 @@ void Mem::FastDMA(s_DMAData* DMA) {
         // intermittent memcpy
         u32 units_left = length;
         while (units_left != 0) {
-            u16 accesses_until_next_event = (peek_event(Scheduler) / cycles_per_access) + 1; // + 1 to get over the limit
+            u16 accesses_until_next_event = (Scheduler->PeekEvent() / cycles_per_access) + 1; // + 1 to get over the limit
             accesses_until_next_event = MIN(units_left, accesses_until_next_event);
 
             log_dma("DMAing chunk of length %x", accesses_until_next_event);
@@ -39,7 +39,7 @@ void Mem::FastDMA(s_DMAData* DMA) {
                     accesses_until_next_event * sizeof(T)
             );
             (*timer) += accesses_until_next_event * cycles_per_access;
-            do_events(Scheduler);
+            Scheduler->DoEvents();
 
             units_left -= accesses_until_next_event;
             dest += accesses_until_next_event * sizeof(T);
@@ -94,7 +94,7 @@ void Mem::MediumDMA(s_DMAData* DMA) {
         // intermittent memcpy
         u32 units_left = length;
         while (units_left != 0) {
-            u16 accesses_until_next_event = (peek_event(Scheduler) / cycles_per_access) + 1; // + 1 to get over the limit
+            u16 accesses_until_next_event = (Scheduler->PeekEvent() / cycles_per_access) + 1; // + 1 to get over the limit
             accesses_until_next_event = MIN(units_left, accesses_until_next_event);
 
             log_dma("DMAing chunk of length %x", accesses_until_next_event);
@@ -105,7 +105,7 @@ void Mem::MediumDMA(s_DMAData* DMA) {
                 src  += delta_sad;
             }
             (*timer) += accesses_until_next_event * cycles_per_access;
-            do_events(Scheduler);
+            Scheduler->DoEvents();
 
             units_left -= accesses_until_next_event;
         }
@@ -146,8 +146,8 @@ void Mem::SlowDMA(s_DMAData* DMA) {
         Write<T, true, false>(dad, Read<T, true>(sad));
 
         if constexpr(intermittent_events) {
-            if (unlikely(should_do_events(Scheduler))) {
-                do_events(Scheduler);
+            if (unlikely(Scheduler->ShouldDoEvents())) {
+                Scheduler->DoEvents();
             }
         }
 

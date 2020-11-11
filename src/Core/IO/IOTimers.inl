@@ -8,7 +8,7 @@ template<u8 x> void MMIO::OverflowTimer() {
     ASSUME(x < 4);
 
     Timers[x].Counter = Timers[x].Register.CNT_L;  // reload counter
-    Timers[x].TriggerTime = get_time(Scheduler);  // reset triggertime
+    Timers[x].TriggerTime = *Scheduler->timer;  // reset triggertime
 
     if constexpr(x < 3) {
         // tick next timer if in count-up mode
@@ -31,10 +31,10 @@ template<u8 x> void MMIO::OverflowTimer() {
     if (x == 0 || !(Timers[x].Register.CNT_H & static_cast<u16>(TMCNT_HFlags::CountUp))) {
         if (likely(!Timers[x].Overflow.active)) {
             Timers[x].Overflow.time += (0x10000 - Timers[x].Register.CNT_L) << Timers[x].PrescalerShift;
-            add_event(Scheduler, &Timers[x].Overflow);
+            Scheduler->AddEvent(&Timers[x].Overflow);
         }
         else {
-            reschedule_event(Scheduler, &Timers[x].Overflow,
+            Scheduler->RescheduleEvent(&Timers[x].Overflow,
                              Timers[x].Overflow.time + ((0x10000 - Timers[x].Register.CNT_L) << Timers[x].PrescalerShift));
         }
     }
@@ -59,12 +59,12 @@ template<u8 x> WRITE_CALLBACK(MMIO::WriteTMxCNT_L) {
 template<u8 x> READ_PRECALL(MMIO::ReadTMxCNT_L) {
     if constexpr (x == 0) {
         // always direct
-        Timers[x].FlushDirect(get_time(Scheduler));
+        Timers[x].FlushDirect(*Scheduler->timer);
     }
     else {
         // maybe count-up
         if (!(Timers[x].Register.CNT_H & static_cast<u16>(TMCNT_HFlags::CountUp))) {
-            Timers[x].FlushDirect(get_time(Scheduler));
+            Timers[x].FlushDirect(*Scheduler->timer);
         }
     }
     return (u16)Timers[x].Counter;
@@ -82,12 +82,12 @@ template<u8 x> WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
         // flush timer
         if constexpr (x == 0) {
             // always direct
-            Timers[x].FlushDirect(get_time(Scheduler));
+            Timers[x].FlushDirect(*Scheduler->timer);
         }
         else {
             // maybe count-up
             if (!(Timers[x].Register.CNT_H & static_cast<u16>(TMCNT_HFlags::CountUp))) {
-                Timers[x].FlushDirect(get_time(Scheduler));
+                Timers[x].FlushDirect(*Scheduler->timer);
             }
         }
     }
@@ -95,7 +95,7 @@ template<u8 x> WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
         // timer got enabled
         // trigger timing still needs to be set
         Timers[x].Counter = Timers[x].Register.CNT_L;
-        Timers[x].TriggerTime = get_time(Scheduler);
+        Timers[x].TriggerTime = *Scheduler->timer;
     }
     else {
         // nothing interesting happens
@@ -110,19 +110,19 @@ template<u8 x> WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
     if (x == 0 || !(Timers[x].Register.CNT_H & static_cast<u16>(TMCNT_HFlags::CountUp))) {
         // for direct timers: schedule/reschedule event
         if (unlikely(Timers[x].Overflow.active)) {
-            remove_event(Scheduler, &Timers[x].Overflow);
+            Scheduler->RemoveEvent(&Timers[x].Overflow);
         }
 
         // delta time
         u64 new_time = (0x10000 - Timers[x].Counter) << Timers[x].PrescalerShift;
         // absolute time
-        u64 current_time = get_time(Scheduler);
+        u64 current_time = *Scheduler->timer;
         new_time = current_time + (current_time - Timers[x].TriggerTime) + new_time;
         Timers[x].Overflow.time = new_time;
 
-        add_event(Scheduler, &Timers[x].Overflow);
+        Scheduler->AddEvent(&Timers[x].Overflow);
     }
     else if (unlikely(Timers[x].Overflow.active)) {
-        remove_event(Scheduler, &Timers[x].Overflow);
+        Scheduler->RemoveEvent(&Timers[x].Overflow);
     }
 }

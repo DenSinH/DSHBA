@@ -68,8 +68,8 @@ MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
         .caller   = this,
     };
 
-    add_event(scheduler, &HBlank);
-    add_event(scheduler, &VBlank);
+    Scheduler->AddEvent(&HBlank);
+    Scheduler->AddEvent(&VBlank);
 }
 
 void MMIO::TriggerInterrupt(u16 interrupt) {
@@ -165,11 +165,11 @@ SCHEDULER_EVENT(MMIO::HBlankEvent) {
     if (!(IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::HBLank))) {
         // HBlank, set flag after 46 cycles
         IO->HBlankFlag.time = event->time + CYCLES_HBLANK_FLAG_DELAY;
-        add_event(scheduler, &IO->HBlankFlag);
+        IO->Scheduler->AddEvent(&IO->HBlankFlag);
 
         // clear after 226 cycles
         event->time += CYCLES_HBLANK;
-        add_event(scheduler, event);
+        IO->Scheduler->AddEvent(event);
 
         // buffer scanline & HBlank DMAs
         if (IO->VCount < VISIBLE_SCREEN_HEIGHT) {
@@ -186,7 +186,7 @@ SCHEDULER_EVENT(MMIO::HBlankEvent) {
         // HBlank was cleared, set after 1006 cycles
         IO->DISPSTAT &= ~static_cast<u16>(DISPSTATFlags::HBLank);
         event->time += CYCLES_HDRAW;
-        add_event(scheduler, event);
+        IO->Scheduler->AddEvent(event);
 
         // increment VCount
         IO->VCount++;
@@ -255,7 +255,7 @@ SCHEDULER_EVENT(MMIO::VBlankEvent) {
         IO->DISPSTAT |= static_cast<u16>(DISPSTATFlags::VBlank);
         // VBlank was set, clear after 68 scanlines (total frame height - visible frame height)
         event->time += CYCLES_PER_SCANLINE * (TOTAL_SCREEN_HEIGHT - VISIBLE_SCREEN_HEIGHT);
-        add_event(scheduler, event);
+        IO->Scheduler->AddEvent(event);
 
         // VBlank interrupts
         if (IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::VBlankIRQ)) {
@@ -268,7 +268,7 @@ SCHEDULER_EVENT(MMIO::VBlankEvent) {
     else {
         // no longer in VBlank, set again after visible frame
         event->time += CYCLES_PER_SCANLINE * VISIBLE_SCREEN_HEIGHT;
-        add_event(scheduler, event);
+        IO->Scheduler->AddEvent(event);
     }
 }
 
@@ -365,8 +365,8 @@ WRITE_CALLBACK(MMIO::WritePOSTFLG_HALTCNT) {
     if (value & 0xff00) {
         CPU->Halted = true;
         while (CPU->Halted) {
-            CPU->timer = peek_event(Scheduler);
-            do_events(Scheduler);
+            CPU->timer = Scheduler->PeekEvent();
+            Scheduler->DoEvents();
         }
     }
 }

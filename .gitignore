@@ -2,4 +2,11 @@
 cmake-*/
 venv/
 roms/
+*.gba
+*.sav
+*.log
+*.dump
 files/gba_bios.bin
+files/krom/*
+.vs/
+out/

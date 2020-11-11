@@ -29,15 +29,15 @@ private:
 #endif
 
 public:
-    s_scheduler* Scheduler = create_scheduler(&CPU.timer);
+    s_scheduler Scheduler = s_scheduler(&CPU.timer);
     bool Shutdown = false;
 
-    MMIO IO = MMIO(&PPU, &CPU, &Memory, Scheduler);
-    Mem Memory = Mem(&IO, Scheduler, &CPU.pc, &CPU.timer, [&cpu = CPU]() -> void {
+    MMIO IO = MMIO(&PPU, &CPU, &Memory, &Scheduler);
+    Mem Memory = Mem(&IO, &Scheduler, &CPU.pc, &CPU.timer, [&cpu = CPU]() -> void {
         cpu.PipelineReflush();
     });
-    ARM7TDMI CPU = ARM7TDMI(Scheduler, &Memory);
-    GBAPPU PPU = GBAPPU(Scheduler, &Memory);
+    ARM7TDMI CPU = ARM7TDMI(&Scheduler, &Memory);
+    GBAPPU PPU = GBAPPU(&Scheduler, &Memory);
 
     GBA();
     ~GBA();

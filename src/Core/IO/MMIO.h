@@ -113,11 +113,11 @@ private:
     inline void TriggerDMAChannel(u8 x) {
         if (DMAsActive) {
             // if other DMAs are active, there is no delay
-            add_event_after(Scheduler, &DMAStart[x], 0);
+            Scheduler->AddEventAfter(&DMAStart[x], 0);
         }
         else {
             // account for startup delay todo: ROM extra cycles
-            add_event_after(Scheduler, &DMAStart[x], 2);
+            Scheduler->AddEventAfter(&DMAStart[x], 2);
         }
     };
     void TriggerDMATiming(DMACNT_HFlags start_timing);

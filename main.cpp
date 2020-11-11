@@ -64,7 +64,7 @@ int main() {
 
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/RotationScaling/OBJAffineSet/BIOSOBJAFFINESET.gba");
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Arithmetic/ARCTAN/BIOSARCTAN.gba");
-    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/tonc/prio_demo.gba");
+    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/tonc/win_demo.gba");
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/suite.gba");
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/ags.gba");
     // gba->Memory.LoadROM("D:/User/Downloads/Kirby - Nightmare in Dream Land (USA).gba");

@@ -154,7 +154,7 @@ private:
     ALWAYS_INLINE u32 subs_cv(u32 op1, u32 op2);
 
     ALWAYS_INLINE void Idle() {
-        timer = peek_event(Scheduler);
+        timer = Scheduler->PeekEvent();
     }
 
     [[nodiscard]] inline bool CheckCondition(u8 condition) const;

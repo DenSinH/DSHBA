@@ -33,8 +33,8 @@ void GBA::Run() {
 
     while (!Shutdown) {
 
-        if (unlikely(should_do_events(Scheduler))) {
-            do_events(Scheduler);
+        if (unlikely(Scheduler.ShouldDoEvents())) {
+            Scheduler.DoEvents();
         }
         CPU.Step();
 

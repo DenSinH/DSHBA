@@ -150,7 +150,7 @@ SCHEDULER_EVENT(ARM7TDMI::InterruptPollEvent) {
 void ARM7TDMI::ScheduleInterruptPoll() {
     if (!InterruptPoll.active) {
         // schedule immediately
-        add_event_after(Scheduler, &InterruptPoll, 0);
+        Scheduler->AddEventAfter(&InterruptPoll, 0);
     }
 }
 
