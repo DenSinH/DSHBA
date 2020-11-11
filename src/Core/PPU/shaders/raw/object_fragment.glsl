@@ -17,10 +17,10 @@ flat in uint ObjHeight;
 uniform uint YClipStart;
 uniform uint YClipEnd;
 
-#ifndef OBJ_WINDOW
-    out vec4 FragColor;
-#else
+#ifdef OBJ_WINDOW
     out uvec4 FragColor;
+#else
+    out vec4 FragColor;
 #endif
 
 out float gl_FragDepth;

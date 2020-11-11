@@ -612,10 +612,10 @@ const char* ObjectFragmentShaderSource =
 "uniform uint YClipStart;\n                                                                         "    // l:12
 "uniform uint YClipEnd;\n                                                                           "    // l:13
 "\n                                                                                                 "    // l:14
-"#ifndef OBJ_WINDOW\n                                                                               "    // l:15
-"    out vec4 FragColor;\n                                                                          "    // l:16
+"#ifdef OBJ_WINDOW\n                                                                                "    // l:15
+"    out uvec4 FragColor;\n                                                                         "    // l:16
 "#else\n                                                                                            "    // l:17
-"    out uvec4 FragColor;\n                                                                         "    // l:18
+"    out vec4 FragColor;\n                                                                          "    // l:18
 "#endif\n                                                                                           "    // l:19
 "\n                                                                                                 "    // l:20
 "out float gl_FragDepth;\n                                                                          "    // l:21
