@@ -98,7 +98,6 @@ private:
     };
 
     // buffer attribute 0 and 1 (positions) to send to the vertex shader
-    u32 NumberOfObjVerts = 0;
     u64 ObjAttrBuffer[sizeof(OAMMEM)];
     GLuint ObjProgram;
     GLuint ObjIOLocation;
@@ -124,10 +123,10 @@ private:
     void InitWinObjBuffers();
 
     template<bool ObjWindow>
-    void BufferObjects(u32 buffer, i32 scanline, i32 batch_size);
+    u32 BufferObjects(u32 buffer, i32 scanline, i32 batch_size);
 
     void DrawWindows();
-    void DrawBGWindow(int win_start, int win_end);
+    void DrawBGWindow(int win_start, int win_end) const;
     void DrawObjWindow(int win_start, int win_end);
     void DrawScanlines(u32 scanline, u32 amount);
     void DrawObjects(u32 scanline, u32 amount);
@@ -135,8 +134,8 @@ private:
 
 
 template<bool ObjWindow>
-void GBAPPU::BufferObjects(u32 buffer, i32 scanline, i32 batch_size) {
-    NumberOfObjVerts = 0;
+u32 GBAPPU::BufferObjects(u32 buffer, i32 scanline, i32 batch_size) {
+    u32 NumberOfObjVerts = 0;
     i32 y;
     u32 height;
     // buffer in reverse for object priority
@@ -181,4 +180,5 @@ void GBAPPU::BufferObjects(u32 buffer, i32 scanline, i32 batch_size) {
         ObjAttrBuffer[NumberOfObjVerts++] = Attrs;
         ObjAttrBuffer[NumberOfObjVerts++] = Attrs;
     }
+    return NumberOfObjVerts;
 }

@@ -26,7 +26,7 @@ void main() {
     }
 
     uint x = uint(screenCoord.x);
-    uint y = ++VISIBLE_SCREEN_HEIGHT++ - uint(screenCoord.y);
+    uint y = uint(screenCoord.y);
 
     // window 0 has higher priority
     for (uint window = 0; window < 2; window++) {

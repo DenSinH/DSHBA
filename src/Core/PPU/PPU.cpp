@@ -556,14 +556,13 @@ void GBAPPU::VideoInit() {
     InitWinBGBuffers();
     InitWinObjBuffers();
 
-    glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void GBAPPU::DrawBGWindow(int win_start, int win_end) {
+void GBAPPU::DrawBGWindow(int win_start, int win_end) const {
     glUseProgram(WinBGProgram);
     glBindVertexArray(WinBGVAO);
 
@@ -600,6 +599,7 @@ void GBAPPU::DrawObjWindow(int win_start, int win_end) {
     glPrimitiveRestartIndex(0xffff);
 
     size_t scanline = 0;
+    u32 NumberOfObjVerts;
     do {
         u32 batch_size = ScanlineOAMBatchSizes[BufferFrame ^ 1][scanline];
 
@@ -610,7 +610,7 @@ void GBAPPU::DrawObjWindow(int win_start, int win_end) {
             break;
         }
 
-        BufferObjects<true>(BufferFrame ^ 1, scanline, batch_size);
+        NumberOfObjVerts = BufferObjects<true>(BufferFrame ^ 1, scanline, batch_size);
         if (!NumberOfObjVerts) {
             scanline += batch_size;
             continue;
@@ -685,7 +685,7 @@ void GBAPPU::DrawWindows() {
 }
 
 void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
-    BufferObjects<false>(BufferFrame ^ 1, scanline, amount);
+    u32 NumberOfObjVerts = BufferObjects<false>(BufferFrame ^ 1, scanline, amount);
     if (!NumberOfObjVerts) {
         return;
     }

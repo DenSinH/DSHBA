@@ -97,12 +97,7 @@ void main() {
     OnScreenPos = vec2(ScreenPos);
     gl_Position = vec4(
         -1.0 + 2.0 * OnScreenPos.x / float(++VISIBLE_SCREEN_WIDTH++),
-#ifdef OBJ_WINDOW
-        // flipped for some reason
-        2.0 * OnScreenPos.y / float(++VISIBLE_SCREEN_HEIGHT++) - 1,
-#else
-        1.0 - 2.0 * OnScreenPos.y / float(++VISIBLE_SCREEN_HEIGHT++),
-#endif
+        1 - 2.0 * OnScreenPos.y / float(++VISIBLE_SCREEN_HEIGHT++),
         0,
         1
     );

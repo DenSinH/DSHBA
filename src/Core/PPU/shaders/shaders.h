@@ -349,7 +349,7 @@ const char* FragmentHelperSource =
 "\n                                                                                                 "    // l:54
 "uint getWindow(uint x, uint y) {\n                                                                 "    // l:55
 "    return texelFetch(\n                                                                           "    // l:56
-"        Window, ivec2(x, y), 0\n                                                                   "    // l:57
+"        Window, ivec2(x, 160 - y), 0\n                                                             "    // l:57
 "    ).r;\n                                                                                         "    // l:58
 "}\n                                                                                                "    // l:59
 "\n                                                                                                 "    // l:60
@@ -878,7 +878,7 @@ const char* ObjectFragmentShaderSource =
 ;
 
 
-// ObjectVertexShaderSource (from object_vertex.glsl, lines 5 to 110)
+// ObjectVertexShaderSource (from object_vertex.glsl, lines 5 to 105)
 const char* ObjectVertexShaderSource = 
 "#define attr0 x\n                                                                                  "    // l:1
 "#define attr1 y\n                                                                                  "    // l:2
@@ -974,17 +974,12 @@ const char* ObjectVertexShaderSource =
 "    OnScreenPos = vec2(ScreenPos);\n                                                               "    // l:92
 "    gl_Position = vec4(\n                                                                          "    // l:93
 "        -1.0 + 2.0 * OnScreenPos.x / float(240),\n                                                 "    // l:94
-"#ifdef OBJ_WINDOW\n                                                                                "    // l:95
-"        // flipped for some reason\n                                                               "    // l:96
-"        2.0 * OnScreenPos.y / float(160) - 1,\n                                                    "    // l:97
-"#else\n                                                                                            "    // l:98
-"        1.0 - 2.0 * OnScreenPos.y / float(160),\n                                                  "    // l:99
-"#endif\n                                                                                           "    // l:100
-"        0,\n                                                                                       "    // l:101
-"        1\n                                                                                        "    // l:102
-"    );\n                                                                                           "    // l:103
-"}\n                                                                                                "    // l:104
-"\n                                                                                                 "    // l:105
+"        1 - 2.0 * OnScreenPos.y / float(160),\n                                                    "    // l:95
+"        0,\n                                                                                       "    // l:96
+"        1\n                                                                                        "    // l:97
+"    );\n                                                                                           "    // l:98
+"}\n                                                                                                "    // l:99
+"\n                                                                                                 "    // l:100
 ;
 
 
@@ -1001,7 +996,7 @@ const char* VertexShaderSource =
 "    // convert y coordinate from scanline to screen coordinate\n                                   "    // l:9
 "    gl_Position = vec4(\n                                                                          "    // l:10
 "        position.x,\n                                                                              "    // l:11
-"        1.0 - (2.0 * position.y) / float(160), 0, 1\n                                              "    // l:12
+"        1 - (2.0 * position.y) / float(160), 0, 1\n                                                "    // l:12
 "    );\n                                                                                           "    // l:13
 "\n                                                                                                 "    // l:14
 "    screenCoord = vec2(\n                                                                          "    // l:15
@@ -1043,7 +1038,7 @@ const char* WindowFragmentShaderSource =
 "    }\n                                                                                            "    // l:24
 "\n                                                                                                 "    // l:25
 "    uint x = uint(screenCoord.x);\n                                                                "    // l:26
-"    uint y = 160 - uint(screenCoord.y);\n                                                          "    // l:27
+"    uint y = uint(screenCoord.y);\n                                                                "    // l:27
 "\n                                                                                                 "    // l:28
 "    // window 0 has higher priority\n                                                              "    // l:29
 "    for (uint window = 0; window < 2; window++) {\n                                                "    // l:30

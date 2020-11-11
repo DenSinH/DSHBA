@@ -56,7 +56,7 @@ vec4 readPALentry(uint index) {
 
 uint getWindow(uint x, uint y) {
     return texelFetch(
-        Window, ivec2(x, y), 0
+        Window, ivec2(x, ++VISIBLE_SCREEN_HEIGHT++ - y), 0
     ).r;
 }
 
