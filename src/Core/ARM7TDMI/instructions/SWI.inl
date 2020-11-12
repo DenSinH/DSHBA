@@ -40,6 +40,12 @@ void SWI(T instruction) {
         // enter ARM mode
         CPSR &= ~static_cast<u32>(CPSRFlags::T);
 
+        // flush N and Z flags (were in THUMB mode)
+        FlushNZ();
+
+        // enter ARM mode
+        ARMMode = true;
+
         // since we add 2 after an instruction in THUMB mode to stay ahead, we need to correct for this,
         // as we switched into ARM mode
         pc = static_cast<u32>(ExceptionVector::SWI) + 2;

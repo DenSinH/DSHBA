@@ -52,8 +52,6 @@ void ARM7TDMI::Step() {
         LogState();
     }
 #endif
-
-    const bool ARMMode = !(CPSR & static_cast<u32>(CPSRFlags::T));
     if (unlikely(Pipeline.Count)) {
         // we only have stuff in the pipeline if writes near PC happened
         instruction = Pipeline.Dequeue();
@@ -147,6 +145,7 @@ SCHEDULER_EVENT(ARM7TDMI::InterruptPollEvent) {
             if (cpu->CPSR & static_cast<u32>(CPSRFlags::T)) {
                 // THUMB mode, enter ARM mode, flush NZ flags
                 cpu->CPSR &= ~static_cast<u32>(CPSRFlags::T);
+                cpu->ARMMode = true;
             }
 
             cpu->pc = static_cast<u32>(ExceptionVector::IRQ);

@@ -29,24 +29,23 @@ GBA::~GBA() {
 }
 
 void GBA::Run() {
-    CPU.SkipBIOS();
+    // CPU.SkipBIOS();
 
+    u64 instrs_until_event;
     while (!Shutdown) {
 
-        if (unlikely(Scheduler.ShouldDoEvents())) {
-            Scheduler.DoEvents();
-        }
-        CPU.Step();
+        while (likely(!Scheduler.ShouldDoEvents())) {
+            CPU.Step();
 
 #if defined(DO_BREAKPOINTS) && defined(DO_DEBUGGER)
-        if (check_breakpoints(&Breakpoints, CPU.pc - ((CPU.CPSR & static_cast<u32>(CPSRFlags::T)) ? 4 : 8))) {
+            if (check_breakpoints(&Breakpoints, CPU.pc - ((CPU.CPSR & static_cast<u32>(CPSRFlags::T)) ? 4 : 8))) {
             log_debug("Hit breakpoint %08x", CPU.pc - ((CPU.CPSR & static_cast<u32>(CPSRFlags::T)) ? 4 : 8));
             Paused = true;
         }
 #endif
 
 #ifdef DO_DEBUGGER
-        while (Paused && (Stepcount == 0) && !Shutdown) {
+            while (Paused && (Stepcount == 0) && !Shutdown) {
             // sleep for a bit to not have a busy wait. This is for debugging anyway, and we are frozen
             // so it's okay if it's not instant
             sleep_ms(16);
@@ -56,5 +55,8 @@ void GBA::Run() {
             Stepcount--;
         }
 #endif
+        }
+
+        Scheduler.DoEvents();
     }
 }

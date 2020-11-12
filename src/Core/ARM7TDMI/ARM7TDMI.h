@@ -104,6 +104,8 @@ private:
     u32 FIQBank[2][5]   = {};  // store user mode registers into 0, FIQ registers into 1
     u32 Registers[16]   = {};
 
+    bool ARMMode = true;
+
     // used to reduce the amount of times we need to set the NZ flags in THUMB mode
     // basically, we only need to update them when transitioning back to ARM or on conditional branches
     /*

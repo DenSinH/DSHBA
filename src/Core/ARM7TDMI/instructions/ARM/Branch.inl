@@ -30,6 +30,9 @@ void BranchExchange(u32 instruction) {
             // reflush NZ
             FlushNZ();
 
+            // enter ARM mode
+            ARMMode = true;
+
             // correct for adding 2 after instruction because we were in THUMB mode
             pc += 2;
         }
@@ -54,6 +57,7 @@ void BranchExchange(u32 instruction) {
 
             // set default NZ values
             SetLastNZ();
+            ARMMode = false;
         }
 #ifdef BASIC_IDLE_DETECTION
         else if (unlikely(target == instruction_address)) {

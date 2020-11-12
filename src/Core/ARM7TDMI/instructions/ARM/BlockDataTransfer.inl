@@ -158,6 +158,7 @@ void BlockDataTransfer(u32 instruction) {
                 // change into THUMB mode
                 pc -= 2;  // pipeline correction
                 SetLastNZ();
+                ARMMode = false;
 
                 FakePipelineFlush();
             }

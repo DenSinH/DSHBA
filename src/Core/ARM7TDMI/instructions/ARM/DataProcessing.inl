@@ -381,6 +381,7 @@ void DataProcessing(u32 instruction) {
                 // mode change, DP is an ARM instruction, so we were in ARM mode
                 pc -= 2;  // we add 4 after instruction, should be 2
                 SetLastNZ();
+                ARMMode = false;
             }
         }
         FakePipelineFlush();

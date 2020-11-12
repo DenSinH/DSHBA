@@ -74,6 +74,7 @@ void MSR(u32 instruction) {
             // entered THUMB mode, correct pc and reload LastNZ
             pc -= 2;
             SetLastNZ();
+            ARMMode = false;
         }
 
         // I flag might have been set
