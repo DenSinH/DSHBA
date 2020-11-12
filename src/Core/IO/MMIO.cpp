@@ -11,6 +11,9 @@ MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
     Memory = memory;
     Scheduler = scheduler;
 
+    // set to 0xff to detect HALT writes properly
+    WriteArray<u8>(Registers, static_cast<u32>(IORegister::HALTCNT), 0xff);
+
     HBlank = {
         .callback = HBlankEvent,
         .caller   = this,
@@ -27,6 +30,11 @@ MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
         .callback = VBlankEvent,
         .caller   = this,
         .time     = CYCLES_PER_SCANLINE * VISIBLE_SCREEN_HEIGHT
+    };
+
+    Halt = {
+        .callback = HaltEvent,
+        .caller   = this,
     };
 
     DMAData[0].CNT_L_MAX = 0x4000;
@@ -361,12 +369,23 @@ READ_PRECALL(MMIO::ReadIF) {
     return CPU->IF;
 }
 
+SCHEDULER_EVENT(MMIO::HaltEvent) {
+    auto IO = (MMIO*)caller;
+
+    while (IO->CPU->Halted) {
+        IO->CPU->timer = IO->Scheduler->PeekEvent();
+        IO->Scheduler->DoEvents();
+    }
+}
+
 WRITE_CALLBACK(MMIO::WritePOSTFLG_HALTCNT) {
-    if (value & 0xff00) {
+    if (!(value & 0xff00)) {
         CPU->Halted = true;
-        while (CPU->Halted) {
-            CPU->timer = Scheduler->PeekEvent();
-            Scheduler->DoEvents();
-        }
+
+        // halting needs to happen outside of the instruction scope
+        Scheduler->AddEventAfter(&Halt, 0);
+
+        // reset to 0xff to detect HALT writes properly
+        WriteArray<u8>(Registers, static_cast<u32>(IORegister::HALTCNT), 0xff);
     }
 }
