@@ -40,6 +40,21 @@ GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
 }
 
 void GBAPPU::BufferScanline(u32 scanline) {
+    if (unlikely(scanline == 0)) {
+        Frame++;
+
+        // we really only need to lock for swapping the frame
+        DrawMutex.lock();
+        BufferFrame ^= 1;
+        DrawMutex.unlock();
+
+        // reset scanline batching
+        CurrentVRAMScanlineBatch = 0;  // reset batch
+        ScanlineVRAMBatchSizes[BufferFrame][0] = 0;
+        CurrentOAMScanlineBatch = 0;  // reset batch
+        ScanlineOAMBatchSizes[BufferFrame][0] = 0;
+    }
+
     // copy over range data
     VRAMRanges[BufferFrame][scanline] = Memory->VRAMUpdate;
 
@@ -108,21 +123,8 @@ void GBAPPU::BufferScanline(u32 scanline) {
     ReferenceLine2Buffer[BufferFrame][scanline] = Memory->IO->ReferenceLine2;
     ReferenceLine3Buffer[BufferFrame][scanline] = Memory->IO->ReferenceLine3;
 
-    DrawMutex.lock();
-    if (unlikely(scanline == (VISIBLE_SCREEN_HEIGHT - 1))) {
-        Frame++;
-        BufferFrame ^= 1;
-
-        // reset scanline batching
-        CurrentVRAMScanlineBatch = 0;  // reset batch
-        ScanlineVRAMBatchSizes[BufferFrame][0] = 0;
-        CurrentOAMScanlineBatch = 0;  // reset batch
-        ScanlineOAMBatchSizes[BufferFrame][0] = 0;
-    }
-
     // next time: update whatever was new last scanline, plus what gets drawn next
     Memory->VRAMUpdate = VRAMRanges[BufferFrame][scanline];
-    DrawMutex.unlock();
 }
 
 void GBAPPU::InitFramebuffers() {
