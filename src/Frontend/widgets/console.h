@@ -279,7 +279,10 @@ struct ConsoleWidget
             if (Stricmp(args[0], cmd.command) == 0) {
 
                 cmd.callback(args, argc, this->OutputBuf);
-                AddLog("%s", this->OutputBuf);
+                if (this->OutputBuf[0]) {
+                    AddLog("%s", this->OutputBuf);
+                }
+                this->OutputBuf[0] = 0;
 
                 // On command input, we scroll to bottom even if AutoScroll==false
                 ScrollToBottom = true;

@@ -32,6 +32,7 @@ set(FRONTEND_SRCS
         widgets/disassemble.c
         controller.cpp
         debugger.cpp
+
 )
 
 set(FRONTEND_HDRS
@@ -44,6 +45,7 @@ set(FRONTEND_HDRS
         widgets/disassembly_viewer.h
         widgets/overlay.h
         widgets/disassemble.h
+        widgets/file_dialog.h
         debugger.h
         frontend.h
         interface.h

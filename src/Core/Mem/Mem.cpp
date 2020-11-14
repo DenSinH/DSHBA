@@ -20,6 +20,7 @@ Mem::Mem(MMIO* IO, s_scheduler* scheduler, u32* pc_ptr, u64* timer, std::functio
     this->timer = timer;
 
     memset(BIOS, 0, sizeof(BIOS));
+    memset(ROM, 0, sizeof(ROM));
     Reset();
 }
 
@@ -48,13 +49,13 @@ void Mem::Reset() {
     memset(PAL, 0, sizeof(PALMEM));
     memset(VRAM, 0, sizeof(VRAMMEM));
     memset(OAM, 0, sizeof(OAMMEM));
-    memset(ROM, 0, sizeof(ROM));
 
     DirtyOAM = true;
     VRAMUpdate = { .min=0, .max=sizeof(VRAMMEM) };
 }
 
-void Mem::LoadROM(const std::string& file_path) {
+void Mem::LoadROM(const std::string file_path) {
+    log_debug("Loading %s", file_path.c_str());
     ROMFile = file_path;
     ROMSize = LoadFileTo(reinterpret_cast<char *>(ROM), file_path, 0x0200'0000);
     for (size_t addr = ROMSize; addr < sizeof(ROM); addr += 2) {

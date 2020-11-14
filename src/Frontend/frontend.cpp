@@ -4,6 +4,8 @@
 #include "interface.h"
 #include "controller.h"
 
+#include "widgets/file_dialog.h"
+
 #include <cstdio>
 #include <SDL.h>
 
@@ -12,14 +14,16 @@ const unsigned WINDOW_HEIGHT = 720;
 #define FPS 60
 
 static struct s_frontend {
+    ImGui::FileBrowser file_dialog = ImGui::FileBrowser();
+
     ImGuiIO io;
     s_controller controller;
     void (*parse_input)(s_controller* controller);
 
-    bool* shutdown;
+    void (*shutdown)();
     void (*video_init)();
     void (*destroy)();
-    s_framebuffer (*render)(void);
+    s_framebuffer (*render)();
 } Frontend;
 
 ImGuiIO *frontend_set_io() {
@@ -32,7 +36,7 @@ extern "C" {
 #endif
 
 void frontend_init(
-        bool *shutdown,
+        void (*shutdown)(),
         uint32_t *PC,
         uint64_t mem_size,
         uint8_t *(*valid_address_mask)(uint32_t),
@@ -57,6 +61,22 @@ void bind_video_render(s_framebuffer (*render)(void)) {
 
 void bind_video_destroy(void (*destroy)(void)) {
     Frontend.destroy = destroy;
+}
+
+void open_file_explorer(const char* title, char** filters, size_t filter_count, FILE_SELECT_CALLBACK((*callback))) {
+
+    std::vector<const char*> _filters;
+    _filters.reserve(filter_count);
+    for (size_t i = 0; i < filter_count; i++) {
+        _filters.push_back(filters[i]);
+    }
+
+    if (!Frontend.file_dialog.IsOpened()) {
+        Frontend.file_dialog.callback = callback;
+        Frontend.file_dialog.SetTitle(title);
+        Frontend.file_dialog.SetTypeFilters(_filters);
+        Frontend.file_dialog.Open();
+    }
 }
 
 SDL_GameController* gamecontroller = nullptr;
@@ -128,10 +148,12 @@ int ui_run() {
         printf("No frontend initializer function bound\n");
     }
 
+    ImGui::FileBrowser file_dialog;
     printf("Done initializing frontend\n");
 
     // Main loop
-    while (!*Frontend.shutdown) {
+    bool shutdown = false;
+    while (!shutdown) {
         uint32_t frame_ticks = SDL_GetTicks();
         uint32_t time_left;
 
@@ -142,12 +164,18 @@ int ui_run() {
 
             switch (event.type) {
                 case SDL_QUIT:
-                    *Frontend.shutdown = true;
+                    shutdown = true;
+                    if (Frontend.shutdown) {
+                        Frontend.shutdown();
+                    }
                     break;
                 case SDL_WINDOWEVENT:
                     if (event.window.event == SDL_WINDOWEVENT_CLOSE &&
                         event.window.windowID == SDL_GetWindowID(window)) {
-                        *Frontend.shutdown = true;
+                        shutdown = true;
+                        if (Frontend.shutdown) {
+                            Frontend.shutdown();
+                        }
                     }
                     break;
                 case SDL_CONTROLLERDEVICEADDED:
@@ -190,11 +218,15 @@ int ui_run() {
 
         debugger_render();
 
-        glDisable(GL_SCISSOR_TEST);
+        Frontend.file_dialog.Handle();
+
+        // Rendering
+        ImGui::Render();
 
 #ifdef SHOW_EXAMPLE_MENU
         ImGui::ShowDemoWindow(NULL);
 #endif
+        glDisable(GL_SCISSOR_TEST);
         // render actual emulation
         s_framebuffer emu_framebuffer = {
                 .id = 0,

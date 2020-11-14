@@ -120,7 +120,4 @@ void debugger_render() {
         Debugger.overlay.Draw(&show_overlay);
     if (show_memory_viewer)
         Debugger.memory_viewer.Draw(&show_memory_viewer);
-
-    // Rendering
-    ImGui::Render();
 }

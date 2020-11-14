@@ -76,7 +76,7 @@ void ShowMenuBar(
                 if (item.name) {
                     if (ImGui::MenuItem(item.name, nullptr, item.selected)) {
                         if (item.callback) {
-                            item.callback(*item.selected);
+                            item.callback(item.selected == nullptr || *item.selected);
                         }
                     }
                 }

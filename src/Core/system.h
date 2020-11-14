@@ -17,14 +17,16 @@ class GBA {
 public:
     bool Paused = false;
     bool Shutdown = false;
+    void (*Interaction)() = nullptr;
 
     GBA();
     ~GBA();
     void Run();
     void Reset();
 
-    void LoadROM(std::string& file_path) {
+    void LoadROM(std::string file_path) {
         Memory.LoadROM(file_path);
+        Reset();
     }
 
     void ReloadROM() {
@@ -38,6 +40,7 @@ public:
 private:
     friend class Initializer;
     friend int main();
+
 #ifdef DO_DEBUGGER
     u32 Stepcount = 0;
 

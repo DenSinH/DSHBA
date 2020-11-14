@@ -17,10 +17,10 @@ CONSOLE_COMMAND(Initializer::reset_system) {
             ) {
         gba->Paused = true;
     }
+#endif
 
     gba->Reset();
     gba->ReloadROM();
-#endif
 }
 
 CONSOLE_COMMAND(Initializer::pause_system) {
@@ -129,6 +129,17 @@ MENU_ITEM_CALLBACK(Initializer::toggle_frameskip) {
     }
 }
 
+static std::string file;
+FILE_SELECT_CALLBACK(load_ROM_callback) {
+    file = (std::string)file_name;
+    gba->Interaction = []{ gba->LoadROM(file); };
+}
+
+MENU_ITEM_CALLBACK(load_ROM) {
+    const char* filters[2] = {".gba", ""};
+    open_file_explorer("Select ROM file", const_cast<char **>(filters), 2, load_ROM_callback);
+}
+
 u8 Initializer::ReadByte(u64 offset) {
     return gba->Memory.Read<u8, false>(offset);
 }
@@ -180,7 +191,7 @@ GBA* Initializer::init() {
     bind_video_destroy(frontend_destroy);
 
     frontend_init(
-            &gba->Shutdown,
+            []{ gba->Shutdown = true; gba->Interaction = []{}; },
             &gba->CPU.pc,
             0x1'0000'0000ULL,
             ValidAddressMask,
@@ -238,6 +249,9 @@ GBA* Initializer::init() {
 
     add_overlay_info(cpu_ticks);
     add_overlay_info(fps_counter);
+
+    int game_tab = add_menu_tab((char*)"Game");
+    add_menu_item(game_tab, "Load ROM", nullptr, load_ROM);
 
     int video_tab = add_menu_tab((char*)"Video");
     add_menu_item(video_tab, "Frameskip", &gba->PPU.FrameSkip, Initializer::toggle_frameskip);

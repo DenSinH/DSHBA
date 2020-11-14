@@ -44,7 +44,7 @@ public:
     template<typename T, bool count> T Read(u32 address);
     template<typename T, bool count, bool do_reflush> void Write(u32 address, T value);
 
-    void LoadROM(const std::string& file_path);
+    void LoadROM(const std::string file_path);
     void ReloadROM() {
         LoadROM(ROMFile);
     }

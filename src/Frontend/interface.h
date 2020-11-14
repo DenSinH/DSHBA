@@ -7,6 +7,7 @@
 #define CONSOLE_COMMAND(name) void name(char** args, int argc, char* output)
 #define OVERLAY_INFO(name) void name(char* output, size_t output_length, float delta_time)
 #define MENU_ITEM_CALLBACK(name) void name(bool selected)
+#define FILE_SELECT_CALLBACK(name) void name(const char* file_name)
 #define MAX_OUTPUT_LENGTH 0x100
 #define CONTROLLER_MAP_FILE "input.map"
 
@@ -30,7 +31,7 @@ extern "C" {
     int ui_run(void);
 
     void frontend_init(
-            bool* shutdown,
+            void (*shutdown)(),
             uint32_t* PC,
             uint64_t mem_size,
             uint8_t* (*valid_address_mask)(uint32_t),
@@ -46,6 +47,7 @@ extern "C" {
 
     size_t add_menu_tab(char* name);
     void add_menu_item(int tab, const char* name, bool* selected, MENU_ITEM_CALLBACK((*callback)));
+    void open_file_explorer(const char* title, char** filters, size_t filter_count, FILE_SELECT_CALLBACK((*callback)));
 
     void bind_video_init(void (*initializer)());
     void bind_video_render(s_framebuffer (*render)());
