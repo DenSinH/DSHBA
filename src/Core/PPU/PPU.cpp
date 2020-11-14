@@ -905,3 +905,17 @@ struct s_framebuffer GBAPPU::Render() {
             .b = b,
     };
 }
+
+void GBAPPU::VideoDestroy() {
+    glDeleteBuffers(1, &VRAMSSBO);
+    glDeleteTextures(1, &OAMTexture);
+    glDeleteTextures(1, &PALTexture);
+    glDeleteTextures(1, &IOTexture);
+    glDeleteFramebuffers(1, &Framebuffer);
+    glDeleteFramebuffers(1, &WinFramebuffer);
+    glDeleteTextures(1, &WinTexture);
+    glDeleteProgram(BGProgram);
+    glDeleteProgram(ObjProgram);
+    glDeleteProgram(WinBGProgram);
+    glDeleteProgram(WinObjProgram);
+}

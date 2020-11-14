@@ -24,6 +24,7 @@ public:
     ~GBAPPU() { };
 
     void VideoInit();
+    void VideoDestroy();
     struct s_framebuffer Render();
 
 private:

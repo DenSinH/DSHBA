@@ -151,12 +151,17 @@ static s_framebuffer frontend_render() {
     return gba->PPU.Render();
 }
 
+static void frontend_destroy() {
+    gba->PPU.VideoDestroy();
+}
+
 GBA* Initializer::init() {
     gba = (GBA *) malloc(sizeof(GBA));
     new(gba) GBA;
 
     bind_video_init(frontend_video_init);
     bind_video_render(frontend_render);
+    bind_video_destroy(frontend_destroy);
 
     frontend_init(
             &gba->Shutdown,
