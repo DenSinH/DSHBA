@@ -6,6 +6,7 @@
 
 #define CONSOLE_COMMAND(name) void name(char** args, int argc, char* output)
 #define OVERLAY_INFO(name) void name(char* output, size_t output_length, float delta_time)
+#define MENU_ITEM_CALLBACK(name) void name(bool selected)
 #define MAX_OUTPUT_LENGTH 0x100
 #define CONTROLLER_MAP_FILE "input.map"
 
@@ -42,9 +43,12 @@ extern "C" {
     int add_register_tab(const char* name);
     void add_register_data(const char* name, const void* value, size_t size, int tab);
 
-    void bind_video_init(void (*initializer)(void));
-    void bind_video_render(s_framebuffer (*render)(void));
-    void bind_video_destroy(void (*destroy)(void));
+    size_t add_menu_tab(char* name);
+    void add_menu_item(int tab, const char* name, bool* selected, MENU_ITEM_CALLBACK((*callback)));
+
+    void bind_video_init(void (*initializer)());
+    void bind_video_render(s_framebuffer (*render)());
+    void bind_video_destroy(void (*destroy)());
 #ifdef __cplusplus
 }
 #endif

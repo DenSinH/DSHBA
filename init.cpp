@@ -104,6 +104,15 @@ static OVERLAY_INFO(fps_counter) {
     }
 }
 
+MENU_ITEM_CALLBACK(Initializer::toggle_frameskip) {
+    // selected is PPU.FrameSkip
+    if (selected) {
+        // just need to make sure we don't get stuck waiting for this
+        gba->PPU.FrameDrawn = true;
+        gba->PPU.cv.notify_all();
+    }
+}
+
 u8 Initializer::ReadByte(u64 offset) {
     return gba->Memory.Read<u8, false>(offset);
 }
@@ -208,6 +217,9 @@ GBA* Initializer::init() {
 
     add_overlay_info(cpu_ticks);
     add_overlay_info(fps_counter);
+
+    int video_tab = add_menu_tab((char*)"Video");
+    add_menu_item(video_tab, "Frameskip", &gba->PPU.FrameSkip, Initializer::toggle_frameskip);
 
     return gba;
 }

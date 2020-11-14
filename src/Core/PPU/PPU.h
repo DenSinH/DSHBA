@@ -110,6 +110,10 @@ private:
     GLuint ObjVBO;
     GLuint ObjEBO;
 
+    bool FrameSkip = false;
+    bool FrameDrawn = false;
+    std::condition_variable cv;
+
     void BufferScanline(u32 scanline);
 
     void InitFramebuffers();

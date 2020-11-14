@@ -2,8 +2,8 @@
 
 #include "default.h"
 
-#include <stdint.h>
-#include <inttypes.h>
+#include <cstdint>
+#include <cinttypes>
 
 #include <SDL.h>
 #include "imgui/imgui.h"

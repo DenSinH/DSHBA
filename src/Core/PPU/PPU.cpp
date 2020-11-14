@@ -44,9 +44,17 @@ void GBAPPU::BufferScanline(u32 scanline) {
         Frame++;
 
         // we really only need to lock for swapping the frame
-        DrawMutex.lock();
-        BufferFrame ^= 1;
-        DrawMutex.unlock();
+        if (FrameSkip) {
+            DrawMutex.lock();
+            BufferFrame ^= 1;
+            DrawMutex.unlock();
+        }
+        else {
+            std::unique_lock<std::mutex> lock(DrawMutex);
+            cv.wait(lock, [this]{ return FrameDrawn; });
+            FrameDrawn = false;
+            BufferFrame ^= 1;
+        }
 
         // reset scanline batching
         CurrentVRAMScanlineBatch = 0;  // reset batch
@@ -798,7 +806,9 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
 }
 
 struct s_framebuffer GBAPPU::Render() {
-    DrawMutex.lock();
+    if (FrameSkip) {
+        DrawMutex.lock();
+    }
     // buffer PAL texture
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glBindTexture(GL_TEXTURE_2D, PALTexture);
@@ -851,7 +861,13 @@ struct s_framebuffer GBAPPU::Render() {
     }
 #endif
 
-    DrawMutex.unlock();
+    if (FrameSkip) {
+        DrawMutex.unlock();
+    }
+    else {
+        FrameDrawn = true;
+        cv.notify_all();
+    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
