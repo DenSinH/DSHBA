@@ -188,10 +188,11 @@ int ui_run() {
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
 
+        debugger_render();
+
+        glDisable(GL_SCISSOR_TEST);
         glClearColor(0, 0, 0, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-
-        debugger_render();
 
 #ifdef SHOW_EXAMPLE_MENU
         ImGui::ShowDemoWindow(NULL);

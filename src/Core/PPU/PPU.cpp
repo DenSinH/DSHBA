@@ -427,6 +427,7 @@ void GBAPPU::InitBGBuffers() {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(0);
 
     log_debug("OpenGL error after BG initialization: %x", glGetError());
@@ -484,6 +485,7 @@ void GBAPPU::InitObjBuffers() {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(0);
 
     log_debug("OpenGL error after Obj initialization: %x", glGetError());
@@ -555,6 +557,7 @@ void GBAPPU::InitWinObjBuffers() {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(0);
 
     log_debug("OpenGL error after Win Obj initialization: %x", glGetError());
@@ -574,11 +577,6 @@ void GBAPPU::VideoInit() {
     InitObjBuffers();
     InitWinBGBuffers();
     InitWinObjBuffers();
-
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void GBAPPU::DrawBGWindow(int win_start, int win_end) const {
@@ -617,6 +615,8 @@ void GBAPPU::DrawObjWindow(int win_start, int win_end) {
     glEnable(GL_PRIMITIVE_RESTART);
     glPrimitiveRestartIndex(0xffff);
 
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
+
     size_t scanline = 0;
     u32 NumberOfObjVerts;
     do {
@@ -636,7 +636,6 @@ void GBAPPU::DrawObjWindow(int win_start, int win_end) {
         }
 
         // bind and buffer OAM texture
-        glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
         glBindTexture(GL_TEXTURE_1D, OAMTexture);
         glTexSubImage1D(GL_TEXTURE_1D, 0, 0, sizeof(OAMMEM) >> 3,
                         GL_RGBA_INTEGER, GL_SHORT, OAMBuffer[BufferFrame ^ 1][scanline]);
@@ -745,6 +744,7 @@ void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
     glDisable(GL_PRIMITIVE_RESTART);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindTexture(GL_TEXTURE_1D, 0);
     glBindVertexArray(0);
@@ -817,6 +817,13 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
 }
 
 struct s_framebuffer GBAPPU::Render() {
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_SCISSOR_TEST);
+
     if (FrameSkip) {
         DrawMutex.lock();
     }
@@ -854,7 +861,6 @@ struct s_framebuffer GBAPPU::Render() {
             DrawScanlines(VRAM_scanline, batch_size);
             VRAM_scanline += batch_size;
             log_ppu("%d VRAM scanlines batched (accum %d)", batch_size, VRAM_scanline);
-            // log_debug("%d VRAM scanlines batched (accum %d)", batch_size, VRAM_scanline);
         }
         else {
             u32 batch_size = ScanlineOAMBatchSizes[BufferFrame ^ 1][OAM_scanline];
