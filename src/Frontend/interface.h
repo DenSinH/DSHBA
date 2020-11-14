@@ -18,6 +18,7 @@ extern "C" {
         unsigned int id;
         size_t src_width, src_height;
         size_t dest_width, dest_height;
+        float r, g, b;
     } s_framebuffer;
 
     typedef struct s_controller {

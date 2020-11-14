@@ -889,11 +889,19 @@ struct s_framebuffer GBAPPU::Render() {
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    u16 backdrop = ReadArray<u16>(PALBuffer[BufferFrame ^ 1][0], 0);
+    float r = (float)(backdrop & 0x1fu) / 32.0;
+    float g = (float)((backdrop >> 5) & 0x1fu) / 32.0;
+    float b = (float)((backdrop >> 10) & 0x1fu) / 32.0;
+
     return (s_framebuffer) {
             .id = Framebuffer,
             .src_width = INTERNAL_FRAMEBUFFER_WIDTH,
             .src_height = INTERNAL_FRAMEBUFFER_HEIGHT,
             .dest_width = VISIBLE_SCREEN_WIDTH,
-            .dest_height = VISIBLE_SCREEN_HEIGHT
+            .dest_height = VISIBLE_SCREEN_HEIGHT,
+            .r = r,
+            .g = g,
+            .b = b,
     };
 }

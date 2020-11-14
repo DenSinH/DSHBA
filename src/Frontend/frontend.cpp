@@ -191,8 +191,6 @@ int ui_run() {
         debugger_render();
 
         glDisable(GL_SCISSOR_TEST);
-        glClearColor(0, 0, 0, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
 
 #ifdef SHOW_EXAMPLE_MENU
         ImGui::ShowDemoWindow(NULL);
@@ -205,6 +203,10 @@ int ui_run() {
         if (Frontend.render) {
             emu_framebuffer = Frontend.render();
         }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClearColor(emu_framebuffer.r, emu_framebuffer.g, emu_framebuffer.b, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
 
         glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
