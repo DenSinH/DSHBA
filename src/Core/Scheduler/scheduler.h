@@ -80,9 +80,14 @@ struct s_scheduler {
     explicit s_scheduler(u64* timer) {
         this->timer = timer;
 
-        // fill queue with initial event
+        this->Reset();
+    }
+
+    void Reset() {
+        // clear queue (fill queue with initial event)
+        queue = {};
         queue.push(&infty);
-        this->top = (u64)-1;
+        top = (u64)-1;
     }
 
     void AddEvent(s_event* event) {

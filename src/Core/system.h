@@ -14,24 +14,40 @@
 
 class GBA {
 
-#ifdef DO_DEBUGGER
 public:
     bool Paused = false;
+    bool Shutdown = false;
+
+    GBA();
+    ~GBA();
+    void Run();
+    void Reset();
+
+    void LoadROM(std::string& file_path) {
+        Memory.LoadROM(file_path);
+    }
+
+    void ReloadROM() {
+        Memory.ReloadROM();
+    }
+
+    void LoadBIOS(std::string& file_path) {
+        Memory.LoadBIOS(file_path);
+    }
 
 private:
     friend class Initializer;
-
+    friend int main();
+#ifdef DO_DEBUGGER
     u32 Stepcount = 0;
+
 # ifdef DO_BREAKPOINTS
     s_breakpoints Breakpoints = {};
 # endif
 
 #endif
 
-public:
     s_scheduler Scheduler = s_scheduler(&CPU.timer);
-    bool Shutdown = false;
-
     MMIO IO = MMIO(&PPU, &CPU, &Memory, &Scheduler);
     Mem Memory = Mem(&IO, &Scheduler, &CPU.pc, &CPU.timer, [&cpu = CPU]() -> void {
         cpu.PipelineReflush();
@@ -39,9 +55,6 @@ public:
     ARM7TDMI CPU = ARM7TDMI(&Scheduler, &Memory);
     GBAPPU PPU = GBAPPU(&Scheduler, &Memory);
 
-    GBA();
-    ~GBA();
-    void Run();
 };
 
 #endif //GC__SYSTEM_H

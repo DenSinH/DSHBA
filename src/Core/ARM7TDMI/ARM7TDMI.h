@@ -75,6 +75,7 @@ public:
     void SkipBIOS();
     void Step();
     void PipelineReflush();
+    void Reset();
 
 private:
     friend class MMIO;  // IO needs control over the CPU

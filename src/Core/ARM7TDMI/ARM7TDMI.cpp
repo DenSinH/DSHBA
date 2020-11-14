@@ -22,6 +22,23 @@ ARM7TDMI::ARM7TDMI(s_scheduler *scheduler, Mem *memory)  {
 #endif
 }
 
+void ARM7TDMI::Reset() {
+    memset(Registers, 0, sizeof(Registers));
+    memset(SPSRBank, 0, sizeof(SPSRBank));
+    memset(SPLRBank, 0, sizeof(SPLRBank));
+    memset(FIQBank, 0, sizeof(FIQBank));
+    CPSR = 0;
+    ARMMode = true;
+    SPSR = 0;
+
+    IME = 0;
+    IE = 0;
+    IF = 0;
+    Halted = false;
+    Pipeline.Clear();
+    SkipBIOS();
+}
+
 void ARM7TDMI::SkipBIOS() {
     Registers[0] = 0x0800'0000;
     Registers[1] = 0xea;

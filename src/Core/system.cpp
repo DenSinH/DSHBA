@@ -28,6 +28,12 @@ GBA::~GBA() {
 
 }
 
+void GBA::Reset() {
+    CPU.Reset();
+    Memory.Reset();
+    IO.Reset();
+}
+
 void GBA::Run() {
     // CPU.SkipBIOS();
 

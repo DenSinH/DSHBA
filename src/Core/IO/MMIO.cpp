@@ -80,6 +80,17 @@ MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
     Scheduler->AddEvent(&VBlank);
 }
 
+void MMIO::Reset() {
+    memset(Registers, 0, sizeof(Registers));
+
+    // we don't want to write to the interrupt control registers to not enter HALT state
+    for (int i = 0; i < 0x200; i++) {
+        if (WriteCallback[i >> 1]) {
+            (this->*WriteCallback[i >> 1])(0);
+        }
+    }
+}
+
 void MMIO::TriggerInterrupt(u16 interrupt) {
     CPU->IF |= interrupt;
     CPU->ScheduleInterruptPoll();

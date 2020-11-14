@@ -72,6 +72,8 @@ public:
     MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler);
     ~MMIO() {};
 
+    void Reset();
+
     // expect masked address:
     template<typename T> inline T Read(u32 address);
     template<typename T> inline void Write(u32 address, T value);

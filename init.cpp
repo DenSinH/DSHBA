@@ -7,6 +7,22 @@
 
 static GBA* gba;
 
+CONSOLE_COMMAND(Initializer::reset_system) {
+#ifdef DO_DEBUGGER
+    if (argc > 1 && (
+            strcmp(args[1], "freeze") == 0 ||
+            strcmp(args[1], "pause")  == 0 ||
+            strcmp(args[1], "break")  == 0
+    )
+            ) {
+        gba->Paused = true;
+    }
+
+    gba->Reset();
+    gba->ReloadROM();
+#endif
+}
+
 CONSOLE_COMMAND(Initializer::pause_system) {
 #ifdef DO_DEBUGGER
     gba->Paused = true;
@@ -88,14 +104,14 @@ CONSOLE_COMMAND(Initializer::trace_system) {
 }
 
 static u64 ticks, prev_ticks;
-static OVERLAY_INFO(cpu_ticks) {
+OVERLAY_INFO(Initializer::cpu_ticks) {
     ticks = gba->CPU.timer;
     SPRINTF(output, output_length, "CPU ticks/s: %.1f", (float)(ticks - prev_ticks) / delta_time);
     prev_ticks = ticks;
 }
 
 static float accum_time;
-static OVERLAY_INFO(fps_counter) {
+OVERLAY_INFO(Initializer::fps_counter) {
     accum_time += delta_time;
     SPRINTF(output, output_length, "FPS        : %.1f", (double)(gba->PPU.Frame) / accum_time);
     if (accum_time > 1) {
@@ -122,7 +138,7 @@ u8* Initializer::ValidAddressMask(u32 address) {
     return gba->Memory.GetPtr(address);
 }
 
-static void ParseInput(struct s_controller* controller) {
+void Initializer::ParseInput(struct s_controller* controller) {
     u16 KEYINPUT = 0;
     if (controller->A | controller->X) KEYINPUT |= static_cast<u16>(KeypadButton::A);
     if (controller->B | controller->Y) KEYINPUT |= static_cast<u16>(KeypadButton::B);
@@ -143,15 +159,15 @@ bool Initializer::ARMMode() {
     return !(gba->CPU.CPSR & static_cast<u32>(CPSRFlags::T));
 }
 
-static void frontend_video_init() {
+void Initializer::frontend_video_init() {
     gba->PPU.VideoInit();
 }
 
-static s_framebuffer frontend_render() {
+s_framebuffer Initializer::frontend_render() {
     return gba->PPU.Render();
 }
 
-static void frontend_destroy() {
+void Initializer::frontend_destroy() {
     gba->PPU.VideoDestroy();
 }
 
@@ -212,7 +228,7 @@ GBA* Initializer::init() {
     add_register_data("IE", &gba->CPU.IE, 2, IO_tab);
     add_register_data("IF", &gba->CPU.IF, 2, IO_tab);
 
-    // add_command("RESET", "Resets the system. Add 'pause/freeze/break' to freeze on reload.", reset_system);
+    add_command("RESET", "Resets the system. Add 'pause/freeze/break' to freeze on reload.", reset_system);
     add_command("PAUSE", "Pauses the system.", pause_system);
     add_command("CONTINUE", "Unpauses the system.", unpause_system);
     add_command("BREAK", "Add breakpoint to system at PC = $1.", break_system);

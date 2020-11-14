@@ -10,6 +10,7 @@ public:
     static GBA* init();
 
 private:
+    static CONSOLE_COMMAND(reset_system);
     static CONSOLE_COMMAND(step_system);
     static CONSOLE_COMMAND(trace_system);
     static CONSOLE_COMMAND(break_system);
@@ -19,7 +20,16 @@ private:
 
     static MENU_ITEM_CALLBACK(toggle_frameskip);
 
+    static OVERLAY_INFO(cpu_ticks);
+    static OVERLAY_INFO(fps_counter);
+
     static u8 ReadByte(u64 offset);
     static u8* ValidAddressMask(u32 address);
+    static void ParseInput(struct s_controller* controller);
+
+    static void frontend_video_init();
+    static s_framebuffer frontend_render();
+    static void frontend_destroy();
+
     static bool ARMMode();
 };

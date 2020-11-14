@@ -39,10 +39,15 @@ public:
     Mem(MMIO* IO, s_scheduler* scheduler, u32* pc_ptr, u64* timer, std::function<void(void)> reflush);
     ~Mem();
 
+    void Reset();
+
     template<typename T, bool count> T Read(u32 address);
     template<typename T, bool count, bool do_reflush> void Write(u32 address, T value);
 
     void LoadROM(const std::string& file_path);
+    void ReloadROM() {
+        LoadROM(ROMFile);
+    }
     void LoadBIOS(const std::string& file_path);
     u8* GetPtr(u32 address);
     template<typename T, bool intermittent_events> void DoDMA(s_DMAData* DMA);
@@ -167,6 +172,8 @@ private:
     OAMMEM OAM               = {};
     u8 ROM   [0x0200'0000]   = {};
     size_t ROMSize = 0;
+
+    std::string ROMFile = "";
 
 #define INLINED_INCLUDES
 #include "MemDMAUtil.inl"
