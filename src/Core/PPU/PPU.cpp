@@ -73,7 +73,7 @@ void GBAPPU::BufferScanline(u32 scanline) {
         sizeof(PALMEM)
     );
 #ifndef FULL_VRAM_BUFFER
-    s_UpdateRange range = VRAMRanges[BufferFrame][scanline];
+    s_UpdateRange range = Memory->VRAMUpdate;
     if (range.min <= range.max) {
         memcpy(
                 VRAMBuffer[BufferFrame][scanline] + range.min,
@@ -131,8 +131,15 @@ void GBAPPU::BufferScanline(u32 scanline) {
     ReferenceLine2Buffer[BufferFrame][scanline] = Memory->IO->ReferenceLine2;
     ReferenceLine3Buffer[BufferFrame][scanline] = Memory->IO->ReferenceLine3;
 
-    // next time: update whatever was new last scanline, plus what gets drawn next
-    Memory->VRAMUpdate = VRAMRanges[BufferFrame][scanline];
+    if (FrameSkip) {
+        // next time: update whatever was new last frame, plus what gets drawn next
+        DrawMutex.lock();
+        Memory->VRAMUpdate = VRAMRanges[BufferFrame ^ 1][scanline];
+        DrawMutex.unlock();
+    }
+    else {
+        Memory->VRAMUpdate = { .min = sizeof(VRAMMEM), .max = 0 };
+    }
 }
 
 void GBAPPU::InitFramebuffers() {
@@ -182,6 +189,8 @@ void GBAPPU::InitFramebuffers() {
     glDrawBuffers(1, tex_draw_buffers);
 
     CheckFramebufferInit("window");
+    glClearColor(1, 1, 1, 1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void GBAPPU::InitBGProgram() {
@@ -755,8 +764,10 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
                 range.max - range.min,
                 &VRAMBuffer[BufferFrame ^ 1][scanline][range.min]
         );
-        // reset range data
-        VRAMRanges[BufferFrame ^ 1][scanline] = { .min = sizeof(VRAMMEM), .max = 0 };
+        if (FrameSkip) {
+            // reset range data here if we are frameskipping
+            VRAMRanges[BufferFrame ^ 1][scanline] = { .min = sizeof(VRAMMEM), .max = 0 };
+        }
     }
 #else
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
@@ -843,6 +854,7 @@ struct s_framebuffer GBAPPU::Render() {
             DrawScanlines(VRAM_scanline, batch_size);
             VRAM_scanline += batch_size;
             log_ppu("%d VRAM scanlines batched (accum %d)", batch_size, VRAM_scanline);
+            // log_debug("%d VRAM scanlines batched (accum %d)", batch_size, VRAM_scanline);
         }
         else {
             u32 batch_size = ScanlineOAMBatchSizes[BufferFrame ^ 1][OAM_scanline];
