@@ -12,6 +12,7 @@
 
 #include <mutex>
 #include <array>
+#include <condition_variable>
 
 class Mem;
 
@@ -26,6 +27,7 @@ public:
     void VideoInit();
     void VideoDestroy();
     struct s_framebuffer Render();
+    struct s_framebuffer RenderUntil(size_t ticks);
 
 private:
     friend class MMIO;  // IO needs full control over the PPU
@@ -111,9 +113,17 @@ private:
     GLuint ObjVBO;
     GLuint ObjEBO;
 
+    bool SyncToVideo = true;
     bool FrameSkip = false;
-    bool FrameDrawn = false;
-    std::condition_variable cv;
+
+    /* utils for non-synced non-frameskipped video */
+    bool FrameReady = false;
+    std::mutex FrameWaitMutex = std::mutex();
+    std::condition_variable FrameReadyVariable;
+
+    /* utils for non-frameskipped video */
+    bool FrameDrawn = true;  // this is important to be true initially
+    std::condition_variable FrameDrawnVariable;
 
     void BufferScanline(u32 scanline);
 

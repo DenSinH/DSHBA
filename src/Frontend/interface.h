@@ -50,7 +50,7 @@ extern "C" {
     void open_file_explorer(const char* title, char** filters, size_t filter_count, FILE_SELECT_CALLBACK((*callback)));
 
     void bind_video_init(void (*initializer)());
-    void bind_video_render(s_framebuffer (*render)());
+    void bind_video_render(s_framebuffer (*render)(size_t));
     void bind_video_destroy(void (*destroy)());
 #ifdef __cplusplus
 }

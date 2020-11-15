@@ -77,7 +77,6 @@ void ARM7TDMI::PipelineReflush() {
     this->Pipeline.Clear();
     // if instructions that should be in the pipeline get written to
     // PC is in an instruction when this happens (marked by a bool in the template)
-    log_warn("Reflush for write near PC (%x)", pc);
 
     // don't add memory access timings for reflushes, because they should have already happened
     if (!(CPSR & static_cast<u32>(CPSRFlags::T))) {

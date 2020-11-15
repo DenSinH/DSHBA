@@ -11,6 +11,8 @@
 #include "log.h"
 #include "const.h"
 
+#include <SDL.h>
+
 const char* glsl_version = "#version 430 core\n";
 
 #define INTERNAL_FRAMEBUFFER_WIDTH 480
@@ -50,10 +52,19 @@ void GBAPPU::BufferScanline(u32 scanline) {
             DrawMutex.unlock();
         }
         else {
-            std::unique_lock<std::mutex> lock(DrawMutex);
-            cv.wait(lock, [this]{ return FrameDrawn; });
-            FrameDrawn = false;
+            {
+                std::unique_lock<std::mutex> lock(DrawMutex);
+                FrameDrawnVariable.wait(lock, [this]{ return FrameDrawn; });
+                FrameDrawn = false;
+            }
+
             BufferFrame ^= 1;
+
+            if (unlikely(!SyncToVideo)) {
+                std::lock_guard<std::mutex> lock(FrameWaitMutex);
+                FrameReady = true;
+                FrameReadyVariable.notify_all();
+            }
         }
 
         // reset scanline batching
@@ -883,8 +894,9 @@ struct s_framebuffer GBAPPU::Render() {
         DrawMutex.unlock();
     }
     else {
+        std::lock_guard<std::mutex> lock(DrawMutex);
         FrameDrawn = true;
-        cv.notify_all();
+        FrameDrawnVariable.notify_all();
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -904,6 +916,36 @@ struct s_framebuffer GBAPPU::Render() {
             .g = g,
             .b = b,
     };
+}
+
+struct s_framebuffer GBAPPU::RenderUntil(size_t ticks) {
+    if (likely(SyncToVideo || FrameSkip)) {
+        // only render once if synced
+        return Render();
+    }
+    else {
+        s_framebuffer framebuffer;
+        size_t current_ticks;
+
+        do {
+            framebuffer = Render();
+
+            current_ticks = SDL_GetTicks();
+            std::unique_lock<std::mutex> lock(FrameWaitMutex);
+            if ((current_ticks < ticks) && FrameReadyVariable.wait_for(
+                    lock,
+                    std::chrono::milliseconds(current_ticks - ticks),
+                    [this]{ return FrameReady; }
+            )) {
+                FrameReady = false;
+            }
+            else {
+                // timeout expired
+                break;
+            }
+        } while (true);
+        return framebuffer;
+    }
 }
 
 void GBAPPU::VideoDestroy() {

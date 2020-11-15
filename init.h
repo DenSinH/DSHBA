@@ -17,8 +17,10 @@ private:
     static CONSOLE_COMMAND(unbreak_system);
     static CONSOLE_COMMAND(pause_system);
     static CONSOLE_COMMAND(unpause_system);
+    static CONSOLE_COMMAND(tester);
 
     static MENU_ITEM_CALLBACK(toggle_frameskip);
+    static MENU_ITEM_CALLBACK(toggle_sync_to_video);
 
     static OVERLAY_INFO(cpu_ticks);
     static OVERLAY_INFO(fps_counter);
@@ -28,7 +30,7 @@ private:
     static void ParseInput(struct s_controller* controller);
 
     static void frontend_video_init();
-    static s_framebuffer frontend_render();
+    static s_framebuffer frontend_render(size_t);
     static void frontend_destroy();
 
     static bool ARMMode();

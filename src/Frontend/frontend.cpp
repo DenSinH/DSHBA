@@ -13,6 +13,7 @@
 const unsigned WINDOW_WIDTH = 1280;
 const unsigned WINDOW_HEIGHT = 720;
 #define FPS 60
+#define DELTA_TIME (1000 / FPS)
 
 #define FILE_BROWSER_PWD_SETTING "PWD"
 
@@ -26,7 +27,7 @@ static struct s_frontend {
     void (*shutdown)();
     void (*video_init)();
     void (*destroy)();
-    s_framebuffer (*render)();
+    s_framebuffer (*render)(size_t render_until);
 } Frontend;
 
 ImGuiIO *frontend_set_io() {
@@ -58,11 +59,11 @@ void bind_video_init(void (*initializer)()) {
     Frontend.video_init = initializer;
 }
 
-void bind_video_render(s_framebuffer (*render)(void)) {
+void bind_video_render(s_framebuffer (*render)(size_t)) {
     Frontend.render = render;
 }
 
-void bind_video_destroy(void (*destroy)(void)) {
+void bind_video_destroy(void (*destroy)()) {
     Frontend.destroy = destroy;
 }
 
@@ -164,7 +165,6 @@ int ui_run() {
     bool shutdown = false;
     while (!shutdown) {
         uint32_t frame_ticks = SDL_GetTicks();
-        uint32_t time_left;
 
         // Get events
         SDL_Event event;
@@ -242,7 +242,7 @@ int ui_run() {
         };
 
         if (Frontend.render) {
-            emu_framebuffer = Frontend.render();
+            emu_framebuffer = Frontend.render(DELTA_TIME + frame_ticks);
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);

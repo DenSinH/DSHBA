@@ -105,6 +105,11 @@ CONSOLE_COMMAND(Initializer::trace_system) {
 #endif
 }
 
+CONSOLE_COMMAND(Initializer::tester) {
+    gba->PPU.SyncToVideo ^= true;
+    toggle_sync_to_video(gba->PPU.SyncToVideo);
+}
+
 static u64 ticks, prev_ticks;
 OVERLAY_INFO(Initializer::cpu_ticks) {
     ticks = gba->CPU.timer;
@@ -127,7 +132,16 @@ MENU_ITEM_CALLBACK(Initializer::toggle_frameskip) {
     if (selected) {
         // just need to make sure we don't get stuck waiting for this
         gba->PPU.FrameDrawn = true;
-        gba->PPU.cv.notify_all();
+        gba->PPU.FrameDrawnVariable.notify_all();
+    }
+}
+
+MENU_ITEM_CALLBACK(Initializer::toggle_sync_to_video) {
+    // selected is PPU.SyncToVideo
+    if (!selected) {
+        // just need to make sure we don't get stuck waiting for this
+        gba->PPU.FrameReady = true;
+        gba->PPU.FrameReadyVariable.notify_all();
     }
 }
 
@@ -176,8 +190,8 @@ void Initializer::frontend_video_init() {
     gba->PPU.VideoInit();
 }
 
-s_framebuffer Initializer::frontend_render() {
-    return gba->PPU.Render();
+s_framebuffer Initializer::frontend_render(size_t t) {
+    return gba->PPU.RenderUntil(t);
 }
 
 void Initializer::frontend_destroy() {
@@ -248,6 +262,9 @@ GBA* Initializer::init() {
     add_command("UNBREAK", "Remove breakpoint to system at PC = $1.", unbreak_system);
     add_command("STEP", "Step system for $1 CPU steps (defaults to 1 step).", step_system);
     add_command("TRACE", "Trace system for $1 CPU steps.", trace_system);
+#ifndef NDEBUG
+    add_command("TEST", "This is just for testing.", tester);
+#endif
 
     add_overlay_info(cpu_ticks);
     add_overlay_info(fps_counter);
@@ -256,6 +273,7 @@ GBA* Initializer::init() {
     add_menu_item(game_tab, "Load ROM", nullptr, load_ROM);
 
     int video_tab = add_menu_tab((char*)"Video");
+    add_menu_item(video_tab, "Sync to video", &gba->PPU.SyncToVideo, Initializer::toggle_sync_to_video);
     add_menu_item(video_tab, "Frameskip", &gba->PPU.FrameSkip, Initializer::toggle_frameskip);
 
     return gba;
