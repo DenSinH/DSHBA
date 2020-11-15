@@ -76,8 +76,7 @@ static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 
         case MemoryRegion::ROM_H:
         case MemoryRegion::ROM_H1:
         case MemoryRegion::ROM_H2:
-            // todo: if EEPROM: slow
-            // otherwise:
+            // EEPROM checks happen after this
         case MemoryRegion::BIOS:
         case MemoryRegion::Unused:
         case MemoryRegion::ROM_L:
@@ -121,8 +120,7 @@ static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 
         case MemoryRegion::ROM_H:
         case MemoryRegion::ROM_H1:
         case MemoryRegion::ROM_H2:
-            // todo: if EEPROM: slow
-            // otherwise:
+            // EEPROM checks happen after this
             break; // allow fast
         default:
             return DMAAction::Skip;

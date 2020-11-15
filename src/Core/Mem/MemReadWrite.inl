@@ -31,13 +31,20 @@ T Mem::Read(u32 address) {
             return ReadArray<T>(OAM, address & 0x3ff);
         case MemoryRegion::ROM_L1:
         case MemoryRegion::ROM_L2:
-            // todo: EEPROM attempts
         case MemoryRegion::ROM_L:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::ROM_L>(); }
+            return ReadArray<T>(ROM, address & 0x01ff'ffff);
         case MemoryRegion::ROM_H1:
         case MemoryRegion::ROM_H2:
         case MemoryRegion::ROM_H:
-            // todo: EEPROM attempts
-            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::ROM_L>(); }
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::ROM_H>(); }
+
+            // EEPROM might be accessed in this region
+            if (static_cast<u8>(Type) & static_cast<u8>(BackupType::EEPROM_bit)) {
+                if (IsEEPROMAccess(address)) {
+                    return Backup->Read(address);
+                }
+            }
             return ReadArray<T>(ROM, address & 0x01ff'ffff);
         case MemoryRegion::SRAM:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::SRAM>(); }
@@ -185,11 +192,23 @@ void Mem::Write(u32 address, T value) {
         case MemoryRegion::ROM_L1:
         case MemoryRegion::ROM_L2:
         case MemoryRegion::ROM_L:
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::ROM_L>(); }
+            return;
         case MemoryRegion::ROM_H1:
         case MemoryRegion::ROM_H2:
         case MemoryRegion::ROM_H:
-            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::ROM_L>(); }
-            // todo: EEPROM attempts
+            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::ROM_H>(); }
+
+            // EEPROM might be accessed in this region
+            if (static_cast<u8>(Type) & static_cast<u8>(BackupType::EEPROM_bit)) {
+                if (IsEEPROMAccess(address)) {
+                    Backup->Write(address, value);
+                    Backup->Dirty = BackupMem::MaxDirtyChecks;
+                    if (!DumpSave.active) {
+                        Scheduler->AddEventAfter(&DumpSave, CYCLES_PER_FRAME);
+                    }
+                }
+            }
             return;
         case MemoryRegion::SRAM:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::SRAM>(); }

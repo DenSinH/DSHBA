@@ -33,9 +33,9 @@ private:
     bool IDMode        = false;
 
     void Dump(const std::string &file_name) override;
-    virtual void Load(const std::string& file_name) override;
-    virtual u8 Read(u32 address) override;
-    virtual void Write(u32 address, u8 value) override;
+    void Load(const std::string& file_name) override;
+    u8 Read(u32 address) override;
+    void Write(u32 address, u8 value) override;
 
     void Erase(u32 start, size_t size) {
         memset(&_banks[Bank][start], 0xff, size);

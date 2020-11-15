@@ -11,7 +11,7 @@ private:
     u8 _storage[0x8000];
 
     void Dump(const std::string &file_name) override;
-    virtual void Load(const std::string& file_name) override;
-    virtual u8 Read(u32 address) override;
-    virtual void Write(u32 address, u8 value) override;
+    void Load(const std::string& file_name) override;
+    u8 Read(u32 address) override;
+    void Write(u32 address, u8 value) override;
 };

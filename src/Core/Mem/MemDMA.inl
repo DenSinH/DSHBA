@@ -168,7 +168,42 @@ void Mem::DoDMA(s_DMAData* DMA) {
     u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
 
     DMAAction dma_action = AllowFastDMA<T>(DMA->DAD, DMA->SAD, length, DMA->CNT_H);
+#endif
 
+
+    if (unlikely(Type == BackupType::EEPROM)) {
+        // unspecified EEPROM
+        if (DMA->DAD >= 0x0800'0000) {
+            // DMA to EEPROM
+            if (likely(!((EEPROM *) Backup)->BusWidth)) {
+                if (DMA->CNT_L > 9) {
+                    ((EEPROM *) Backup)->SetBusWidth(EEPROM_64K_BUS_WIDTH);
+                    Type = BackupType::EEPROM_64;
+                } else {
+                    ((EEPROM *) Backup)->SetBusWidth(EEPROM_4K_BUS_WIDTH);
+                    Type = BackupType::EEPROM_4;
+                }
+            } else {
+                // this should not happen, lets just prevent it from happening again
+                if (((EEPROM *) Backup)->BusWidth == EEPROM_4K_BUS_WIDTH) {
+                    Type = BackupType::EEPROM_4;
+                } else {
+                    Type = BackupType::EEPROM_64;
+                }
+            }
+        }
+    }
+#ifdef FAST_DMA
+    else if (static_cast<u8>(Type) & static_cast<u8>(BackupType::EEPROM_bit)) {
+        if (DMA->DAD >= 0x0800'0000 || DMA->SAD >= 0x0800'0000) {
+            // DMA to EEPROM
+            // log_mem("Potential EEPROM DMA: %x -> %x", DMA->SAD, DMA->DAD);
+            dma_action = DMAAction::Slow;
+        }
+    }
+#endif
+
+#ifdef FAST_DMA
     switch(dma_action) {
         case DMAAction::Medium:
             // Invalidate VRAM, we do this before the transfer because the transfer updates DMA*

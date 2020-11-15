@@ -70,7 +70,6 @@ static std::map<BackupType, const char*> BackupSearchString = {
 
 bool FindInROM(const u8* ROM, u32 ROMSize, BackupType Type) {
     const char* SearchString = BackupSearchString[Type];
-    log_debug("Searching for %s", SearchString);
     for (u32 i = 0; i < ROMSize; i++) {
         bool match = true;
         for (u32 j = 0; SearchString[j] != 0; j++) {
@@ -149,11 +148,16 @@ void Mem::LoadROM(const std::string file_path) {
             Backup = new Flash(false);
             break;
         case BackupType::EEPROM:
+            log_mem("Detected unspecified EEPROM save type");
+            Backup = new EEPROM(UNSPECIFIED_EEPROM_BUS_WIDTH);
+            break;
         case BackupType::EEPROM_4:
+            log_mem("Detected 4k EEPROM save type");
+            Backup = new EEPROM(EEPROM_4K_BUS_WIDTH);
+            break;
         case BackupType::EEPROM_64:
-            log_mem("Detected EEPROM save type");
-            // todo
-            Backup = new SRAM();
+            log_mem("Detected 64k EEPROM save type");
+            Backup = new EEPROM(EEPROM_64K_BUS_WIDTH);
             break;
         default:
             log_fatal("Unspecified save type");

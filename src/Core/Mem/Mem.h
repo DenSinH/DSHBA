@@ -12,6 +12,7 @@
 #include "Backup/BackupDefault.h"
 #include "Backup/SRAM.h"
 #include "Backup/Flash.h"
+#include "Backup/EEPROM.h"
 
 #include <type_traits>
 #include <algorithm>
@@ -158,6 +159,12 @@ private:
             return address & 0xffff;
         }
         return 0x1'0000 | (address & 0x7fff);
+    }
+
+    // assumes save type is actually EEPROM
+    [[nodiscard]] ALWAYS_INLINE constexpr bool IsEEPROMAccess(const u32 address) const {
+        ASSUME((address >= 0x0800'0000));
+        return ((address & 0x01ff'ffff) > 0x01ff'feff) || ((ROMSize <= 0x0100'0000) && (address >= 0x0d00'0000));
     }
 
     s_scheduler* Scheduler;

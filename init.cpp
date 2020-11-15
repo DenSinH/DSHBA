@@ -118,13 +118,22 @@ OVERLAY_INFO(Initializer::cpu_ticks) {
 }
 
 static float accum_time;
+static size_t prev_frame;
 OVERLAY_INFO(Initializer::fps_counter) {
     accum_time += delta_time;
-    SPRINTF(output, output_length, "FPS        : %.1f", (double)(gba->PPU.Frame) / accum_time);
+    SPRINTF(
+            output,
+            output_length,
+                "FPS        : %.1f\n"
+                "Frame time : %.1fms",
+            (double)(gba->PPU.Frame) / accum_time,
+            1000.0 * delta_time / (float)(gba->PPU.Frame - prev_frame)
+    );
     if (accum_time > 1) {
         gba->PPU.Frame = 0;
         accum_time = 0;
     }
+    prev_frame = gba->PPU.Frame;
 }
 
 MENU_ITEM_CALLBACK(Initializer::toggle_frameskip) {
