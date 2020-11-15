@@ -15,13 +15,14 @@
 #define COMPONENT_IO          0x10
 #define COMPONENT_DMA         0x20
 #define COMPONENT_TIMERS      0x40
+#define COMPONENT_MEMORY      0x80
 
 #define STUB_SIO
 
 #ifndef NDEBUG
 // change to change verbosity / component logging:
 #define VERBOSITY VERBOSITY_DEBUG
-#define COMPONENT_FLAGS (0)
+#define COMPONENT_FLAGS (COMPONENT_MEMORY)
 
 // very intense testing variables:
 #define TRACE_LOG

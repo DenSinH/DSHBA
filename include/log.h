@@ -95,6 +95,16 @@
 #define log_tmr(message, ...) do { } while(0)
 #endif
 
+#if COMPONENT_FLAGS & COMPONENT_MEMORY
+#define log_mem(message, ...) do {                        \
+        CONSOLE_BLUE();                                \
+        fprintf(stdout, "[MEMORY]: " message "\n",  ##__VA_ARGS__); \
+        CONSOLE_RESTORE();                             \
+    } while(0)
+#else
+#define log_mem(message, ...) do { } while(0)
+#endif
+
 #if COMPONENT_FLAGS & COMPONENT_SCHEDULER
 #define log_sched(message, ...) do {                        \
         CONSOLE_BLUE();                                \

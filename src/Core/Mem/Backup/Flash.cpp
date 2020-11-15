@@ -4,7 +4,8 @@
 
 #include "log.h"
 
-Flash::Flash() {
+Flash::Flash(bool megabit) {
+    Megabit = megabit;
     // don't worry, nothing has been loaded yet
     EraseAll();
 }
@@ -55,11 +56,14 @@ void Flash::Write(u32 address, u8 value) {
             Expect = ExpectState::Nothing;
             return;
         case ExpectState::BankSwitch:
-            if (masked_address == 0) {
-                Bank = value & 1;
-            }
-            else {
-                log_warn("Expected bank switch, got write %02x to %x", value, masked_address);
+            if (Megabit) {
+                // small flash doesn't do bank switching
+                if (masked_address == 0) {
+                    Bank = value & 1;
+                }
+                else {
+                    log_warn("Expected bank switch, got write %02x to %x", value, masked_address);
+                }
             }
             Expect = ExpectState::Nothing;
             return;

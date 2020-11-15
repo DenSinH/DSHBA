@@ -1,6 +1,7 @@
 #include "Mem.h"
 
 #include "CoreUtils.h"
+#include "Backup/BackupDB.h"
 
 #ifdef DUMP_MEM
 #include <fstream>
@@ -59,6 +60,64 @@ void Mem::Reset() {
     VRAMUpdate = { .min=0, .max=sizeof(VRAMMEM) };
 }
 
+static std::map<BackupType, const char*> BackupSearchString = {
+        { BackupType::SRAM,      "SRAM_V" },
+        { BackupType::FLASH,     "FLASH_V" },
+        { BackupType::FLASH_64,  "FLASH512_V" },
+        { BackupType::FLASH_128, "FLASH1M_V" },
+        { BackupType::EEPROM,    "EEPROM_V" },
+};
+
+bool FindInROM(const u8* ROM, u32 ROMSize, BackupType Type) {
+    const char* SearchString = BackupSearchString[Type];
+    log_debug("Searching for %s", SearchString);
+    for (u32 i = 0; i < ROMSize; i++) {
+        bool match = true;
+        for (u32 j = 0; SearchString[j] != 0; j++) {
+            if (i + j >= ROMSize) {
+                match = false;
+                break;
+            }
+
+            if (ROM[i + j] != SearchString[j]) {
+                match = false;
+                break;
+            }
+        }
+        if (match) {
+            return true;
+        }
+    }
+    return false;
+}
+
+BackupType Mem::FindBackupType() {
+    char GameCode[5];
+    memcpy(GameCode, &ROM[0xac], 4);
+    GameCode[4] = '\0';
+
+    const std::string ID = std::string(GameCode);
+    auto it = GameDB.find(ID);
+    if (it != GameDB.cend()) {
+        s_SaveInfo SaveInfo = it->second;
+
+        if (SaveInfo.Type != BackupType::Detect) {
+            log_mem("ROM in game database");
+            return SaveInfo.Type;
+        }
+    }
+
+    // not in DB, try matching save type substrings
+    for (auto type : { BackupType::EEPROM, BackupType::FLASH_128, BackupType::FLASH_64, BackupType::FLASH }) {
+        if (FindInROM(ROM, ROMSize, type)) {
+            return type;
+        }
+    }
+
+    // couldn't find anything, use SRAM as default
+    return BackupType::SRAM;
+}
+
 void Mem::LoadROM(const std::string file_path) {
     // dump old save
     if (Backup) {
@@ -68,14 +127,39 @@ void Mem::LoadROM(const std::string file_path) {
 
     log_debug("Loading %s", file_path.c_str());
     ROMFile = file_path;
+    ROMSize = LoadFileTo(reinterpret_cast<char *>(ROM), file_path, 0x0200'0000);
     SaveFile = file_path.substr(0, file_path.find_last_of('.')) + ".dshba";
 
     // todo: check backup type
-    Backup = new Flash();
-    Type = BackupType::Flash;
+    Type = FindBackupType();
+
+    switch (Type) {
+        case BackupType::SRAM:
+            log_mem("Detected SRAM save type");
+            Backup = new SRAM();
+            break;
+        case BackupType::FLASH:
+        case BackupType::FLASH_128:
+            log_mem("Detected FLASH1M save type");
+            // just in case for unspecified FLASH type we use 2 banks
+            Backup = new Flash(true);
+            break;
+        case BackupType::FLASH_64:
+            log_mem("Detected FLASH512K save type");
+            Backup = new Flash(false);
+            break;
+        case BackupType::EEPROM:
+        case BackupType::EEPROM_4:
+        case BackupType::EEPROM_64:
+            log_mem("Detected EEPROM save type");
+            // todo
+            Backup = new SRAM();
+            break;
+        default:
+            log_fatal("Unspecified save type");
+    }
     Backup->Load(SaveFile);
 
-    ROMSize = LoadFileTo(reinterpret_cast<char *>(ROM), file_path, 0x0200'0000);
     for (size_t addr = ROMSize; addr < sizeof(ROM); addr += 2) {
         // out of bounds ROM accesses
         WriteArray<u16>(ROM, addr, addr >> 1);

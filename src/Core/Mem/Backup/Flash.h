@@ -5,9 +5,10 @@
 class Flash : public BackupMem {
 
 public:
-    Flash();
+    Flash(bool megabit);
 
 private:
+    bool Megabit;
     u8 _banks[2][0x10000];
     static constexpr const u8 SanyoManufacturerID = 0x62;
     static constexpr const u8 SanyoDeviceID = 0x13;

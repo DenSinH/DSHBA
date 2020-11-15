@@ -9,6 +9,7 @@
 #include "const.h"
 #include "MemoryHelpers.h"
 #include "Backup/BackupMem.h"
+#include "Backup/BackupDefault.h"
 #include "Backup/SRAM.h"
 #include "Backup/Flash.h"
 
@@ -36,12 +37,6 @@ enum class MemoryRegion {
     ROM_H2 = 0x0d,
     SRAM   = 0x0e,
     OOB,
-};
-
-enum class BackupType {
-    SRAM,
-    Flash,
-    EEPROM,
 };
 
 class Mem {
@@ -184,6 +179,8 @@ private:
     BackupMem* Backup        = nullptr;
     BackupType Type = BackupType::SRAM;
     size_t ROMSize = 0;
+
+    BackupType FindBackupType();
 
     std::string ROMFile;
     std::string SaveFile;
