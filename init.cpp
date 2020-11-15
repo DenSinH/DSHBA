@@ -193,7 +193,7 @@ GBA* Initializer::init() {
     bind_video_destroy(frontend_destroy);
 
     frontend_init(
-            []{ gba->Shutdown = true; gba->Interaction = []{}; },
+            []{ gba->Shutdown = true; gba->Interaction = []{}; },  // need to set interaction function to break it out of the loop
             &gba->CPU.pc,
             0x1'0000'0000ULL,
             ValidAddressMask,

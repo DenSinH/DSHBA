@@ -9,11 +9,17 @@
 #include "widgets/disassembly_viewer.h"
 #include "widgets/memory_viewer.h"
 
-static bool show_console = true;
-static bool show_register_viewer = true;
-static bool show_disassembly_viewer = true;
+#ifdef NDEBUG
+#define DEFAULT_DEBUGGER_WIDGET_STATE false
+#else
+#define DEFAULT_DEBUGGER_WIDGET_STATE true
+#endif
+
+static bool show_console = DEFAULT_DEBUGGER_WIDGET_STATE;
+static bool show_register_viewer = DEFAULT_DEBUGGER_WIDGET_STATE;
+static bool show_disassembly_viewer = DEFAULT_DEBUGGER_WIDGET_STATE;
 static bool show_overlay = false;
-static bool show_memory_viewer = true;
+static bool show_memory_viewer = DEFAULT_DEBUGGER_WIDGET_STATE;
 
 // Our state
 static struct s_debugger {
