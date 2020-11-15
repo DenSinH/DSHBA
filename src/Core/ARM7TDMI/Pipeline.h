@@ -13,20 +13,20 @@ private:
 public:
     u32 Count = 0;
 
-    void Clear() {
+    ALWAYS_INLINE void Clear() {
         Offset = Count = 0;
     }
 
-    u32 Peek() {
+    ALWAYS_INLINE u32 Peek() {
         return Storage[Offset & 3];
     }
 
-    u32 Dequeue() {
+    ALWAYS_INLINE u32 Dequeue() {
         Count--;
         return Storage[Offset++ & 3];
     }
 
-    void Enqueue(u32 value) {
+    ALWAYS_INLINE void Enqueue(u32 value) {
         Storage[(Offset + Count++) & 3] = value;
     }
 } s_Pipeline;

@@ -73,7 +73,7 @@ public:
     };
 
     void SkipBIOS();
-    void Step();
+    ALWAYS_INLINE void Step();
     void PipelineReflush();
     void Reset();
 
@@ -346,4 +346,46 @@ void ARM7TDMI::SetNZ(u32 result) {
 
 bool ARM7TDMI::CheckCondition(u8 condition) const {
     return ((Conditions[condition] >> (CPSR >> 28)) & 1) != 0;
+}
+
+void ARM7TDMI::Step() {
+    u32 instruction;
+
+#ifdef ALWAYS_TRACE_LOG
+    LogState();
+#elif defined(TRACE_LOG)
+    if (TraceSteps > 0) {
+        TraceSteps--;
+        LogState();
+    }
+#endif
+    if (unlikely(Pipeline.Count)) {
+        // we only have stuff in the pipeline if writes near PC happened
+        instruction = Pipeline.Dequeue();
+    }
+    else if (ARMMode) {
+        // before the instruction gets executed, we are 2 instructions ahead
+        instruction = Memory->Mem::Read<u32, true>(pc - 8);
+    }
+    else {
+        // THUMB mode
+        instruction = Memory->Mem::Read<u16, true>(pc - 4);
+    }
+
+    if (ARMMode) {
+        // ARM mode
+        if (CheckCondition(instruction >> 28)) {
+            (this->*ARMInstructions[ARMHash(instruction)])(instruction);
+        }
+
+        // we handle mode changes in the BX instruction by correcting PC for it there
+        // this saves us from doing another check after every instruction
+        pc += 4;
+    }
+    else {
+        // THUMB mode
+        (this->*THUMBInstructions[THUMBHash((u16)instruction)])((u16)instruction);
+        // same here
+        pc += 2;
+    }
 }
