@@ -64,7 +64,7 @@ typedef struct RegisterViewer
     void Draw(bool* p_open)
     {
         ImGui::SetNextWindowSizeConstraints(ImVec2(-1, 0),    ImVec2(-1, FLT_MAX));
-        ImGui::SetNextWindowSize(ImVec2(600, 600), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(600, 300), ImGuiCond_Once);
 
         if (!ImGui::Begin("Register Viewer", p_open))
         {

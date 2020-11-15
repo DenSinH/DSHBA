@@ -283,7 +283,7 @@ u32 ARM7TDMI::adcs_cv(u32 op1, u32 op2, u32 carry_in) {
     }
 #else
     result = op1 + op2 + carry_in;
-    CPSR |= ((op1 + op2 + carry_in) > 0xffff'ffffULL) ? static_cast<u32>(CPSRFlags::C) : 0;
+    CPSR |= (((u64)op1 + (u64)op2 + (u64)carry_in) > 0xffff'ffffULL) ? static_cast<u32>(CPSRFlags::C) : 0;
 #endif // addc
 
     // todo: overflow detection seemed broken for edge cases

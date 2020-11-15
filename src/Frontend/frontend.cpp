@@ -3,6 +3,7 @@
 #include "debugger.h"
 #include "interface.h"
 #include "controller.h"
+#include "settings.h"
 
 #include "widgets/file_dialog.h"
 
@@ -13,8 +14,10 @@ const unsigned WINDOW_WIDTH = 1280;
 const unsigned WINDOW_HEIGHT = 720;
 #define FPS 60
 
+#define FILE_BROWSER_PWD_SETTING "PWD"
+
 static struct s_frontend {
-    ImGui::FileBrowser file_dialog = ImGui::FileBrowser();
+    ImGui::FileBrowser file_dialog = ImGui::FileBrowser(ImGuiFileBrowserFlags_CloseOnEsc);
 
     ImGuiIO io;
     s_controller controller;
@@ -148,7 +151,13 @@ int ui_run() {
         printf("No frontend initializer function bound\n");
     }
 
-    ImGui::FileBrowser file_dialog;
+    Settings settings = Settings();
+
+    if (settings.Has(FILE_BROWSER_PWD_SETTING)) {
+        std::string pwd = settings.Get(FILE_BROWSER_PWD_SETTING);
+        Frontend.file_dialog.SetPwd(pwd);
+    }
+
     printf("Done initializing frontend\n");
 
     // Main loop
@@ -275,6 +284,9 @@ int ui_run() {
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
     SDL_Quit();
+
+    settings.Set(FILE_BROWSER_PWD_SETTING, Frontend.file_dialog.GetPwd().string());
+    settings.Dump();
 
     if (Frontend.destroy) {
         printf("Destroying frontend\n");

@@ -32,7 +32,7 @@ set(FRONTEND_SRCS
         widgets/disassemble.c
         controller.cpp
         debugger.cpp
-
+        settings.cpp
 )
 
 set(FRONTEND_HDRS
@@ -50,6 +50,7 @@ set(FRONTEND_HDRS
         frontend.h
         interface.h
         controller.h
+        settings.h
 )
 
 add_library(Frontend ${FRONTEND_SRCS} ${FRONTEND_HDRS})
