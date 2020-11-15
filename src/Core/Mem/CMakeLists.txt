@@ -3,7 +3,7 @@ add_library(Mem STATIC
         Mem.cpp
         MemoryHelpers.h
         Backup/BackupMem.h
-        Backup/SRAM.cpp Backup/SRAM.h)
+        Backup/SRAM.cpp Backup/SRAM.h Backup/Flash.cpp Backup/Flash.h)
 
 # for logging / stuff I want to use in all files
 include_directories(

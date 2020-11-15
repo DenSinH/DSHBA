@@ -10,6 +10,7 @@
 #include "MemoryHelpers.h"
 #include "Backup/BackupMem.h"
 #include "Backup/SRAM.h"
+#include "Backup/Flash.h"
 
 #include <type_traits>
 #include <algorithm>

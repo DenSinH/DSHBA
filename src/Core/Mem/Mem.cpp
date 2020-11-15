@@ -71,8 +71,8 @@ void Mem::LoadROM(const std::string file_path) {
     SaveFile = file_path.substr(0, file_path.find_last_of('.')) + ".dshba";
 
     // todo: check backup type
-    Backup = new SRAM();
-    Type = BackupType::SRAM;
+    Backup = new Flash();
+    Type = BackupType::Flash;
     Backup->Load(SaveFile);
 
     ROMSize = LoadFileTo(reinterpret_cast<char *>(ROM), file_path, 0x0200'0000);

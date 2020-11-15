@@ -41,20 +41,13 @@ T Mem::Read(u32 address) {
             return ReadArray<T>(ROM, address & 0x01ff'ffff);
         case MemoryRegion::SRAM:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::SRAM>(); }
-            // todo: remove flash stub:
-            if (address == 0x0e00'0000) return 0xc2;
-            if (address == 0x0e00'0001) return 0x09;
-
-            if (Type != BackupType::EEPROM) {
-                if constexpr(std::is_same_v<T, u16>) {
-                    return 0x0101 * Backup->Read(address);
-                }
-                else if constexpr(std::is_same_v<T, u32>) {
-                    return 0x01010101 * Backup->Read(address);
-                }
-                return Backup->Read(address);
+            if constexpr(std::is_same_v<T, u16>) {
+                return 0x0101 * Backup->Read(address);
             }
-            return 0;
+            else if constexpr(std::is_same_v<T, u32>) {
+                return 0x01010101 * Backup->Read(address);
+            }
+            return Backup->Read(address);
         default:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::OOB>(); }
             return 0;
@@ -200,9 +193,7 @@ void Mem::Write(u32 address, T value) {
             return;
         case MemoryRegion::SRAM:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::SRAM>(); }
-            if (Type != BackupType::EEPROM) {
-                Backup->Write(address, value);
-            }
+            Backup->Write(address, value);
             Backup->Dirty = BackupMem::MaxDirtyChecks;
             if (!DumpSave.active) {
                 Scheduler->AddEventAfter(&DumpSave, CYCLES_PER_FRAME);
