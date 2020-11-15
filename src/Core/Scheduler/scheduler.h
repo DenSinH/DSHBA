@@ -101,6 +101,7 @@ struct s_scheduler {
     void AddEventAfter(s_event* event, u64 dt) {
         if (likely(!event->active)) {
             event->time = *timer + dt;
+            event->active = true;
             queue.push(event);
             top = min(top, event->time);
         }

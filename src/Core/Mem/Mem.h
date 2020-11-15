@@ -6,7 +6,10 @@
 #include "default.h"
 #include "helpers.h"
 #include "flags.h"
+#include "const.h"
 #include "MemoryHelpers.h"
+#include "Backup/BackupMem.h"
+#include "Backup/SRAM.h"
 
 #include <type_traits>
 #include <algorithm>
@@ -32,6 +35,12 @@ enum class MemoryRegion {
     ROM_H2 = 0x0d,
     SRAM   = 0x0e,
     OOB,
+};
+
+enum class BackupType {
+    SRAM,
+    Flash,
+    EEPROM,
 };
 
 class Mem {
@@ -171,9 +180,15 @@ private:
     VRAMMEM VRAM             = {};
     OAMMEM OAM               = {};
     u8 ROM   [0x0200'0000]   = {};
+    BackupMem* Backup        = nullptr;
+    BackupType Type = BackupType::SRAM;
     size_t ROMSize = 0;
 
-    std::string ROMFile = "";
+    std::string ROMFile;
+    std::string SaveFile;
+
+    s_event DumpSave;
+    static SCHEDULER_EVENT(DumpSaveEvent);
 
 #define INLINED_INCLUDES
 #include "MemDMAUtil.inl"

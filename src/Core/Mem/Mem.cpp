@@ -22,6 +22,11 @@ Mem::Mem(MMIO* IO, s_scheduler* scheduler, u32* pc_ptr, u64* timer, std::functio
     memset(BIOS, 0, sizeof(BIOS));
     memset(ROM, 0, sizeof(ROM));
     Reset();
+
+    DumpSave = (s_event) {
+        .callback = DumpSaveEvent,
+        .caller = this
+    };
 }
 
 Mem::~Mem() {
@@ -55,8 +60,21 @@ void Mem::Reset() {
 }
 
 void Mem::LoadROM(const std::string file_path) {
+    // dump old save
+    if (Backup) {
+        Backup->Dump(SaveFile);
+        free(Backup);
+    }
+
     log_debug("Loading %s", file_path.c_str());
     ROMFile = file_path;
+    SaveFile = file_path.substr(0, file_path.find_last_of('.')) + ".dshba";
+
+    // todo: check backup type
+    Backup = new SRAM();
+    Type = BackupType::SRAM;
+    Backup->Load(SaveFile);
+
     ROMSize = LoadFileTo(reinterpret_cast<char *>(ROM), file_path, 0x0200'0000);
     for (size_t addr = ROMSize; addr < sizeof(ROM); addr += 2) {
         // out of bounds ROM accesses
@@ -96,5 +114,17 @@ u8* Mem::GetPtr(u32 address) {
         case MemoryRegion::SRAM:
         default:
             return nullptr;
+    }
+}
+
+SCHEDULER_EVENT(Mem::DumpSaveEvent) {
+    auto Memory = (Mem*)caller;
+
+    if (--Memory->Backup->Dirty > 0) {
+        // reschedule to check again
+        scheduler->AddEventAfter(event, CYCLES_PER_FRAME);
+    }
+    else {
+        Memory->Backup->Dump(Memory->SaveFile);
     }
 }
