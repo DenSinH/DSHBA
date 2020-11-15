@@ -19,8 +19,10 @@ CONSOLE_COMMAND(Initializer::reset_system) {
     }
 #endif
 
-    gba->Reset();
-    gba->ReloadROM();
+    gba->Interaction = [] {
+        gba->Reset();
+        gba->ReloadROM();
+    };
 }
 
 CONSOLE_COMMAND(Initializer::pause_system) {
