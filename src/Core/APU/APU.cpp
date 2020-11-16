@@ -4,7 +4,8 @@
 
 #include <cmath>
 
-GBAAPU::GBAAPU(s_scheduler* scheduler) {
+GBAAPU::GBAAPU(s_scheduler* scheduler) : sq{Square(scheduler), Square(scheduler)} {
+
     this->Scheduler = scheduler;
 
     TickFrameSequencer = (s_event) {
@@ -39,7 +40,6 @@ void GBAAPU::AudioInit() {
 
 void GBAAPU::AudioCallback(void *apu, u8 *stream, int length) {
     auto APU = (GBAAPU*)apu;
-    // log_debug("Requesting %d samples", length / sizeof(float));
 
     int gotten = 0;
     if (SDL_AudioStreamAvailable(APU->Stream)) {
@@ -53,7 +53,7 @@ void GBAAPU::AudioCallback(void *apu, u8 *stream, int length) {
 
         for (int i = gotten_samples; i < length / sizeof(float); i++) {
             float sample = 0;  // todo: last sample the APU generated
-            *out++ = sample; // (float)std::sin(8 * sizeof(float) * (double)i * 3.141592 / ((double)length)) / 20.0;
+            *out++ = sample;
         }
     }
 }
@@ -65,17 +65,35 @@ SCHEDULER_EVENT(GBAAPU::TickFrameSequencerEvent) {
     scheduler->AddEvent(event);
 }
 
+static float tester = 0;
+void GBAAPU::DoProvideSample() {
+    if (!Stream) {
+        return;
+    }
+
+    float SampleLeft = 0;
+    float SampleRight = 0;
+
+    SampleLeft += (float)sq[0].CurrentSample;
+    SampleLeft += (float)sq[1].CurrentSample;
+
+    SampleRight += (float)sq[0].CurrentSample;
+    SampleRight += (float)sq[1].CurrentSample;
+
+    i16 samples[2] = {
+            (i16)(SampleLeft  * ExternalVolume / 8),  // left
+            (i16)(SampleRight * ExternalVolume / 8),  // right
+    };
+
+    // log_debug("Providing %d", samples[0]);
+
+    SDL_AudioStreamPut(Stream, samples, 2 * sizeof(i16));
+}
+
 SCHEDULER_EVENT(GBAAPU::ProvideSampleEvent) {
     auto APU = (GBAAPU*)caller;
 
-    if (APU->Stream) {
-        i16 samples[2] = {
-                0,  // left
-                0,  // right
-        };
-
-        SDL_AudioStreamPut(APU->Stream, samples, 2 * sizeof(i16));
-    }
+    APU->DoProvideSample();
 
     event->time += SamplePeriod;
     scheduler->AddEvent(event);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Channels/Square.h"
+
 #include "../Scheduler/scheduler.h"
 
 #include "default.h"
@@ -17,6 +19,8 @@ public:
     void AudioInit();
     void AudioDestroy();
 
+    float ExternalVolume = 0.05;
+
 private:
     friend class Initializer;
 
@@ -32,7 +36,10 @@ private:
     static SCHEDULER_EVENT(TickFrameSequencerEvent);
     s_event TickFrameSequencer;
     static SCHEDULER_EVENT(ProvideSampleEvent);
+    void DoProvideSample();
     s_event ProvideSample;
+
+    Square sq[2];
 
     /* External function */
     static void AudioCallback(void* apu, u8* stream, int length);
@@ -49,5 +56,4 @@ private:
     SDL_AudioSpec ActualSpec;
     SDL_AudioDeviceID Device;
     SDL_AudioStream* Stream = nullptr;
-
 };
