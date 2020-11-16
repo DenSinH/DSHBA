@@ -3,6 +3,7 @@
 
 #define BIOS_FILE "D:/Data/CProjects/DSHBA/files/gba_bios.bin"
 
+#define CLOCK_FREQUENCY 16853760
 // from Tonc:
 #define CYCLES_PER_FRAME 280896
 #define CYCLES_HDRAW 960

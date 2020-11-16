@@ -26,8 +26,11 @@ static struct s_frontend {
 
     void (*shutdown)();
     void (*video_init)();
-    void (*destroy)();
+    void (*video_destroy)();
     s_framebuffer (*render)(size_t render_until);
+
+    void (*audio_init)();
+    void (*audio_destroy)();
 } Frontend;
 
 ImGuiIO *frontend_set_io() {
@@ -64,7 +67,15 @@ void bind_video_render(s_framebuffer (*render)(size_t)) {
 }
 
 void bind_video_destroy(void (*destroy)()) {
-    Frontend.destroy = destroy;
+    Frontend.video_destroy = destroy;
+}
+
+void bind_audio_init(void (*initializer)()) {
+    Frontend.audio_init = initializer;
+}
+
+void bind_audio_destroy(void (*destroy)()) {
+    Frontend.audio_destroy = destroy;
 }
 
 void open_file_explorer(const char* title, char** filters, size_t filter_count, FILE_SELECT_CALLBACK((*callback))) {
@@ -108,7 +119,7 @@ void init_gamecontroller() {
 }
 
 int ui_run() {
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
         printf("Error: %s\n", SDL_GetError());
         return -1;
     }
@@ -151,6 +162,11 @@ int ui_run() {
     else {
         printf("No frontend initializer function bound\n");
     }
+
+    if (Frontend.audio_init) {
+        Frontend.audio_init();
+    }
+
 
     Settings settings = Settings();
 
@@ -280,7 +296,7 @@ int ui_run() {
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
+    SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
     SDL_Quit();
@@ -288,15 +304,15 @@ int ui_run() {
     settings.Set(FILE_BROWSER_PWD_SETTING, Frontend.file_dialog.GetPwd().string());
     settings.Dump();
 
-    if (Frontend.destroy) {
-        printf("Destroying frontend\n");
-        Frontend.destroy();
-        printf("Frontend destroyed\n");
-    }
-    else {
-        printf("No frontend destroy function bound\n");
+    if (Frontend.video_destroy) {
+        Frontend.video_destroy();
     }
 
+    if (Frontend.audio_destroy) {
+        Frontend.audio_destroy();
+    }
+
+    printf("Frontend destroyed\n");
     return 0;
 }
 

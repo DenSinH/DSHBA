@@ -4,6 +4,7 @@
 #include "Mem/Mem.h"
 #include "ARM7TDMI/ARM7TDMI.h"
 #include "PPU/PPU.h"
+#include "APU/APU.h"
 #include "IO/MMIO.h"
 
 #include "default.h"
@@ -39,7 +40,6 @@ public:
 
 private:
     friend class Initializer;
-    friend int main();
 
 #ifdef DO_DEBUGGER
     u32 Stepcount = 0;
@@ -57,7 +57,7 @@ private:
     });
     ARM7TDMI CPU = ARM7TDMI(&Scheduler, &Memory);
     GBAPPU PPU = GBAPPU(&Scheduler, &Memory);
-
+    GBAAPU APU = GBAAPU(&Scheduler);
 };
 
 #endif //GC__SYSTEM_H

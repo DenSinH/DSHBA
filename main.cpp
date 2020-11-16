@@ -46,6 +46,7 @@ void benchmark() {
 }
 #endif
 
+#undef main
 int main() {
     gba = Initializer::init();
 
@@ -67,14 +68,14 @@ int main() {
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/tonc/win_demo.gba");
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/suite.gba");
     // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/ags.gba");
-    gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/main.gba");
-    // gba->Memory.LoadROM("D:/User/Downloads/Kirby - Nightmare in Dream Land (USA).gba");
+    // gba->Memory.LoadROM("D:/Data/CProjects/DSHBA/files/roms/main.gba");
+    gba->LoadROM("D:/User/Downloads/Kirby - Nightmare in Dream Land (USA).gba");
     // gba->Memory.LoadROM("D:/User/Downloads/Pokemon - Emerald Version (USA, Europe).gba");
     // gba->Memory.LoadROM("D:/User/Downloads/Legend of Zelda, The - The Minish Cap (USA).gba");
     // gba->Memory.LoadROM("D:/User/Downloads/Pokemon - Ruby Version (USA, Europe) (Rev 2).gba");
     // gba->Memory.LoadROM("D:/User/Downloads/WarioWare, Inc. - Mega Microgame$! (USA).gba");
     // gba->Memory.LoadROM("D:/User/Downloads/Mario & Luigi - Superstar Saga (USA, Australia).gba");
-    // gba->Memory.LoadROM("D:/User/Downloads/dma_priority3.gba");
+    // gba->Memory.LoadROM("D:/User/Downloads/Pokemon Mystery Dungeon - Red Rescue Team (USA, Australia).gba");
     gba->Run();
 
     ui_thread.join();

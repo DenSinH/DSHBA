@@ -203,8 +203,16 @@ s_framebuffer Initializer::frontend_render(size_t t) {
     return gba->PPU.RenderUntil(t);
 }
 
-void Initializer::frontend_destroy() {
+void Initializer::frontend_video_destroy() {
     gba->PPU.VideoDestroy();
+}
+
+void Initializer::frontend_audio_init() {
+    gba->APU.AudioInit();
+}
+
+void Initializer::frontend_audio_destroy() {
+    gba->APU.AudioDestroy();
 }
 
 GBA* Initializer::init() {
@@ -213,7 +221,10 @@ GBA* Initializer::init() {
 
     bind_video_init(frontend_video_init);
     bind_video_render(frontend_render);
-    bind_video_destroy(frontend_destroy);
+    bind_video_destroy(frontend_video_destroy);
+
+    bind_audio_init(frontend_audio_init);
+    bind_audio_destroy(frontend_audio_destroy);
 
     frontend_init(
             []{ gba->Shutdown = true; gba->Interaction = []{}; },  // need to set interaction function to break it out of the loop

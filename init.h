@@ -31,7 +31,10 @@ private:
 
     static void frontend_video_init();
     static s_framebuffer frontend_render(size_t);
-    static void frontend_destroy();
+    static void frontend_video_destroy();
+
+    static void frontend_audio_init();
+    static void frontend_audio_destroy();
 
     static bool ARMMode();
 };

@@ -9,7 +9,7 @@
 class EEPROM : public BackupMem {
 
 public:
-    EEPROM(u32 bus_width);
+    explicit EEPROM(u32 bus_width);
     // either 0 (uninitialized), 6 or 14
     // if it is 0, to be set by the Mem class holding this backup region to the appropriate value whenever DMA 3 is
     // started to the backup region for the first time
