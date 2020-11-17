@@ -3,12 +3,21 @@ add_library(Mem STATIC
         Mem.cpp
         MemoryHelpers.h
         Backup/BackupMem.h
-        Backup/SRAM.cpp Backup/SRAM.h Backup/Flash.cpp Backup/Flash.h Backup/BackupDB.h Backup/BackupDefault.h Backup/EEPROM.cpp Backup/EEPROM.h)
+        Backup/SRAM.cpp
+        Backup/SRAM.h
+        Backup/Flash.cpp
+        Backup/Flash.h
+        Backup/BackupDB.h
+        Backup/BackupDefault.h
+        Backup/EEPROM.cpp
+        Backup/EEPROM.h
+)
 
 # for logging / stuff I want to use in all files
 include_directories(
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/modules
+        $<TARGET_PROPERTY:APU,INCLUDE_DIRECTORIES>  # need SDL stuff
         ../include
 )
 

@@ -51,13 +51,13 @@ private:
 #endif
 
     s_scheduler Scheduler = s_scheduler(&CPU.timer);
-    MMIO IO = MMIO(&PPU, &CPU, &Memory, &Scheduler);
+    GBAAPU APU = GBAAPU(&Scheduler);
+    MMIO IO = MMIO(&PPU, &APU, &CPU, &Memory, &Scheduler);
     Mem Memory = Mem(&IO, &Scheduler, &CPU.pc, &CPU.timer, [&cpu = CPU]() -> void {
         cpu.PipelineReflush();
     });
     ARM7TDMI CPU = ARM7TDMI(&Scheduler, &Memory);
     GBAPPU PPU = GBAPPU(&Scheduler, &Memory);
-    GBAAPU APU = GBAAPU(&Scheduler);
 };
 
 #endif //GC__SYSTEM_H

@@ -275,6 +275,23 @@ GBA* Initializer::init() {
     add_register_data("IE", &gba->CPU.IE, 2, IO_tab);
     add_register_data("IF", &gba->CPU.IF, 2, IO_tab);
 
+    int APU_tab = add_register_tab("APU");
+
+    add_register_data("SQ1Vol", &gba->APU.sq[0].Volume, 4, APU_tab);
+    add_register_data("SQ1Per", &gba->APU.sq[0].Period, 4, APU_tab);
+    add_register_data("SQ1Len", &gba->APU.sq[0].LengthCounter, 4, APU_tab);
+    add_register_data("SQ1Smpl", &gba->APU.sq[0].CurrentSample, 2, APU_tab);
+
+    add_register_data("SQ2Vol", &gba->APU.sq[1].Volume, 4, APU_tab);
+    add_register_data("SQ2Per", &gba->APU.sq[1].Period, 4, APU_tab);
+    add_register_data("SQ2Len", &gba->APU.sq[1].LengthCounter, 4, APU_tab);
+    add_register_data("SQ2Smpl", &gba->APU.sq[1].CurrentSample, 2, APU_tab);
+
+    add_register_data("NSVol", &gba->APU.ns.Volume, 4, APU_tab);
+    add_register_data("NSPer", &gba->APU.ns.Period, 4, APU_tab);
+    add_register_data("NSLen", &gba->APU.ns.LengthCounter, 4, APU_tab);
+    add_register_data("NSSmpl", &gba->APU.ns.CurrentSample, 2, APU_tab);
+
     add_command("RESET", "Resets the system. Add 'pause/freeze/break' to freeze on reload.", reset_system);
     add_command("PAUSE", "Pauses the system.", pause_system);
     add_command("CONTINUE", "Unpauses the system.", unpause_system);

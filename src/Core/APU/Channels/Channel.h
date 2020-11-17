@@ -47,8 +47,6 @@ protected:
     virtual i16 GetSample() { return 0; };
 
     [[nodiscard]] virtual ALWAYS_INLINE bool SoundOn() const {
-        return true;
-
         if (!Enabled) {
             return false;
         }
@@ -65,7 +63,10 @@ protected:
     }
 
 private:
-    int  LengthCounter = 0;
+    friend class Initializer;
+    friend class MMIO;
+
+    i32  LengthCounter = 0;
     bool LengthFlag    = false;
     bool Enabled       = false;
 

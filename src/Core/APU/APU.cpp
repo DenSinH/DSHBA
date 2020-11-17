@@ -4,7 +4,10 @@
 
 #include <cmath>
 
-GBAAPU::GBAAPU(s_scheduler* scheduler) : sq{Square(scheduler), Square(scheduler)} {
+GBAAPU::GBAAPU(s_scheduler* scheduler) :
+    sq{Square(scheduler), Square(scheduler)},
+    ns(scheduler)
+{
 
     this->Scheduler = scheduler;
 
@@ -33,7 +36,7 @@ void GBAAPU::AudioInit() {
 
     Stream = SDL_NewAudioStream(
             AUDIO_S16SYS, 2, SampleFrequency,
-            AUDIO_F32SYS, 2, 48000
+            AUDIO_F32SYS, 2, 44100
     );  // thank you Dillon
     SDL_PauseAudioDevice(Device, false);
 }
@@ -60,6 +63,23 @@ void GBAAPU::AudioCallback(void *apu, u8 *stream, int length) {
 
 SCHEDULER_EVENT(GBAAPU::TickFrameSequencerEvent) {
     auto APU = (GBAAPU*)caller;
+    APU->FrameSequencer++;
+    switch (APU->FrameSequencer & 7) {
+        case 2:
+        case 6:
+            // todo: sq0 sweep
+        case 0:
+        case 4:
+            APU->sq[0].TickLengthCounter();
+            APU->sq[1].TickLengthCounter();
+            APU->ns.TickLengthCounter();
+            break;
+        case 7:
+            // todo: envelope
+            break;
+        default:
+            break;
+    }
 
     event->time += FrameSequencerPeriod;
     scheduler->AddEvent(event);
@@ -76,16 +96,16 @@ void GBAAPU::DoProvideSample() {
 
     SampleLeft += (float)sq[0].CurrentSample;
     SampleLeft += (float)sq[1].CurrentSample;
+    SampleLeft += (float)ns.CurrentSample;
 
     SampleRight += (float)sq[0].CurrentSample;
     SampleRight += (float)sq[1].CurrentSample;
+    SampleRight += (float)ns.CurrentSample;
 
     i16 samples[2] = {
             (i16)(SampleLeft  * ExternalVolume / 8),  // left
             (i16)(SampleRight * ExternalVolume / 8),  // right
     };
-
-    // log_debug("Providing %d", samples[0]);
 
     SDL_AudioStreamPut(Stream, samples, 2 * sizeof(i16));
 }

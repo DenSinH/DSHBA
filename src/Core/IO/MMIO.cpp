@@ -5,8 +5,9 @@
 #include "../ARM7TDMI/ARM7TDMI.h"
 #include "../Mem/Mem.h"
 
-MMIO::MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
+MMIO::MMIO(GBAPPU* ppu, GBAAPU* apu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
     PPU = ppu;
+    APU = apu;
     CPU = cpu;
     Memory = memory;
     Scheduler = scheduler;

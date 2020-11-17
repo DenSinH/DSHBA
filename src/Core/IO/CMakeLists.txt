@@ -10,6 +10,7 @@ add_library(IO STATIC
 include_directories(
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/modules
+        $<TARGET_PROPERTY:APU,INCLUDE_DIRECTORIES>  # need SDL stuff
         ../include
 )
 

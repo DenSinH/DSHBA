@@ -6,6 +6,7 @@
 
 #include "../Mem/MemoryHelpers.h"
 #include "../PPU/PPU.h"
+#include "../APU/APU.h"
 
 #include "../Scheduler/scheduler.h"
 
@@ -69,7 +70,7 @@ class MMIO {
 
 public:
 
-    MMIO(GBAPPU* ppu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler);
+    MMIO(GBAPPU* ppu, GBAAPU* apu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler);
     ~MMIO() {};
 
     void Reset();
@@ -80,7 +81,6 @@ public:
 
 private:
     friend void GBAPPU::BufferScanline(u32); // allow registers to be buffered
-    friend void ParseInput(struct s_controller* controller);   // joypad input
     friend class Mem;
     friend class Initializer;
 
@@ -134,6 +134,14 @@ private:
     template<u8 x> WRITE_CALLBACK(WriteTMxCNT_H);
     template<u8 x> READ_PRECALL(ReadTMxCNT_L);
 
+    /*============== Audio ==============*/
+
+    WRITE_CALLBACK(WriteSquare0Sweep);
+    template<u8 x> WRITE_CALLBACK(WriteSquareCNT_L);
+    template<u8 x> WRITE_CALLBACK(WriteSquareCNT_H);
+    WRITE_CALLBACK(WriteNoiseCNT_L);
+    WRITE_CALLBACK(WriteNoiseCNT_H);
+
     /*=============== COM ===============*/
     WRITE_CALLBACK(WriteSIOCNT);  // mostly used to just generate an IRQ whenever necessary
     READ_PRECALL(ReadKEYINPUT);
@@ -156,6 +164,7 @@ private:
 
     ARM7TDMI* CPU;
     GBAPPU* PPU;
+    GBAAPU* APU;
     Mem* Memory;
     s_scheduler* Scheduler;
 
@@ -182,6 +191,15 @@ private:
         table[(static_cast<u32>(IORegister::BG3X) >> 1) + 1] = &MMIO::WriteReferencePoint<false>;  // upper part
         table[static_cast<u32>(IORegister::BG3Y) >> 1] = &MMIO::WriteReferencePoint<false>;
         table[(static_cast<u32>(IORegister::BG3Y) >> 1) + 1] = &MMIO::WriteReferencePoint<false>;  // upper part
+
+        table[static_cast<u32>(IORegister::SOUND1CNT_L) >> 1] = &MMIO::WriteSquare0Sweep;
+        table[static_cast<u32>(IORegister::SOUND1CNT_H) >> 1] = &MMIO::WriteSquareCNT_L<0>;
+        table[static_cast<u32>(IORegister::SOUND1CNT_X) >> 1] = &MMIO::WriteSquareCNT_H<0>;
+        table[static_cast<u32>(IORegister::SOUND2CNT_L) >> 1] = &MMIO::WriteSquareCNT_L<1>;
+        table[static_cast<u32>(IORegister::SOUND2CNT_H) >> 1] = &MMIO::WriteSquareCNT_H<1>;
+
+        table[static_cast<u32>(IORegister::SOUND4CNT_L) >> 1] = &MMIO::WriteNoiseCNT_L;
+        table[static_cast<u32>(IORegister::SOUND4CNT_H) >> 1] = &MMIO::WriteNoiseCNT_H;
 
         table[static_cast<u32>(IORegister::TM0CNT_L) >> 1] = &MMIO::WriteTMxCNT_L<0>;
         table[static_cast<u32>(IORegister::TM1CNT_L) >> 1] = &MMIO::WriteTMxCNT_L<1>;
@@ -251,6 +269,8 @@ private:
         table[(static_cast<u32>(IORegister::BG3X) >> 1) + 1] = 0x0fff;    // upper part
         table[(static_cast<u32>(IORegister::BG3Y) >> 1) + 1] = 0x0fff;    // upper part
 
+        table[(static_cast<u32>(IORegister::SOUND1CNT_L) >> 1)] = 0x007f;
+
         table[(static_cast<u32>(IORegister::TM0CNT_H) >> 1)] = 0x00c3;
         table[(static_cast<u32>(IORegister::TM1CNT_H) >> 1)] = 0x00c7;
         table[(static_cast<u32>(IORegister::TM2CNT_H) >> 1)] = 0x00c7;
@@ -290,3 +310,4 @@ WRITE_CALLBACK(MMIO::WriteReferencePoint) {
 #include "IOReadWrite.inl"  // Read/Write templated functions
 #include "IODMA.inl"        // DMA related inlined functions
 #include "IOTimers.inl"
+#include "IOAudio.inl"

@@ -9,7 +9,7 @@ add_library(ARM7TDMI STATIC
 include_directories(
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/modules
-        #         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        $<TARGET_PROPERTY:APU,INCLUDE_DIRECTORIES>  # need SDL stuff for Mem > IO > APU
         ../include
 )
 

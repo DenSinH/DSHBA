@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Channels/Square.h"
+#include "Channels/Noise.h"
 
 #include "../Scheduler/scheduler.h"
 
@@ -23,6 +24,7 @@ public:
 
 private:
     friend class Initializer;
+    friend class MMIO;  // MMIO needs full control over the APU
 
     static const int SampleFrequency = 32768;
 
@@ -40,12 +42,13 @@ private:
     s_event ProvideSample;
 
     Square sq[2];
+    Noise ns;
 
     /* External function */
     static void AudioCallback(void* apu, u8* stream, int length);
 
     const SDL_AudioSpec GBASpec = {
-        .freq     = SampleFrequency,
+        .freq     = 44100,
         .format   = AUDIO_F32SYS,
         .channels = 2,
         .samples  = AUDIO_BUFFER_SIZE,
