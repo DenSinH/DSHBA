@@ -2,6 +2,7 @@
 
 #include "Channels/Square.h"
 #include "Channels/Noise.h"
+#include "Channels/Wave.h"
 
 #include "../Scheduler/scheduler.h"
 
@@ -15,12 +16,12 @@
 class GBAAPU {
 public:
 
-    explicit GBAAPU(s_scheduler* scheduler);
+    explicit GBAAPU(s_scheduler* scheduler, u8* wave_ram_ptr);
 
     void AudioInit();
     void AudioDestroy();
 
-    float ExternalVolume = 0.05;
+    float ExternalVolume = 0.5;
 
 private:
     friend class Initializer;
@@ -43,6 +44,7 @@ private:
 
     Square sq[2];
     Noise ns;
+    Wave wav;
 
     /* External function */
     static void AudioCallback(void* apu, u8* stream, int length);

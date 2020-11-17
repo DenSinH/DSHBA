@@ -40,8 +40,12 @@ protected:
     static const u32 UpperPeriodBound = CLOCK_FREQUENCY / 20;
     static const u32 LowerPeriodBound = CLOCK_FREQUENCY / 22000;
 
+    i32  LengthCounter = 0;
     u32  Period        = 128 * 2048;  // square channel default period, just some arbitrary value
     u32  Volume        = 0;
+
+    bool LengthFlag    = false;
+    bool Enabled       = false;
 
     virtual void OnTick() {};
     virtual i16 GetSample() { return 0; };
@@ -65,10 +69,6 @@ protected:
 private:
     friend class Initializer;
     friend class MMIO;
-
-    i32  LengthCounter = 0;
-    bool LengthFlag    = false;
-    bool Enabled       = false;
 
     s_event Tick;
     static SCHEDULER_EVENT(TickEvent) {

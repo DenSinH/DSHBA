@@ -39,12 +39,12 @@ inline void MMIO::Write<u32>(u32 address, u32 value) {
     // 32 bit writes are a little different
     // Remember Little Endianness!
     WriteArray<u16>(Registers, address, value & WriteMask[address >> 1]);
-    if (unlikely(WriteCallback[address >> 1])) {
+    if (WriteCallback[address >> 1]) {
         (this->*WriteCallback[address >> 1])(value & WriteMask[address >> 1]);
     }
 
     WriteArray<u16>(Registers, address + 2, (value >> 16) & WriteMask[(address >> 1) + 1]);
-    if (unlikely(WriteCallback[1 + (address >> 1)])) {
+    if (WriteCallback[1 + (address >> 1)]) {
         (this->*WriteCallback[1 + (address >> 1)])((value >> 16) & WriteMask[(address >> 1) + 1]);
     }
 }
@@ -53,7 +53,7 @@ template<>
 inline void MMIO::Write<u16>(u32 address, u16 value) {
     WriteArray<u16>(Registers, address, value & WriteMask[address >> 1]);
 
-    if (unlikely(WriteCallback[address >> 1])) {
+    if (WriteCallback[address >> 1]) {
         (this->*WriteCallback[address >> 1])(value & WriteMask[address >> 1]);
     }
 }
@@ -68,7 +68,7 @@ inline void MMIO::Write<u8>(u32 address, u8 value) {
     }
 
     // todo: if there is also a special readcallback, the value read is not up to date
-    if (unlikely(WriteCallback[address >> 1])) {
+    if (WriteCallback[address >> 1]) {
         // We have to be careful with this:
         // writemask is already applied
         (this->*WriteCallback[address >> 1])(ReadArray<u16>(Registers, address));

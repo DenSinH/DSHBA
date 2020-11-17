@@ -14,10 +14,12 @@ public:
         ShiftRegister = CounterStepWidth ? 0x4000 : 0x40;
     }
 
-    bool CounterStepWidth = false;  // false: 15 bit, true: 7 bit
 
 private:
+    friend class MMIO;
     friend class Initializer;
+
+    bool CounterStepWidth = false;  // false: 15 bit, true: 7 bit
     u32 ShiftRegister;
 
 protected:

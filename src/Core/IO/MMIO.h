@@ -79,6 +79,10 @@ public:
     template<typename T> inline T Read(u32 address);
     template<typename T> inline void Write(u32 address, T value);
 
+    u8* GetWaveRAM_ptr() {
+        return &Registers[static_cast<u32>(IORegister::WAVE_RAM)];
+    }
+
 private:
     friend void GBAPPU::BufferScanline(u32); // allow registers to be buffered
     friend class Mem;
@@ -141,6 +145,9 @@ private:
     template<u8 x> WRITE_CALLBACK(WriteSquareCNT_H);
     WRITE_CALLBACK(WriteNoiseCNT_L);
     WRITE_CALLBACK(WriteNoiseCNT_H);
+    WRITE_CALLBACK(WriteWaveCNT_L);
+    WRITE_CALLBACK(WriteWaveCNT_H);
+    WRITE_CALLBACK(WriteWaveCNT_X);
 
     /*=============== COM ===============*/
     WRITE_CALLBACK(WriteSIOCNT);  // mostly used to just generate an IRQ whenever necessary
@@ -195,8 +202,13 @@ private:
         table[static_cast<u32>(IORegister::SOUND1CNT_L) >> 1] = &MMIO::WriteSquare0Sweep;
         table[static_cast<u32>(IORegister::SOUND1CNT_H) >> 1] = &MMIO::WriteSquareCNT_L<0>;
         table[static_cast<u32>(IORegister::SOUND1CNT_X) >> 1] = &MMIO::WriteSquareCNT_H<0>;
+
         table[static_cast<u32>(IORegister::SOUND2CNT_L) >> 1] = &MMIO::WriteSquareCNT_L<1>;
         table[static_cast<u32>(IORegister::SOUND2CNT_H) >> 1] = &MMIO::WriteSquareCNT_H<1>;
+
+        table[static_cast<u32>(IORegister::SOUND3CNT_L) >> 1] = &MMIO::WriteWaveCNT_L;
+        table[static_cast<u32>(IORegister::SOUND3CNT_H) >> 1] = &MMIO::WriteWaveCNT_H;
+        table[static_cast<u32>(IORegister::SOUND3CNT_X) >> 1] = &MMIO::WriteWaveCNT_X;
 
         table[static_cast<u32>(IORegister::SOUND4CNT_L) >> 1] = &MMIO::WriteNoiseCNT_L;
         table[static_cast<u32>(IORegister::SOUND4CNT_H) >> 1] = &MMIO::WriteNoiseCNT_H;

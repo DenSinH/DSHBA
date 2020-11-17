@@ -3,7 +3,7 @@ find_package(SDL2 CONFIG REQUIRED)
 add_library(APU STATIC
         APU.cpp
         APU.h
-        Channels/Channel.h Channels/Square.h Channels/Noise.h)
+        Channels/Channel.h Channels/Square.h Channels/Noise.h Channels/Wave.h)
 
 # for logging / stuff I want to use in all files
 include_directories(

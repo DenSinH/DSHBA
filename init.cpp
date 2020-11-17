@@ -136,6 +136,33 @@ OVERLAY_INFO(Initializer::fps_counter) {
     prev_frame = gba->PPU.Frame;
 }
 
+OVERLAY_INFO(Initializer::scheduler_events) {
+    SPRINTF(
+            output,
+            output_length,
+            "Scheduler  : %d events",
+            gba->Scheduler.queue.size()
+    );
+}
+
+OVERLAY_INFO(Initializer::audio_samples) {
+    if (gba->APU.Stream) {
+        SPRINTF(
+                output,
+                output_length,
+                "Samples    : %d bytes",
+                SDL_AudioStreamAvailable(gba->APU.Stream)
+        );
+    }
+    else {
+        STRCPY(
+                output,
+                output_length,
+                "NO STREAM AVAILABLE"
+        );
+    }
+}
+
 MENU_ITEM_CALLBACK(Initializer::toggle_frameskip) {
     // selected is PPU.FrameSkip
     if (selected) {
@@ -281,16 +308,26 @@ GBA* Initializer::init() {
     add_register_data("SQ1Per", &gba->APU.sq[0].Period, 4, APU_tab);
     add_register_data("SQ1Len", &gba->APU.sq[0].LengthCounter, 4, APU_tab);
     add_register_data("SQ1Smpl", &gba->APU.sq[0].CurrentSample, 2, APU_tab);
+    add_register_data("", nullptr, 4, APU_tab);
 
     add_register_data("SQ2Vol", &gba->APU.sq[1].Volume, 4, APU_tab);
     add_register_data("SQ2Per", &gba->APU.sq[1].Period, 4, APU_tab);
     add_register_data("SQ2Len", &gba->APU.sq[1].LengthCounter, 4, APU_tab);
     add_register_data("SQ2Smpl", &gba->APU.sq[1].CurrentSample, 2, APU_tab);
+    add_register_data("", nullptr, 4, APU_tab);
 
     add_register_data("NSVol", &gba->APU.ns.Volume, 4, APU_tab);
     add_register_data("NSPer", &gba->APU.ns.Period, 4, APU_tab);
     add_register_data("NSLen", &gba->APU.ns.LengthCounter, 4, APU_tab);
     add_register_data("NSSmpl", &gba->APU.ns.CurrentSample, 2, APU_tab);
+    add_register_data("", nullptr, 4, APU_tab);
+
+    add_register_data("WAVVol", &gba->APU.wav.Volume, 4, APU_tab);
+    add_register_data("WAVPer", &gba->APU.wav.Period, 4, APU_tab);
+    add_register_data("WAVLen", &gba->APU.wav.LengthCounter, 4, APU_tab);
+    add_register_data("WAVPos", &gba->APU.wav.PositionCounter, 4, APU_tab);
+    add_register_data("WAVSmpl", &gba->APU.wav.CurrentSample, 2, APU_tab);
+    add_register_data("", nullptr, 4, APU_tab);
 
     add_command("RESET", "Resets the system. Add 'pause/freeze/break' to freeze on reload.", reset_system);
     add_command("PAUSE", "Pauses the system.", pause_system);
@@ -305,6 +342,8 @@ GBA* Initializer::init() {
 
     add_overlay_info(cpu_ticks);
     add_overlay_info(fps_counter);
+    add_overlay_info(scheduler_events);
+    add_overlay_info(audio_samples);
 
     int game_tab = add_menu_tab((char*)"Game");
     add_menu_item(game_tab, "Load ROM", nullptr, load_ROM);

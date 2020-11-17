@@ -24,6 +24,8 @@ private:
 
     static OVERLAY_INFO(cpu_ticks);
     static OVERLAY_INFO(fps_counter);
+    static OVERLAY_INFO(scheduler_events);
+    static OVERLAY_INFO(audio_samples);
 
     static u8 ReadByte(u64 offset);
     static u8* ValidAddressMask(u32 address);

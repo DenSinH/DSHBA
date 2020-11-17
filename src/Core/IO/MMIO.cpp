@@ -340,6 +340,54 @@ void MMIO::CheckKEYINPUTIRQ() {
     }
 }
 
+WRITE_CALLBACK(MMIO::WriteNoiseCNT_L) {
+    APU->ns.LengthCounter = (64 - value & 0x001f);
+    // todo: envelope
+    APU->ns.Volume = value >> 12;
+}
+
+WRITE_CALLBACK(MMIO::WriteNoiseCNT_H) {
+    u32 r = value & 0x0007;
+    u32 s = (value & 0x00f0) >> 4;
+    // ARM7TDMI.Frequency / 524288 = 32
+    if (r == 0)
+    {
+        // interpret as 0.5 instead
+        APU->ns.Period = 32 * 2 * (2 << s);
+    }
+    else
+    {
+        APU->ns.Period = 32 * (r * (2 << s));
+    }
+
+    APU->ns.CounterStepWidth = (value & 0x0008) != 0;
+    APU->ns.LengthFlag = (value & 0x4000) > 0;
+    if (value & 0x8000)  {
+        APU->ns.Trigger();
+    };
+}
+
+WRITE_CALLBACK(MMIO::WriteWaveCNT_L) {
+    APU->wav.DoubleBanked = (value & 0x0020) != 0;
+    APU->wav.SwitchBanks((value & 0x0040) >> 6);
+    APU->wav.PlayBack = (value & 0x0080) != 0;
+}
+
+WRITE_CALLBACK(MMIO::WriteWaveCNT_H) {
+    APU->wav.LengthCounter = 256 - (value & 0xff);
+    APU->wav.SetVolume((value & 0x6000) >> 13);
+    APU->wav.ForceVolume = (value & 0x8000) != 0;
+}
+
+WRITE_CALLBACK(MMIO::WriteWaveCNT_X) {
+    APU->wav.Period = (2048 - (value & 0x07ff)) << 3;
+    APU->wav.LengthFlag = (value & 0x4000) != 0;
+    if (value & 0x8000) {
+        APU->wav.Trigger();
+    }
+}
+
+
 READ_PRECALL(MMIO::ReadKEYINPUT) {
     CheckKEYINPUTIRQ();
     return KEYINPUT;

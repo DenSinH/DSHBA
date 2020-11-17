@@ -4,9 +4,10 @@
 
 #include <cmath>
 
-GBAAPU::GBAAPU(s_scheduler* scheduler) :
+GBAAPU::GBAAPU(s_scheduler* scheduler, u8* wave_ram_ptr) :
     sq{Square(scheduler), Square(scheduler)},
-    ns(scheduler)
+    ns(scheduler),
+    wav(scheduler, wave_ram_ptr)
 {
 
     this->Scheduler = scheduler;
@@ -73,6 +74,7 @@ SCHEDULER_EVENT(GBAAPU::TickFrameSequencerEvent) {
             APU->sq[0].TickLengthCounter();
             APU->sq[1].TickLengthCounter();
             APU->ns.TickLengthCounter();
+            APU->wav.TickLengthCounter();
             break;
         case 7:
             // todo: envelope
@@ -91,20 +93,27 @@ void GBAAPU::DoProvideSample() {
         return;
     }
 
+    if(SDL_AudioStreamAvailable(Stream) > 0.5 * SampleFrequency * sizeof(float)) {
+        // more than half a second of audio available, stop providing samples
+        return;
+    }
+
     float SampleLeft = 0;
     float SampleRight = 0;
 
     SampleLeft += (float)sq[0].CurrentSample;
     SampleLeft += (float)sq[1].CurrentSample;
     SampleLeft += (float)ns.CurrentSample;
+    SampleLeft += (float)wav.CurrentSample;
 
     SampleRight += (float)sq[0].CurrentSample;
     SampleRight += (float)sq[1].CurrentSample;
     SampleRight += (float)ns.CurrentSample;
+    SampleRight += (float)wav.CurrentSample;
 
     i16 samples[2] = {
-            (i16)(SampleLeft  * ExternalVolume / 8),  // left
-            (i16)(SampleRight * ExternalVolume / 8),  // right
+            (i16)(SampleLeft  * ExternalVolume / 32),  // left
+            (i16)(SampleRight * ExternalVolume / 32),  // right
     };
 
     SDL_AudioStreamPut(Stream, samples, 2 * sizeof(i16));

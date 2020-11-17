@@ -19,30 +19,3 @@ template<u8 x> WRITE_CALLBACK(MMIO::WriteSquareCNT_H) {
         APU->sq[x].Trigger();
     }
 }
-
-inline WRITE_CALLBACK(MMIO::WriteNoiseCNT_L) {
-    APU->ns.LengthCounter = (64 - value & 0x001f);
-    // todo: envelope
-    APU->ns.Volume = value >> 12;
-}
-
-inline WRITE_CALLBACK(MMIO::WriteNoiseCNT_H) {
-    u32 r = value & 0x0007;
-    u32 s = (value & 0x00f0) >> 4;
-    // ARM7TDMI.Frequency / 524288 = 32
-    if (r == 0)
-    {
-        // interpret as 0.5 instead
-        APU->ns.Period = 32 * 2 * (2 << s);
-    }
-    else
-    {
-        APU->ns.Period = 32 * (r * (2 << s));
-    }
-
-    APU->ns.CounterStepWidth = (value & 0x0008) != 0;
-    APU->ns.LengthFlag = (value & 0x4000) > 0;
-    if (value & 0x8000)  {
-        APU->ns.Trigger();
-    };
-}
