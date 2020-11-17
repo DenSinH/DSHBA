@@ -342,7 +342,8 @@ void MMIO::CheckKEYINPUTIRQ() {
 
 WRITE_CALLBACK(MMIO::WriteNoiseCNT_L) {
     APU->ns.LengthCounter = (64 - value & 0x001f);
-    // todo: envelope
+    APU->ns.EnvelopeTime = (value >> 8) & 7;
+    APU->ns.EnvelopeUp   = (value & 0x0800) != 0;
     APU->ns.Volume = value >> 12;
 }
 

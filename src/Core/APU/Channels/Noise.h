@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Channel.h"
+#include "EnvelopeChannel.h"
 
-class Noise : public Channel {
+class Noise : public EnvelopeChannel {
 
 public:
-    explicit Noise(s_scheduler* scheduler) : Channel(scheduler) {
+    explicit Noise(s_scheduler* scheduler) : EnvelopeChannel(scheduler) {
         Period = 128 * 100;
     }
 

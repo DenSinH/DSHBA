@@ -77,7 +77,9 @@ SCHEDULER_EVENT(GBAAPU::TickFrameSequencerEvent) {
             APU->wav.TickLengthCounter();
             break;
         case 7:
-            // todo: envelope
+            APU->sq[0].DoEnvelope();
+            APU->sq[1].DoEnvelope();
+            APU->ns.DoEnvelope();
             break;
         default:
             break;

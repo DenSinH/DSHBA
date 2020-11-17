@@ -6,7 +6,8 @@ inline WRITE_CALLBACK(MMIO::WriteSquare0Sweep) {
 template<u8 x> WRITE_CALLBACK(MMIO::WriteSquareCNT_L) {
     APU->sq[x].LengthCounter = (64 - value & 0x001f);
     APU->sq[x].SetDuty((value >> 6) & 3);
-    // todo: envelope
+    APU->sq[x].EnvelopeTime = (value >> 8) & 7;
+    APU->sq[x].EnvelopeUp  = (value & 0x0800) != 0;
     APU->sq[x].Volume = value >> 12;
 }
 

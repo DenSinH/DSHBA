@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Channel.h"
+#include "EnvelopeChannel.h"
 
-class Square : public Channel {
+class Square : public EnvelopeChannel {
 
 public:
-    explicit Square(s_scheduler* scheduler) : Channel(scheduler) {
+    explicit Square(s_scheduler* scheduler) : EnvelopeChannel(scheduler) {
         Period = 128 * 100;
     }
 
