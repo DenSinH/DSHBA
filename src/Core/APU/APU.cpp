@@ -4,10 +4,11 @@
 
 #include <cmath>
 
-GBAAPU::GBAAPU(s_scheduler* scheduler, u8* wave_ram_ptr) :
+GBAAPU::GBAAPU(s_scheduler* scheduler, u8* wave_ram_ptr, const std::function<void(u32)>& fifo_callback) :
     sq{Square(scheduler), Square(scheduler)},
     ns(scheduler),
-    wav(scheduler, wave_ram_ptr)
+    wav(scheduler, wave_ram_ptr),
+    fifo{FIFOChannel(fifo_callback, 0x0400'00a0), FIFOChannel(fifo_callback, 0x0400'00a4)}
 {
 
     this->Scheduler = scheduler;
@@ -100,22 +101,26 @@ void GBAAPU::DoProvideSample() {
         return;
     }
 
-    float SampleLeft = 0;
-    float SampleRight = 0;
+    i32 SampleLeft = 0;
+    i32 SampleRight = 0;
 
-    SampleLeft += (float)sq[0].CurrentSample;
-    SampleLeft += (float)sq[1].CurrentSample;
-    SampleLeft += (float)ns.CurrentSample;
-    SampleLeft += (float)wav.CurrentSample;
+    SampleLeft += sq[0].CurrentSample;
+    SampleLeft += sq[1].CurrentSample;
+    SampleLeft += ns.CurrentSample;
+    SampleLeft += wav.CurrentSample;
+    SampleLeft += fifo[0].CurrentSample * 8;
+    SampleLeft += fifo[1].CurrentSample * 8;
 
-    SampleRight += (float)sq[0].CurrentSample;
-    SampleRight += (float)sq[1].CurrentSample;
-    SampleRight += (float)ns.CurrentSample;
-    SampleRight += (float)wav.CurrentSample;
+    SampleRight += sq[0].CurrentSample;
+    SampleRight += sq[1].CurrentSample;
+    SampleRight += ns.CurrentSample;
+    SampleRight += wav.CurrentSample;
+    SampleRight += fifo[0].CurrentSample * 8;
+    SampleRight += fifo[1].CurrentSample * 8;
 
     i16 samples[2] = {
-            (i16)(SampleLeft  * ExternalVolume / 32),  // left
-            (i16)(SampleRight * ExternalVolume / 32),  // right
+            (i16)((i32)(SampleLeft  * ExternalVolume) >> 5),  // left
+            (i16)((i32)(SampleRight * ExternalVolume) >> 5),  // right
     };
 
     SDL_AudioStreamPut(Stream, samples, 2 * sizeof(i16));

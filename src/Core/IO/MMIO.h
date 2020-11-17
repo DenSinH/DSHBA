@@ -41,6 +41,7 @@ typedef struct s_DMAData {
     u16 CNT_L;
     u16 CNT_H;
     u32 CNT_L_MAX;
+    bool Audio = false;
 } s_DMAData;
 
 struct s_TimerData {
@@ -52,6 +53,9 @@ struct s_TimerData {
     u8 PrescalerShift;   // shift amount
     u32 Counter;         // used in count-up mode
     u64 TriggerTime;     // used in direct mode
+
+    FIFOChannel* FIFOA = nullptr;
+    FIFOChannel* FIFOB = nullptr;
 
     s_event Overflow;
 
@@ -82,6 +86,7 @@ public:
     u8* GetWaveRAM_ptr() {
         return &Registers[static_cast<u32>(IORegister::WAVE_RAM)];
     }
+    void TriggerAudioDMA(u32 addr);
 
 private:
     friend void GBAPPU::BufferScanline(u32); // allow registers to be buffered
@@ -143,11 +148,19 @@ private:
     WRITE_CALLBACK(WriteSquare0Sweep);
     template<u8 x> WRITE_CALLBACK(WriteSquareCNT_L);
     template<u8 x> WRITE_CALLBACK(WriteSquareCNT_H);
+
     WRITE_CALLBACK(WriteNoiseCNT_L);
     WRITE_CALLBACK(WriteNoiseCNT_H);
+
     WRITE_CALLBACK(WriteWaveCNT_L);
     WRITE_CALLBACK(WriteWaveCNT_H);
     WRITE_CALLBACK(WriteWaveCNT_X);
+
+    template<u8 x> WRITE_CALLBACK(WriteFIFO);
+
+    WRITE_CALLBACK(WriteSOUNDCNT_L);
+    WRITE_CALLBACK(WriteSOUNDCNT_H);
+    WRITE_CALLBACK(WriteSOUNDCNT_X);
 
     /*=============== COM ===============*/
     WRITE_CALLBACK(WriteSIOCNT);  // mostly used to just generate an IRQ whenever necessary
@@ -176,6 +189,11 @@ private:
     s_scheduler* Scheduler;
 
     u8 Registers[0x400]      = {};
+
+    // for debugging:
+    WRITE_CALLBACK(LogWrite) {
+        log_debug("Wrote %x", value);
+    }
 
     /*
      * In general, registers wont have a callback
@@ -212,6 +230,15 @@ private:
 
         table[static_cast<u32>(IORegister::SOUND4CNT_L) >> 1] = &MMIO::WriteNoiseCNT_L;
         table[static_cast<u32>(IORegister::SOUND4CNT_H) >> 1] = &MMIO::WriteNoiseCNT_H;
+
+        table[static_cast<u32>(IORegister::SOUNDCNT_L) >> 1] = &MMIO::WriteSOUNDCNT_L;
+        table[static_cast<u32>(IORegister::SOUNDCNT_H) >> 1] = &MMIO::WriteSOUNDCNT_H;
+        table[static_cast<u32>(IORegister::SOUNDCNT_X) >> 1] = &MMIO::WriteSOUNDCNT_X;
+
+        table[static_cast<u32>(IORegister::FIFO_A) >> 1]       = &MMIO::WriteFIFO<0>;
+        table[(static_cast<u32>(IORegister::FIFO_A) >> 1) + 1] = &MMIO::WriteFIFO<0>;  // upper part
+        table[static_cast<u32>(IORegister::FIFO_B) >> 1]       = &MMIO::WriteFIFO<1>;
+        table[(static_cast<u32>(IORegister::FIFO_B) >> 1) + 1] = &MMIO::WriteFIFO<1>;  // upper part
 
         table[static_cast<u32>(IORegister::TM0CNT_L) >> 1] = &MMIO::WriteTMxCNT_L<0>;
         table[static_cast<u32>(IORegister::TM1CNT_L) >> 1] = &MMIO::WriteTMxCNT_L<1>;

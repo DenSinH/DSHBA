@@ -3,6 +3,7 @@
 #include "Channels/Square.h"
 #include "Channels/Noise.h"
 #include "Channels/Wave.h"
+#include "Channels/FIFO.h"
 
 #include "../Scheduler/scheduler.h"
 
@@ -13,10 +14,32 @@
 
 #define AUDIO_BUFFER_SIZE 1024
 
+enum class SOUNDCNT_HFlags : u16 {
+    PSGVolume       = 0x0003,
+    DMAAVolume      = 0x0004,
+    DMABVolume      = 0x0008,
+    DMAAEnableRight = 0x0100,
+    DMAAEnableLeft  = 0x0200,
+    DMAATMSelect    = 0x0400,
+    DMAAResetFIFO   = 0x0800,
+    DMABEnableRight = 0x1000,
+    DMABEnableLeft  = 0x2000,
+    DMABTMSelect    = 0x4000,
+    DMABResetFIFO   = 0x8000,
+};
+
+enum class SOUNDCNT_XFlags : u16 {
+    PSG0Enabled  = 0x0001,
+    PSG1Enabled  = 0x0002,
+    PSG2Enabled  = 0x0004,
+    PSG3Enabled  = 0x0008,
+    MasterEnable = 0x0080,
+};
+
 class GBAAPU {
 public:
 
-    explicit GBAAPU(s_scheduler* scheduler, u8* wave_ram_ptr);
+    explicit GBAAPU(s_scheduler* scheduler, u8* wave_ram_ptr, const std::function<void(u32)>& fifo_callback);
 
     void AudioInit();
     void AudioDestroy();
@@ -32,7 +55,7 @@ private:
     /* Internal function */
 
     s_scheduler* Scheduler;
-    u32 FrameSequencer;
+    u32 FrameSequencer = 0;
     static const u32 FrameSequencerPeriod = 0x8000;  // CPU cycles
     static const u32 SamplePeriod = CLOCK_FREQUENCY / SampleFrequency;
 
@@ -42,9 +65,18 @@ private:
     void DoProvideSample();
     s_event ProvideSample;
 
+    u8 MasterVolumeRight = 0;
+    u8 MasterVolumeLeft = 0;
+    u8 SoundEnableRight = 0;
+    u8 SoundEnableLeft = 0;
+
+    u16 SOUNDCNT_H;
+    u16 SOUNDCNT_X;
+
     Square sq[2];
     Noise ns;
     Wave wav;
+    FIFOChannel fifo[2];
 
     /* External function */
     static void AudioCallback(void* apu, u8* stream, int length);

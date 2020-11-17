@@ -51,7 +51,7 @@ private:
 #endif
 
     s_scheduler Scheduler = s_scheduler(&CPU.timer);
-    GBAAPU APU = GBAAPU(&Scheduler, IO.GetWaveRAM_ptr());
+    GBAAPU APU = GBAAPU(&Scheduler, IO.GetWaveRAM_ptr(), std::function<void(u32)> ([this](u32 addr){ IO.TriggerAudioDMA(addr); }));
     MMIO IO = MMIO(&PPU, &APU, &CPU, &Memory, &Scheduler);
     Mem Memory = Mem(&IO, &Scheduler, &CPU.pc, &CPU.timer, [&cpu = CPU]() -> void {
         cpu.PipelineReflush();

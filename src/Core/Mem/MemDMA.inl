@@ -48,9 +48,8 @@ void Mem::FastDMA(s_DMAData* DMA) {
     }
 
     // update DMA data
-    if ((DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) != static_cast<u16>(DMACNT_HFlags::DestIncrementReload)) {
-        DMA->DAD += length * sizeof(T);
-    }
+    // handle writeback/reload in IO class
+    DMA->DAD += length * sizeof(T);
     DMA->SAD += length * sizeof(T);
 }
 
@@ -112,9 +111,8 @@ void Mem::MediumDMA(s_DMAData* DMA) {
     }
 
     // update DMA data
-    if ((DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) != static_cast<u16>(DMACNT_HFlags::DestIncrementReload)) {
-        DMA->DAD += length * delta_dad;
-    }
+    // handle writeback/reload in IO class
+    DMA->DAD += length * delta_dad;
     DMA->SAD += length * delta_sad;
     log_dma("Post medium SAD %x, DAD %x", DMA->SAD, DMA->DAD);
 }
@@ -155,10 +153,8 @@ void Mem::SlowDMA(s_DMAData* DMA) {
         sad += delta_sad;
     }
 
-    if ((DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) != static_cast<u16>(DMACNT_HFlags::DestIncrementReload)) {
-        DMA->DAD = dad;
-    }
-
+    // handle writeback/reload in IO class
+    DMA->DAD = dad;
     DMA->SAD = sad;
 }
 
@@ -271,9 +267,8 @@ void Mem::DoDMA(s_DMAData* DMA) {
 
             (*timer) += cycles_per_access * length;
 
-            if ((DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) != static_cast<u16>(DMACNT_HFlags::DestIncrementReload)) {
-                DMA->DAD += length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl));
-            }
+            // handle writeback/reload in IO class
+            DMA->DAD += length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl));
             DMA->SAD += length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl));;
         }
         default:

@@ -77,6 +77,9 @@ MMIO::MMIO(GBAPPU* ppu, GBAAPU* apu, ARM7TDMI* cpu, Mem* memory, s_scheduler* sc
         .caller   = this,
     };
 
+    Timers[0].FIFOA = &APU->fifo[0];
+    Timers[1].FIFOA = &APU->fifo[1];
+
     Scheduler->AddEvent(&HBlank);
     Scheduler->AddEvent(&VBlank);
 }
@@ -138,21 +141,26 @@ void MMIO::RunDMAChannel(u8 x) {
         DMAData[x].CNT_H &= ~static_cast<u16>(DMACNT_HFlags::Enable);
         DMAEnabled[x] = false;
     }
-    // otherwise, it is already marked as enabled
+    else {
+        // marked as repeat
+        // it is already marked as enabled
 
-    // write back the DMA data
-#ifdef DIRECT_IO_DATA_COPY
-    memcpy(
-            &Registers[static_cast<u32>(IORegister::DMA0SAD) + x * 0xc],
-            &DMAData[x],
-            sizeof(s_DMAData)
-    );
-#else
-    WriteArray<u32>(Registers, static_cast<u32>(IORegister::DMA0SAD)   + x * 0xc, DMAData[x].SAD);
-    WriteArray<u32>(Registers, static_cast<u32>(IORegister::DMA0DAD)   + x * 0xc, DMAData[x].DAD);
-    WriteArray<u32>(Registers, static_cast<u32>(IORegister::DMA0CNT_L) + x * 0xc, DMAData[x].CNT_L);
-    WriteArray<u32>(Registers, static_cast<u32>(IORegister::DMA0CNT_H) + x * 0xc, DMAData[x].CNT_H);
-#endif
+        // reload DMA data
+        if (DMAData[x].Audio) {
+            DMAData[x].CNT_L = 4;
+        }
+        else {
+            DMAData[x].CNT_L = ReadArray<u16>(Registers, static_cast<u32>(IORegister::DMA0CNT_L) + x * 0xc);
+        }
+
+        if (!DMAData[x].Audio && (DMAData[x].CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)) == static_cast<u16>(DMACNT_HFlags::DestIncrementReload)) {
+            DMAData[x].DAD = ReadArray<u32>(Registers, static_cast<u32>(IORegister::DMA0DAD) + x * 0xc);
+        }
+    }
+
+    // write back the DMA control data (with enabled clear)
+    // todo: shadow this for audio DMAs?
+    WriteArray<u16>(Registers, static_cast<u32>(IORegister::DMA0CNT_H) + x * 0xc, DMAData[x].CNT_H);
 
     // trigger IRQ
     if (control & static_cast<u16>(DMACNT_HFlags::IRQ)) {
@@ -170,6 +178,20 @@ void MMIO::TriggerDMATiming(DMACNT_HFlags start_timing) {
         if ((DMAData[i].CNT_H & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(start_timing)) {
             log_dma("Triggering DMA %x start timing %x", i, static_cast<u16>(start_timing));
             TriggerDMAChannel(i);
+        }
+    }
+}
+
+void MMIO::TriggerAudioDMA(u32 addr) {
+    for (int i = 1; i <= 2; i++) {
+        if (!DMAEnabled[i]) {
+            continue;
+        }
+
+        if ((DMAData[i].CNT_H & static_cast<u16>(DMACNT_HFlags::StartTiming)) == static_cast<u16>(DMACNT_HFlags::StartSpecial)) {
+            if (DMAData[i].DAD == addr) {
+                TriggerDMAChannel(i);
+            }
         }
     }
 }
@@ -388,6 +410,41 @@ WRITE_CALLBACK(MMIO::WriteWaveCNT_X) {
     }
 }
 
+WRITE_CALLBACK(MMIO::WriteSOUNDCNT_L) {
+    APU->MasterVolumeRight =  value        & 0x7;
+    APU->MasterVolumeLeft  = (value >> 4)  & 0x7;
+    APU->SoundEnableRight  = (value >> 8)  & 0xf;
+    APU->SoundEnableLeft   = (value >> 12) & 0xf;
+}
+
+WRITE_CALLBACK(MMIO::WriteSOUNDCNT_H) {
+    APU->SOUNDCNT_H = value;
+
+    if (value & static_cast<u16>(SOUNDCNT_HFlags::DMAATMSelect)) {
+        // timer 1 selected for FIFO A
+        Timers[1].FIFOA = &APU->fifo[0];
+        Timers[0].FIFOA = nullptr;
+    }
+    else {
+        // timer 0 selected
+        Timers[1].FIFOA = nullptr;
+        Timers[0].FIFOA = &APU->fifo[0];
+    }
+
+    // same for timer B
+    if (value & static_cast<u16>(SOUNDCNT_HFlags::DMABTMSelect)) {
+        Timers[1].FIFOB = &APU->fifo[1];
+        Timers[0].FIFOB = nullptr;
+    }
+    else {
+        Timers[1].FIFOB = nullptr;
+        Timers[0].FIFOB = &APU->fifo[1];
+    }
+}
+
+WRITE_CALLBACK(MMIO::WriteSOUNDCNT_X) {
+    APU->SOUNDCNT_X = value;
+}
 
 READ_PRECALL(MMIO::ReadKEYINPUT) {
     CheckKEYINPUTIRQ();
