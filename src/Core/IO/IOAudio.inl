@@ -1,6 +1,9 @@
 
 inline WRITE_CALLBACK(MMIO::WriteSquare0Sweep) {
-    // todo: sweep
+    APU->sq[0].SweepNumber = value & 7;
+    APU->sq[0].SweepUp = (value & 0x8) != 0;
+    APU->sq[0].SweepPeriod = (value >> 4) & 7;
+    APU->sq[0].SweepReload();
 }
 
 template<u8 x> WRITE_CALLBACK(MMIO::WriteSquareCNT_L) {

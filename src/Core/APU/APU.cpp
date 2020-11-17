@@ -68,7 +68,7 @@ SCHEDULER_EVENT(GBAAPU::TickFrameSequencerEvent) {
     switch (APU->FrameSequencer & 7) {
         case 2:
         case 6:
-            // todo: sq0 sweep
+            APU->sq[0].DoSweep();
         case 0:
         case 4:
             APU->sq[0].TickLengthCounter();

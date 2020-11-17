@@ -13,6 +13,35 @@ public:
         Duty = DutyCycles[index];
     }
 
+    u32 SweepNumber = 0;
+    bool SweepUp = false;
+    u32 SweepPeriod = 0;
+    i32 SweepTimer = 0;
+
+    void SweepReload() {
+        SweepTimer = SweepPeriod;
+    }
+
+    void DoSweep() {
+        if (SweepPeriod == 0) {
+            return;
+        }
+
+        if (--SweepTimer == 0) {
+            i32 dPeriod = Period >> SweepNumber;
+            if (!SweepUp) {
+                dPeriod *= -1;
+            }
+
+            Period += dPeriod;
+            // we dont want to underflow/overflow the period
+            // setting a max on the period makes it so (in this case) for at most 1 second, the channel is frozen
+            Period = std::clamp(Period, 1u, (u32)CLOCK_FREQUENCY);
+
+            SweepTimer = SweepPeriod;
+        }
+    }
+
 private:
     friend class Initializer;
     static constexpr const u8 DutyCycles[4]  = {
