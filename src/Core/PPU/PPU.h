@@ -29,6 +29,9 @@ public:
     struct s_framebuffer Render();
     struct s_framebuffer RenderUntil(size_t ticks);
 
+    bool ExternalBGEnable[4] = { true, true, true, true };
+    bool ExternalObjEnable = true;
+
 private:
     friend class MMIO;  // IO needs full control over the PPU
     friend class Initializer;

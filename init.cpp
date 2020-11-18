@@ -352,6 +352,14 @@ GBA* Initializer::init() {
     add_menu_item(video_tab, "Sync to video", &gba->PPU.SyncToVideo, Initializer::toggle_sync_to_video);
     add_menu_item(video_tab, "Frameskip", &gba->PPU.FrameSkip, Initializer::toggle_frameskip);
 
+    add_menu_item(video_tab, "", nullptr, nullptr);
+
+    add_menu_item(video_tab, "BG0", &gba->PPU.ExternalBGEnable[0], nullptr);
+    add_menu_item(video_tab, "BG1", &gba->PPU.ExternalBGEnable[1], nullptr);
+    add_menu_item(video_tab, "BG2", &gba->PPU.ExternalBGEnable[2], nullptr);
+    add_menu_item(video_tab, "BG3", &gba->PPU.ExternalBGEnable[3], nullptr);
+    add_menu_item(video_tab, "OBJ", &gba->PPU.ExternalObjEnable, nullptr);
+
     int audio_tab = add_menu_tab((char*)"Audio");
     const float max_volume = 2.0;
 

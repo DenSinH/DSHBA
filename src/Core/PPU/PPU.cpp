@@ -714,6 +714,10 @@ void GBAPPU::DrawWindows() {
 }
 
 void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
+    if (unlikely(!ExternalObjEnable)) {
+        return;
+    }
+
     u32 NumberOfObjVerts = BufferObjects<false>(BufferFrame ^ 1, scanline, amount);
     if (!NumberOfObjVerts) {
         return;
@@ -815,9 +819,11 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     glBufferSubData(GL_ARRAY_BUFFER, 0, 8 * sizeof(float), quad);
 
     for (u32 BG = 0; BG <= 4; BG++) {
-        // draw each of the backgrounds separately
-        glUniform1ui(BGLocation, BG);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
+        if (likely(ExternalBGEnable[BG])) {
+            // draw each of the backgrounds separately
+            glUniform1ui(BGLocation, BG);
+            glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
+        }
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
