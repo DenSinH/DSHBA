@@ -242,6 +242,7 @@ int ui_run() {
         ImGui::NewFrame();
 
         debugger_render();
+        // ImGui::ShowDemoWindow();
 
         Frontend.file_dialog.Handle();
 

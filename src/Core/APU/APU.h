@@ -44,7 +44,12 @@ public:
     void AudioInit();
     void AudioDestroy();
 
-    float ExternalVolume = 0.5;
+    bool ExternalEnable = true;
+    float ExternalVolume = 1.0;
+    bool ExternalChannelEnable[4] = { true, true, true, true };
+    bool ExternalFIFOEnable[2] = { true, true };
+    float ExternalChannelVolume[4] = { 1.0, 1.0, 1.0, 1.0 };
+    float ExternalFIFOVolume[2] = { 1.0, 1.0 };
 
 private:
     friend class Initializer;
@@ -77,6 +82,10 @@ private:
     Noise ns;
     Wave wav;
     FIFOChannel fifo[2];
+
+    Channel* const channels[4] = {
+            &sq[0], &sq[1], &ns, &wav
+    };
 
     /* External function */
     static void AudioCallback(void* apu, u8* stream, int length);

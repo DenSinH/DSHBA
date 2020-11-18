@@ -352,5 +352,35 @@ GBA* Initializer::init() {
     add_menu_item(video_tab, "Sync to video", &gba->PPU.SyncToVideo, Initializer::toggle_sync_to_video);
     add_menu_item(video_tab, "Frameskip", &gba->PPU.FrameSkip, Initializer::toggle_frameskip);
 
+    int audio_tab = add_menu_tab((char*)"Audio");
+    const float max_volume = 2.0;
+
+    add_menu_item(audio_tab, "Master Enable", &gba->APU.ExternalEnable, nullptr);
+    add_sliderf(audio_tab, "Master Volume", &gba->APU.ExternalVolume, 0.0, max_volume);
+
+    int fifo_a_menu = add_submenu(audio_tab, "FIFO A");
+    add_submenu_item(audio_tab, fifo_a_menu, "Enable", &gba->APU.ExternalFIFOEnable[0], nullptr);
+    add_submenu_sliderf(audio_tab, fifo_a_menu, "Volume", &gba->APU.ExternalFIFOVolume[0], 0.0, max_volume);
+
+    int fifo_b_menu = add_submenu(audio_tab, "FIFO B");
+    add_submenu_item(audio_tab, fifo_b_menu, "Enable", &gba->APU.ExternalFIFOEnable[1], nullptr);
+    add_submenu_sliderf(audio_tab, fifo_b_menu, "Volume", &gba->APU.ExternalFIFOVolume[1], 0.0, max_volume);
+
+    // separator
+    add_menu_item(audio_tab, "", nullptr, nullptr);
+
+    char* const channel_names[4] = {
+            "Square 0",
+            "Square 1",
+            "Noise",
+            "Wave"
+    };
+
+    for (int i = 0; i < 4; i++) {
+        int channel_menu = add_submenu(audio_tab, channel_names[i]);
+        add_submenu_item(audio_tab, channel_menu, "Enable", &gba->APU.ExternalChannelEnable[i], nullptr);
+        add_submenu_sliderf(audio_tab, channel_menu, "Volume", &gba->APU.ExternalChannelVolume[i], 0.0, max_volume);
+    }
+
     return gba;
 }

@@ -46,7 +46,13 @@ extern "C" {
     void add_register_data(const char* name, const void* value, size_t size, int tab);
 
     size_t add_menu_tab(char* name);
+
+    size_t add_submenu(int tab, const char* name);
+    void add_submenu_item(int tab, int sub_menu, const char* name, bool* selected, MENU_ITEM_CALLBACK((*callback)));
+    void add_submenu_sliderf(int tab, int sub_menu, const char* name, float* value, float min, float max);
+
     void add_menu_item(int tab, const char* name, bool* selected, MENU_ITEM_CALLBACK((*callback)));
+    void add_sliderf(int tab, const char* name, float* value, float min, float max);
     void open_file_explorer(const char* title, char** filters, size_t filter_count, FILE_SELECT_CALLBACK((*callback)));
 
     void bind_video_init(void (*initializer)());

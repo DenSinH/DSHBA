@@ -93,6 +93,10 @@ void MMIO::Reset() {
             (this->*WriteCallback[i >> 1])(0);
         }
     }
+
+    CPU->IE  = 0;
+    CPU->IF  = 0;
+    CPU->IME = 0;
 }
 
 void MMIO::TriggerInterrupt(u16 interrupt) {

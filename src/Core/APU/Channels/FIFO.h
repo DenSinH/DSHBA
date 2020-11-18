@@ -22,7 +22,7 @@ public:
 
     void TimerOverflow() {
         if (Queue.size()) {
-            CurrentSample = (((i16)Queue.front()) << 8) | Queue.front();
+            CurrentSample = ((i16)Queue.front()) << 8 | ((u8)Queue.front() << 1);
             Queue.pop();
         }
 

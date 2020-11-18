@@ -72,10 +72,9 @@ SCHEDULER_EVENT(GBAAPU::TickFrameSequencerEvent) {
             APU->sq[0].DoSweep();
         case 0:
         case 4:
-            APU->sq[0].TickLengthCounter();
-            APU->sq[1].TickLengthCounter();
-            APU->ns.TickLengthCounter();
-            APU->wav.TickLengthCounter();
+            for (auto ch : APU->channels) {
+                ch->TickLengthCounter();
+            }
             break;
         case 7:
             APU->sq[0].DoEnvelope();
@@ -96,31 +95,76 @@ void GBAAPU::DoProvideSample() {
         return;
     }
 
+    if (!ExternalEnable) {
+        return;
+    }
+
     if(SDL_AudioStreamAvailable(Stream) > 0.5 * SampleFrequency * sizeof(float)) {
         // more than half a second of audio available, stop providing samples
+        return;
+    }
+
+    if (!(SOUNDCNT_X & 0x80)) {
+        // PSG/FIFO Master Enable flag
         return;
     }
 
     i32 SampleLeft = 0;
     i32 SampleRight = 0;
 
-    SampleLeft += sq[0].CurrentSample;
-    SampleLeft += sq[1].CurrentSample;
-    SampleLeft += ns.CurrentSample;
-    SampleLeft += wav.CurrentSample;
-    SampleLeft += fifo[0].CurrentSample * 8;
-    SampleLeft += fifo[1].CurrentSample * 8;
+    for (int i = 0; i < 4; i++) {
+        if (!ExternalChannelEnable[i]) {
+            continue;
+        }
 
-    SampleRight += sq[0].CurrentSample;
-    SampleRight += sq[1].CurrentSample;
-    SampleRight += ns.CurrentSample;
-    SampleRight += wav.CurrentSample;
-    SampleRight += fifo[0].CurrentSample * 8;
-    SampleRight += fifo[1].CurrentSample * 8;
+        if (SoundEnableLeft & (1 << i)) {
+            SampleLeft += (i32)(channels[i]->CurrentSample * MasterVolumeLeft * ExternalChannelVolume[i]) >> 3;
+        }
+
+        if (SoundEnableRight & (1 << i)) {
+            SampleRight += (i32)(channels[i]->CurrentSample * MasterVolumeRight * ExternalChannelVolume[i]) >> 3;
+        }
+    }
+
+    // SOUNDCNT_L volume control does not affect FIFO channels
+    SampleLeft  = (SampleLeft  * MasterVolumeRight) >> 3;
+    SampleRight = (SampleRight * MasterVolumeRight) >> 3;
+
+    switch(SOUNDCNT_H & 3) {
+        // volume of PSG channels
+        case 0:
+            // 25%
+            SampleLeft >>= 2;
+            SampleRight >>= 2;
+            break;
+        case 1:
+            // 50%
+            SampleLeft >>= 1;
+            SampleRight >>= 1;
+            break;
+        case 2:
+            // 100%
+            break;
+    }
+
+    for (int i = 0; i < 2; i++) {
+        if (!ExternalFIFOEnable[i]) {
+            continue;
+        }
+
+        if (SOUNDCNT_H & (0x10 << (i << 2))) {
+            // apply volume control in SOUNDCNT_H
+            SampleRight += (i32)(fifo[i].CurrentSample * ExternalFIFOVolume[i]) * 8 >> ((SOUNDCNT_H & (0x4 << i)) ? 0 : 1);
+        }
+
+        if (SOUNDCNT_H & (0x20 << (i << 2))) {
+            SampleLeft += (i32)(fifo[i].CurrentSample * ExternalFIFOVolume[i]) * 8 >> ((SOUNDCNT_H & (0x4 << i)) ? 0 : 1);
+        }
+    }
 
     i16 samples[2] = {
-            (i16)((i32)(SampleLeft  * ExternalVolume) >> 5),  // left
-            (i16)((i32)(SampleRight * ExternalVolume) >> 5),  // right
+            (i16)((i32)(SampleLeft  * ExternalVolume) >> 4),  // left
+            (i16)((i32)(SampleRight * ExternalVolume) >> 4),  // right
     };
 
     SDL_AudioStreamPut(Stream, samples, 2 * sizeof(i16));
