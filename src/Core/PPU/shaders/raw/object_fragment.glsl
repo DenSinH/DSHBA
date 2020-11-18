@@ -1,5 +1,5 @@
 // externally added
-#version 430 core
+#version 330 core
 
 // BEGIN ObjectFragmentShaderSource
 
@@ -46,10 +46,10 @@ vec4 RegularObject(bool OAM2DMapping) {
     uint dy = uint(InObjPos.y);
 
     // mosaic effect
-    if ((OBJ.attr0 & ++ATTR0_MOSAIC++) != 0) {
+    if ((OBJ.attr0 & ++ATTR0_MOSAIC++) != 0u) {
         uint MOSAIC = readIOreg(++MOSAIC++);
-        dx -= dx % (((MOSAIC & 0xf00u) >> 8) + 1);
-        dy -= dy % (((MOSAIC & 0xf000u) >> 12) + 1);
+        dx -= dx % (((MOSAIC & 0xf00u) >> 8) + 1u);
+        dy -= dy % (((MOSAIC & 0xf000u) >> 12) + 1u);
     }
 
     uint PixelAddress;
@@ -62,7 +62,7 @@ vec4 RegularObject(bool OAM2DMapping) {
             PixelAddress += ObjWidth * (dy >> 3) << 2;
         }
         else {
-            PixelAddress += 32 * 0x20 * (dy >> 3);
+            PixelAddress += 32u * 0x20u * (dy >> 3);
         }
         PixelAddress += (dy & 7u) << 2; // offset within tile for sliver
 
@@ -74,7 +74,7 @@ vec4 RegularObject(bool OAM2DMapping) {
         PixelAddress += ((dx & 7u) >> 1);  // in tile
 
         uint VRAMEntry = readVRAM8(PixelAddress);
-        if ((dx & 1u) != 0) {
+        if ((dx & 1u) != 0u) {
             // upper nibble
             VRAMEntry >>= 4;
         }
@@ -82,8 +82,8 @@ vec4 RegularObject(bool OAM2DMapping) {
             VRAMEntry &= 0x0fu;
         }
 
-        if (VRAMEntry != 0) {
-            return vec4(readPALentry(0x100 + (PaletteBank << 4) + VRAMEntry).rgb, 1);
+        if (VRAMEntry != 0u) {
+            return vec4(readPALentry(0x100u + (PaletteBank << 4) + VRAMEntry).rgb, 1);
         }
         else {
             // transparent
@@ -98,7 +98,7 @@ vec4 RegularObject(bool OAM2DMapping) {
             PixelAddress += ObjWidth * (dy & ~7u);
         }
         else {
-            PixelAddress += 32 * 0x20 * (dy >> 3);
+            PixelAddress += 32u * 0x20u * (dy >> 3);
         }
         PixelAddress += (dy & 7u) << 3;
 
@@ -111,8 +111,8 @@ vec4 RegularObject(bool OAM2DMapping) {
 
         uint VRAMEntry = readVRAM8(PixelAddress);
 
-        if (VRAMEntry != 0) {
-            return vec4(readPALentry(0x100 + VRAMEntry).rgb, 1);
+        if (VRAMEntry != 0u) {
+            return vec4(readPALentry(0x100u + VRAMEntry).rgb, 1);
         }
         else {
             // transparent
@@ -136,9 +136,9 @@ vec4 AffineObject(bool OAM2DMapping) {
 
     // scaling parameters
     int PA = readOAMentry(AffineIndex).attr3;
-    int PB = readOAMentry(AffineIndex + 1).attr3;
-    int PC = readOAMentry(AffineIndex + 2).attr3;
-    int PD = readOAMentry(AffineIndex + 3).attr3;
+    int PB = readOAMentry(AffineIndex + 1u).attr3;
+    int PC = readOAMentry(AffineIndex + 2u).attr3;
+    int PD = readOAMentry(AffineIndex + 3u).attr3;
 
     // reference point
     vec2 p0 = vec2(
@@ -167,30 +167,30 @@ vec4 AffineObject(bool OAM2DMapping) {
     }
 
     // mosaic effect
-    if ((OBJ.attr0 & ++ATTR0_MOSAIC++) != 0) {
+    if ((OBJ.attr0 & ++ATTR0_MOSAIC++) != 0u) {
         uint MOSAIC = readIOreg(++MOSAIC++);
-        pos.x -= pos.x % int(((MOSAIC & 0xf00u) >> 8) + 1);
-        pos.y -= pos.y % int(((MOSAIC & 0xf000u) >> 12) + 1);
+        pos.x -= pos.x % int(((MOSAIC & 0xf00u) >> 8) + 1u);
+        pos.y -= pos.y % int(((MOSAIC & 0xf000u) >> 12) + 1u);
     }
 
     // get actual pixel
-    uint PixelAddress = 0x10000;  // OBJ VRAM starts at 0x10000 in VRAM
+    uint PixelAddress = 0x10000u;  // OBJ VRAM starts at 0x10000 in VRAM
     PixelAddress += TID << 5;
     if (OAM2DMapping) {
-        PixelAddress += ObjWidth * (pos.y & ~7) >> 1;
+        PixelAddress += ObjWidth * uint(pos.y & ~7) >> 1;
     }
     else {
-        PixelAddress += 32 * 0x20 * (pos.y >> 3);
+        PixelAddress += 32u * 0x20u * uint(pos.y >> 3);
     }
 
     // the rest is very similar to regular sprites:
     if ((OBJ.attr0 & ++ATTR0_CM++) == ++ATTR0_4BPP++) {
         uint PaletteBank = OBJ.attr2 >> 12;
-        PixelAddress += (pos.y & 7) << 2; // offset within tile for sliver
+        PixelAddress += uint(pos.y & 7) << 2; // offset within tile for sliver
 
         // horizontal offset:
-        PixelAddress += (pos.x >> 3) << 5;    // of tile
-        PixelAddress += (pos.x & 7) >> 1;  // in tile
+        PixelAddress += uint(pos.x >> 3) << 5;    // of tile
+        PixelAddress += uint(pos.x & 7) >> 1;  // in tile
 
         uint VRAMEntry = readVRAM8(PixelAddress);
         if ((pos.x & 1) != 0) {
@@ -201,8 +201,8 @@ vec4 AffineObject(bool OAM2DMapping) {
             VRAMEntry &= 0x0fu;
         }
 
-        if (VRAMEntry != 0) {
-            return vec4(readPALentry(0x100 + (PaletteBank << 4) + VRAMEntry).rgb, 1);
+        if (VRAMEntry != 0u) {
+            return vec4(readPALentry(0x100u + (PaletteBank << 4) + VRAMEntry).rgb, 1);
         }
         else {
             // transparent
@@ -213,13 +213,13 @@ vec4 AffineObject(bool OAM2DMapping) {
         PixelAddress += (uint(pos.y) & 7u) << 3; // offset within tile for sliver
 
         // horizontal offset:
-        PixelAddress += (pos.x >> 3) << 6;  // of tile
-        PixelAddress += (pos.x & 7);        // in tile
+        PixelAddress += uint(pos.x >> 3) << 6;  // of tile
+        PixelAddress += uint(pos.x & 7);        // in tile
 
         uint VRAMEntry = readVRAM8(PixelAddress);
 
-        if (VRAMEntry != 0) {
-            return vec4(readPALentry(0x100 + VRAMEntry).rgb, 1);
+        if (VRAMEntry != 0u) {
+            return vec4(readPALentry(0x100u + VRAMEntry).rgb, 1);
         }
         else {
             // transparent
@@ -245,22 +245,22 @@ void main() {
 
     uint DISPCNT = readIOreg(++DISPCNT++);
 #ifndef OBJ_WINDOW
-    if ((DISPCNT & ++DisplayOBJ++) == 0) {
+    if ((DISPCNT & ++DisplayOBJ++) == 0u) {
         // objects disabled in this scanline
         discard;
     }
-    if ((getWindow(uint(OnScreenPos.x), uint(OnScreenPos.y)) & 0x10u) == 0) {
+    if ((getWindow(uint(OnScreenPos.x), uint(OnScreenPos.y)) & 0x10u) == 0u) {
         // disabled by window
         discard;
     }
 #else
-    if ((DISPCNT & ++DisplayWinObj++) == 0) {
+    if ((DISPCNT & ++DisplayWinObj++) == 0u) {
         // object window disabled in this scanline
         discard;
     }
 #endif
 
-    bool OAM2DMapping = (DISPCNT & (++OAM2DMap++)) != 0;
+    bool OAM2DMapping = (DISPCNT & (++OAM2DMap++)) != 0u;
 
     vec4 Color;
     if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_REG++) {

@@ -1,6 +1,6 @@
 // BEGIN FragmentShaderSource
 
-#version 430 core
+#version 330 core
 
 in vec2 screenCoord;
 
@@ -23,50 +23,50 @@ vec4 readPALentry(uint index);
 uint getWindow(uint x, uint y);
 
 float getDepth(uint BGCNT) {
-    return ((2 * float(BGCNT & 3u)) / 8.0) + (float(1 + BG) / 32.0);
+    return ((2.0 * float(BGCNT & 3u)) / 8.0) + (float(1u + BG) / 32.0);
 }
 
 uint VRAMIndex(uint Tx, uint Ty, uint Size) {
     uint temp = ((Ty & 0x1fu) << 6);
     temp |= temp | ((Tx & 0x1fu) << 1);
     switch (Size) {
-        case 0:  // 32x32
+        case 0u:  // 32x32
             break;
-        case 1:  // 64x32
-            if ((Tx & 0x20u) != 0) {
+        case 1u:  // 64x32
+            if ((Tx & 0x20u) != 0u) {
                 temp |= 0x800u;
             }
             break;
-        case 2:  // 32x64
-            if ((Ty & 0x20u) != 0) {
+        case 2u:  // 32x64
+            if ((Ty & 0x20u) != 0u) {
                 temp |= 0x800u;
             }
             break;
-        case 3:  // 64x64
-            if ((Ty & 0x20u) != 0) {
+        case 3u:  // 64x64
+            if ((Ty & 0x20u) != 0u) {
                 temp |= 0x1000u;
             }
-            if ((Tx & 0x20u) != 0) {
+            if ((Tx & 0x20u) != 0u) {
                 temp |= 0x800u;
             }
             break;
         default:
             // invalid, should not happen
-            return 0;
+            return 0u;
     }
     return temp;
 }
 
 vec4 regularScreenEntryPixel(uint dx, uint dy, uint ScreenEntry, uint CBB, bool ColorMode) {
     uint PaletteBank = ScreenEntry >> 12;  // 16 bits, we need top 4
-    if ((ScreenEntry & 0x0800u) != 0) {
+    if ((ScreenEntry & 0x0800u) != 0u) {
         // VFlip
-        dy = 7 - dy;
+        dy = 7u - dy;
     }
 
-    if ((ScreenEntry & 0x0400u) != 0) {
+    if ((ScreenEntry & 0x0400u) != 0u) {
         // HFlip
-        dx = 7 - dx;
+        dx = 7u - dx;
     }
 
     uint TID     = ScreenEntry & 0x3ffu;
@@ -79,14 +79,14 @@ vec4 regularScreenEntryPixel(uint dx, uint dy, uint ScreenEntry, uint CBB, bool 
 
         Address += dx >> 1;  // offset into sliver
         uint VRAMEntry = readVRAM8(Address);
-        if ((dx & 1u) != 0) {
+        if ((dx & 1u) != 0u) {
             VRAMEntry >>= 4;     // odd x, upper nibble
         }
         else {
             VRAMEntry &= 0xfu;  // even x, lower nibble
         }
 
-        if (VRAMEntry != 0) {
+        if (VRAMEntry != 0u) {
             return vec4(readPALentry((PaletteBank << 4) + VRAMEntry).rgb, 1);
         }
     }
@@ -98,7 +98,7 @@ vec4 regularScreenEntryPixel(uint dx, uint dy, uint ScreenEntry, uint CBB, bool 
         Address += dx;       // offset into sliver
         uint VRAMEntry = readVRAM8(Address);
 
-        if (VRAMEntry != 0) {
+        if (VRAMEntry != 0u) {
             return vec4(readPALentry(VRAMEntry).rgb, 1);
         }
     }
@@ -124,10 +124,10 @@ vec4 regularBGPixel(uint BGCNT, uint x, uint y) {
     uint y_eff = (y + VOFS) & 0xffffu;
 
     // mosaic effect
-    if ((BGCNT & ++BG_MOSAIC++) != 0) {
+    if ((BGCNT & ++BG_MOSAIC++) != 0u) {
         uint MOSAIC = readIOreg(++MOSAIC++);
-        x_eff -= x_eff % ((MOSAIC & 0xfu) + 1);
-        y_eff -= y_eff % (((MOSAIC & 0xf0u) >> 4) + 1);
+        x_eff -= x_eff % ((MOSAIC & 0xfu) + 1u);
+        y_eff -= y_eff % (((MOSAIC & 0xf0u) >> 4) + 1u);
     }
 
     uint ScreenEntryIndex = VRAMIndex(x_eff >> 3u, y_eff >> 3u, Size);
@@ -137,9 +137,9 @@ vec4 regularBGPixel(uint BGCNT, uint x, uint y) {
     return regularScreenEntryPixel(x_eff & 7u, y_eff & 7u, ScreenEntry, CBB, ColorMode);
 }
 
-const uint AffineBGSizeTable[4] = {
-    128, 256, 512, 1024
-};
+const uint AffineBGSizeTable[4] = uint[](
+    128u, 256u, 512u, 1024u
+);
 
 vec4 affineBGPixel(uint BGCNT, vec2 screen_pos) {
     uint x = uint(screen_pos.x);
@@ -148,7 +148,7 @@ vec4 affineBGPixel(uint BGCNT, vec2 screen_pos) {
     uint ReferenceLine;
     uint BGX_raw, BGY_raw;
     int PA, PB, PC, PD;
-    if (BG == 2) {
+    if (BG == 2u) {
         ReferenceLine = ReferenceLine2[y];
 
         BGX_raw  = readIOreg(++BG2X_L++);
@@ -205,22 +205,22 @@ vec4 affineBGPixel(uint BGCNT, vec2 screen_pos) {
     x_eff >>= 8;
     y_eff >>= 8;
 
-    if ((x_eff < 0) || (x_eff > Size) || (y_eff < 0) || (y_eff > Size)) {
-        if ((BGCNT & ++BG_DISPLAY_OVERFLOW++) == 0) {
+    if ((x_eff < 0) || (x_eff > int(Size)) || (y_eff < 0) || (y_eff > int(Size))) {
+        if ((BGCNT & ++BG_DISPLAY_OVERFLOW++) == 0u) {
             // no display area overflow
             discard;
         }
 
         // wrapping
-        x_eff &= int(Size - 1);
-        y_eff &= int(Size - 1);
+        x_eff &= int(Size) - 1;
+        y_eff &= int(Size) - 1;
     }
 
     // mosaic effect
-    if ((BGCNT & ++BG_MOSAIC++) != 0) {
+    if ((BGCNT & ++BG_MOSAIC++) != 0u) {
         uint MOSAIC = readIOreg(++MOSAIC++);
-        x_eff -= x_eff % int((MOSAIC & 0xfu) + 1);
-        y_eff -= y_eff % int(((MOSAIC & 0xf0u) >> 4) + 1);
+        x_eff -= x_eff % int((MOSAIC & 0xfu) + 1u);
+        y_eff -= y_eff % int(((MOSAIC & 0xf0u) >> 4) + 1u);
     }
 
     uint TIDAddress = (SBB << 11u);  // base
@@ -231,7 +231,7 @@ vec4 affineBGPixel(uint BGCNT, vec2 screen_pos) {
     uint VRAMEntry = readVRAM8(PixelAddress);
 
     // transparent
-    if (VRAMEntry == 0) {
+    if (VRAMEntry == 0u) {
         discard;
     }
 
@@ -245,10 +245,10 @@ vec4 mode3(uint, uint);
 vec4 mode4(uint, uint);
 
 void main() {
-    if (BG >= 4) {
+    if (BG >= 4u) {
         // backdrop, highest frag depth
         gl_FragDepth = 1;
-        FragColor = ColorCorrect(vec4(readPALentry(0).rgb, 1));
+        FragColor = ColorCorrect(vec4(readPALentry(0u).rgb, 1.0));
         return;
     }
 
@@ -256,11 +256,11 @@ void main() {
     uint y = uint(screenCoord.y);
 
     // disabled by window
-    if ((getWindow(x, y) & (1u << BG)) == 0) {
+    if ((getWindow(x, y) & (1u << BG)) == 0u) {
         discard;
     }
 
-    uint DISPCNT = readIOreg(0);
+    uint DISPCNT = readIOreg(0u);
 
     vec4 outColor;
     switch(DISPCNT & 7u) {

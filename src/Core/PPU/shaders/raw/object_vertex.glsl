@@ -1,5 +1,5 @@
 // defined externally
-#version 430 core
+#version 330 core
 
 // BEGIN ObjectVertexShaderSource
 
@@ -21,20 +21,20 @@ struct s_ObjSize {
     uint height;
 };
 
-const s_ObjSize ObjSizeTable[3][4] = {
-    { s_ObjSize(8, 8),  s_ObjSize(16, 16), s_ObjSize(32, 32), s_ObjSize(64, 64) },
-    { s_ObjSize(16, 8), s_ObjSize(32, 8),  s_ObjSize(32, 16), s_ObjSize(64, 32) },
-    { s_ObjSize(8, 16), s_ObjSize(8, 32),  s_ObjSize(16, 32), s_ObjSize(32, 62) }
-};
+const s_ObjSize ObjSizeTable[12] = s_ObjSize[](
+    s_ObjSize(8u, 8u),  s_ObjSize(16u, 16u), s_ObjSize(32u, 32u), s_ObjSize(64u, 64u),
+    s_ObjSize(16u, 8u), s_ObjSize(32u, 8u),  s_ObjSize(32u, 16u), s_ObjSize(64u, 32u),
+    s_ObjSize(8u, 16u), s_ObjSize(8u, 32u),  s_ObjSize(16u, 32u), s_ObjSize(32u, 62u)
+);
 
 struct s_Position {
     bool right;
     bool low;
 };
 
-const s_Position PositionTable[4] = {
+const s_Position PositionTable[4] = s_Position[](
     s_Position(false, false), s_Position(true, false), s_Position(true, true), s_Position(false, true)
-};
+);
 
 void main() {
     OBJ = InOBJ;
@@ -43,7 +43,7 @@ void main() {
     uint Shape = OBJ.attr0 >> 14;
     uint Size  = OBJ.attr1 >> 14;
 
-    s_ObjSize ObjSize = ObjSizeTable[Shape][Size];
+    s_ObjSize ObjSize = ObjSizeTable[(Shape * 4u) + Size];
     ObjWidth = ObjSize.width;
     ObjHeight = ObjSize.height;
 
@@ -83,12 +83,12 @@ void main() {
 
     // flipping only applies to regular sprites
     if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_REG++) {
-        if ((OBJ.attr1 & ++ATTR1_VF++) != 0) {
+        if ((OBJ.attr1 & ++ATTR1_VF++) != 0u) {
             // VFlip
             InObjPos.y = ObjHeight - InObjPos.y;
         }
 
-        if ((OBJ.attr1 & ++ATTR1_HF++) != 0) {
+        if ((OBJ.attr1 & ++ATTR1_HF++) != 0u) {
             // HFlip
             InObjPos.x = ObjWidth - InObjPos.x;
         }

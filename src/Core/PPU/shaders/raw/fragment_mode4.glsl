@@ -1,6 +1,6 @@
 // BEGIN FragmentShaderMode4Source
 
-#version 430 core
+#version 330 core
 
 uniform uint BG;
 
@@ -13,21 +13,21 @@ vec4 readPALentry(uint index);
 float getDepth(uint BGCNT);
 
 vec4 mode4(uint x, uint y) {
-    if (BG != 2) {
+    if (BG != 2u) {
         // only BG2 is drawn
         discard;
     }
 
     uint DISPCNT = readIOreg(++DISPCNT++);
 
-    if ((DISPCNT & ++DisplayBG2++) == 0) {
+    if ((DISPCNT & ++DisplayBG2++) == 0u) {
         // background 2 is disabled
         discard;
     }
 
     // offset is specified in DISPCNT
-    uint Offset = 0;
-    if ((DISPCNT & ++DPFrameSelect++) != 0) {
+    uint Offset = 0u;
+    if ((DISPCNT & ++DPFrameSelect++) != 0u) {
         // offset
         Offset = 0xa000u;
     }

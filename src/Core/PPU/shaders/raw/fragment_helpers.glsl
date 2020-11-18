@@ -1,6 +1,6 @@
 // BEGIN FragmentHelperSource
 
-#version 430 core
+#version 330 core
 
 /* GENERAL */
 in vec2 OnScreenPos;
@@ -35,13 +35,13 @@ uint readVRAM8(uint address) {
 uint readVRAM16(uint address) {
     address &= ~1u;
     uint lsb = readVRAM8(address);
-    return lsb | (readVRAM8(address + 1) << 8u);
+    return lsb | (readVRAM8(address + 1u) << 8u);
 }
 
 uint readVRAM32(uint address) {
     address &= ~3u;
     uint lsh = readVRAM16(address);
-    return lsh | (readVRAM16(address + 2) << 16u);
+    return lsh | (readVRAM16(address + 2u) << 16u);
 }
 
 uint readIOreg(uint address) {

@@ -13,7 +13,7 @@
 
 #include <SDL.h>
 
-const char* glsl_version = "#version 430 core\n";
+const char* glsl_version = "#version 330 core\n";
 
 #define INTERNAL_FRAMEBUFFER_WIDTH 480
 #define INTERNAL_FRAMEBUFFER_HEIGHT 320
@@ -255,7 +255,7 @@ void GBAPPU::InitBGProgram() {
     glAttachShader(BGProgram, modeShaders[2]);
     glAttachShader(BGProgram, modeShaders[3]);
     glAttachShader(BGProgram, modeShaders[4]);
-    LinkProgram(BGProgram);
+    LinkProgram(BGProgram, "BG Program");
 
     // dump shaders
     glDeleteShader(vertexShader);
@@ -296,7 +296,7 @@ void GBAPPU::InitObjProgram() {
     glAttachShader(ObjProgram, vertexShader);
     glAttachShader(ObjProgram, fragmentShader);
     glAttachShader(ObjProgram, fragmentHelpers);
-    LinkProgram(ObjProgram);
+    LinkProgram(ObjProgram, "Obj Program");
 
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
@@ -329,7 +329,7 @@ void GBAPPU::InitWinBGProgram() {
     glAttachShader(WinBGProgram, vertexShader);
     glAttachShader(WinBGProgram, fragmentShader);
     glAttachShader(WinBGProgram, fragmentHelpers);
-    LinkProgram(WinBGProgram);
+    LinkProgram(WinBGProgram, "Win BG Program");
 
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
@@ -363,7 +363,7 @@ void GBAPPU::InitWinObjProgram() {
     glAttachShader(WinObjProgram, vertexShader);
     glAttachShader(WinObjProgram, fragmentShader);
     glAttachShader(WinObjProgram, fragmentHelpers);
-    LinkProgram(WinObjProgram);
+    LinkProgram(WinObjProgram, "Win Obj Program");
 
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);

@@ -1,6 +1,6 @@
 // BEGIN FragmentShaderMode3Source
 
-#version 430 core
+#version 330 core
 
 uniform uint BG;
 
@@ -14,14 +14,14 @@ float getDepth(uint BGCNT);
 
 
 vec4 mode3(uint x, uint y) {
-    if (BG != 2) {
+    if (BG != 2u) {
         // only BG2 is drawn
         discard;
     }
 
     uint DISPCNT = readIOreg(++DISPCNT++);
 
-    if ((DISPCNT & ++DisplayBG2++) == 0) {
+    if ((DISPCNT & ++DisplayBG2++) == 0u) {
         // background 2 is disabled
         discard;
     }

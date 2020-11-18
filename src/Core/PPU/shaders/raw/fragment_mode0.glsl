@@ -1,6 +1,6 @@
 // BEGIN FragmentShaderMode0Source
 
-#version 430 core
+#version 330 core
 
 uniform uint BG;
 
@@ -20,7 +20,7 @@ vec4 mode0(uint x, uint y) {
     uint BGCNT = readIOreg(++BG0CNT++ + (BG << 1));
 
     vec4 Color;
-    if ((DISPCNT & (++DisplayBG0++ << BG)) == 0) {
+    if ((DISPCNT & (++DisplayBG0++ << BG)) == 0u) {
         discard;  // background disabled
     }
 

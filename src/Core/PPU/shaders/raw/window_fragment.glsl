@@ -1,6 +1,6 @@
 // BEGIN WindowFragmentShaderSource
 
-#version 430 core
+#version 330 core
 
 in vec2 screenCoord;
 
@@ -17,10 +17,10 @@ vec4 readPALentry(uint index);
 void main() {
     uint DISPCNT = readIOreg(++DISPCNT++);
 
-    if ((DISPCNT & 0xe000u) == 0) {
+    if ((DISPCNT & 0xe000u) == 0u) {
         // windows are disabled, enable all windows
         // we should have caught this before rendering, but eh, I guess we'll check again...
-        FragColor.x = 0x3f;
+        FragColor.x = 0x3fu;
         gl_FragDepth = -1.0;
         return;
     }
@@ -29,15 +29,15 @@ void main() {
     uint y = uint(screenCoord.y);
 
     // window 0 has higher priority
-    for (uint window = 0; window < 2; window++) {
-        if ((DISPCNT & (++DisplayWin0++ << window)) == 0) {
+    for (uint window = 0u; window < 2u; window++) {
+        if ((DISPCNT & (++DisplayWin0++ << window)) == 0u) {
             // window disabled
             continue;
         }
 
-        uint WINH = readIOreg(++WIN0H++ + 2 * window);
-        uint WINV = readIOreg(++WIN0V++ + 2 * window);
-        uint WININ = (readIOreg(++WININ++) >> (window * 8)) & 0x3fu;
+        uint WINH = readIOreg(++WIN0H++ + 2u * window);
+        uint WINV = readIOreg(++WIN0V++ + 2u * window);
+        uint WININ = (readIOreg(++WININ++) >> (window * 8u)) & 0x3fu;
 
         uint X1 = WINH >> 8;
         uint X2 = WINH & 0xffu;

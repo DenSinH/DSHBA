@@ -18,7 +18,7 @@ static void CompileShader(unsigned int shader, const char* name) {
     }
 }
 
-static void LinkProgram(unsigned int program) {
+static void LinkProgram(unsigned int program, const char* name) {
     glLinkProgram(program);
 
     int  success;
@@ -26,7 +26,7 @@ static void LinkProgram(unsigned int program) {
     if(!success) {
         char infoLog[512];
         glGetProgramInfoLog(program, 512, nullptr, infoLog);
-        log_fatal("Shader program linking failed: %s\n", infoLog);
+        log_fatal("Shader program %s linking failed: %s\n", name, infoLog);
     }
 }
 
