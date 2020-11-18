@@ -78,7 +78,7 @@ MMIO::MMIO(GBAPPU* ppu, GBAAPU* apu, ARM7TDMI* cpu, Mem* memory, s_scheduler* sc
     };
 
     Timers[0].FIFOA = &APU->fifo[0];
-    Timers[1].FIFOA = &APU->fifo[1];
+    Timers[0].FIFOB = &APU->fifo[1];
 
     Scheduler->AddEvent(&HBlank);
     Scheduler->AddEvent(&VBlank);

@@ -9,7 +9,7 @@ void MMIO::OverflowTimer() {
     ASSUME(x < 4);
 
     Timers[x].Counter = Timers[x].Register.CNT_L;  // reload counter
-    Timers[x].TriggerTime = *Scheduler->timer;  // reset triggertime
+    Timers[x].TriggerTime = *Scheduler->timer;     // reset triggertime
 
     if constexpr(x < 2) {
         // trigger bound FIFO channels

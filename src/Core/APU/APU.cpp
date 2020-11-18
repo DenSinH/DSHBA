@@ -156,12 +156,12 @@ void GBAAPU::DoProvideSample() {
             continue;
         }
 
-        if (SOUNDCNT_H & (0x10 << (i << 2))) {
+        if (SOUNDCNT_H & (0x100 << (i << 2))) {
             // apply volume control in SOUNDCNT_H
             SampleRight += (i32)(fifo[i].CurrentSample * ExternalFIFOVolume[i]) * 8 >> ((SOUNDCNT_H & (0x4 << i)) ? 0 : 1);
         }
 
-        if (SOUNDCNT_H & (0x20 << (i << 2))) {
+        if (SOUNDCNT_H & (0x200 << (i << 2))) {
             SampleLeft += (i32)(fifo[i].CurrentSample * ExternalFIFOVolume[i]) * 8 >> ((SOUNDCNT_H & (0x4 << i)) ? 0 : 1);
         }
     }
