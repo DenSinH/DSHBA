@@ -4,6 +4,9 @@
 
 #include <cmath>
 
+// release mode SDL assertions for audio stuff (Debug mode kept throwing stuff)
+#define SDL_ASSERT_LEVEL 0
+
 GBAAPU::GBAAPU(s_scheduler* scheduler, u8* wave_ram_ptr, const std::function<void(u32)>& fifo_callback) :
     sq{Square(scheduler), Square(scheduler)},
     ns(scheduler),
@@ -57,7 +60,11 @@ void GBAAPU::AudioCallback(void *apu, u8 *stream, int length) {
         float* out = ((float*)stream) + gotten_samples;
 
         for (int i = gotten_samples; i < length / sizeof(float); i++) {
-            float sample = 0;  // todo: last sample the APU generated
+            float sample = 0;
+            if (gotten) {
+                // last sample the APU generated
+                sample = *(((float*)stream) + gotten_samples - 1);
+            }
             *out++ = sample;
         }
     }
@@ -180,5 +187,11 @@ SCHEDULER_EVENT(GBAAPU::ProvideSampleEvent) {
 }
 
 void GBAAPU::AudioDestroy() {
-
+    if (Stream) {
+        SDL_FreeAudioStream(Stream);
+    }
+    if (Device) {
+        SDL_CloseAudioDevice(Device);
+    }
+    SDL_CloseAudio();
 }

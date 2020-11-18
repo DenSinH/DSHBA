@@ -912,6 +912,19 @@ struct s_framebuffer GBAPPU::Render() {
     float g = (float)((backdrop >> 5) & 0x1fu) / 31.0;
     float b = (float)((backdrop >> 10) & 0x1fu) / 31.0;
 
+    // same color correction as in shader
+    // results are slightly different somehow, but eh
+    const float lcdGamma = 4.0;
+    const float outGamma = 2.0;
+
+    float lr = std::pow(r, lcdGamma);
+    float lg = std::pow(g, lcdGamma);
+    float lb = std::pow(b, lcdGamma);
+
+    r = std::pow((  0 * lb +  50 * lg + 255 * lr) / 255.0, 1.0 / outGamma) * (255.0 / 280.0);
+    g = std::pow(( 30 * lb + 230 * lg +  10 * lr) / 255.0, 1.0 / outGamma) * (255.0 / 280.0);
+    b = std::pow((220 * lb +  10 * lg +  50 * lr) / 255.0, 1.0 / outGamma) * (255.0 / 280.0);
+
     return (s_framebuffer) {
             .id = Framebuffer,
             .src_width = INTERNAL_FRAMEBUFFER_WIDTH,

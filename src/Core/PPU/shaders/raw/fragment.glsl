@@ -11,6 +11,8 @@ uniform uint ReferenceLine3[++VISIBLE_SCREEN_HEIGHT++];
 // BG 0 - 3 or 4 for backdrop
 uniform uint BG;
 
+vec4 ColorCorrect(vec4 color);
+
 uint readVRAM8(uint address);
 uint readVRAM16(uint address);
 
@@ -246,7 +248,7 @@ void main() {
     if (BG >= 4) {
         // backdrop, highest frag depth
         gl_FragDepth = 1;
-        FragColor = vec4(readPALentry(0).rgb, 1);
+        FragColor = ColorCorrect(vec4(readPALentry(0).rgb, 1));
         return;
     }
 
@@ -282,7 +284,7 @@ void main() {
             break;
     }
 
-    FragColor = outColor;
+    FragColor = ColorCorrect(outColor);
 }
 
 // END FragmentShaderSource

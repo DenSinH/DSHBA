@@ -297,11 +297,6 @@ int ui_run() {
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
-    SDL_GL_DeleteContext(gl_context);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-
     settings.Set(FILE_BROWSER_PWD_SETTING, Frontend.file_dialog.GetPwd().string());
     settings.Dump();
 
@@ -312,6 +307,11 @@ int ui_run() {
     if (Frontend.audio_destroy) {
         Frontend.audio_destroy();
     }
+
+    SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
+    SDL_GL_DeleteContext(gl_context);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 
     printf("Frontend destroyed\n");
     return 0;

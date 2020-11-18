@@ -15,6 +15,22 @@ layout (std430, binding = ++VRAMSSBO++) readonly buffer VRAMSSBO
     uint VRAM[++VRAMSize++ >> 2];
 };
 
+
+// algorithm from https://byuu.net/video/color-emulation/
+const float lcdGamma = 4.0;
+const float outGamma = 2.2;
+const mat3x3 CorrectionMatrix = mat3x3(
+        255.0,  10.0,  50.0,
+         50.0, 230.0,  10.0,
+          0.0,  30.0, 220.0
+) / 255.0;
+
+vec4 ColorCorrect(vec4 color) {
+    vec3 lrgb = pow(color.rgb, vec3(lcdGamma));
+    vec3 rgb = pow(CorrectionMatrix * lrgb, vec3(1.0 / outGamma)) * (255.0 / 280.0);
+    return vec4(rgb, color.a);
+}
+
 uint readVRAM8(uint address) {
     uint alignment = address & 3u;
     uint value = VRAM[address >> 2];

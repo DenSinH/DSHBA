@@ -25,6 +25,8 @@ uniform uint YClipEnd;
 
 out float gl_FragDepth;
 
+vec4 ColorCorrect(vec4 color);
+
 uint readVRAM8(uint address);
 uint readVRAM16(uint address);
 uint readVRAM32(uint address);
@@ -269,7 +271,7 @@ void main() {
     }
 
 #ifndef OBJ_WINDOW
-    FragColor = Color;
+    FragColor = ColorCorrect(Color);
     // FragColor = vec4(InObjPos.x / float(ObjWidth), InObjPos.y / float(ObjHeight), 1, 1);
 #else
     // RegularObject/AffineObject will only return if it is nontransparent
