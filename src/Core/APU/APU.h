@@ -12,6 +12,8 @@
 
 #include <SDL.h>
 
+#include <mutex>
+
 #define AUDIO_BUFFER_SIZE 1024
 
 enum class SOUNDCNT_HFlags : u16 {
@@ -99,6 +101,7 @@ private:
         .userdata = this,
     };
 
+    std::mutex BufferMutex = std::mutex();
     SDL_AudioSpec ActualSpec;
     SDL_AudioDeviceID Device;
     SDL_AudioStream* Stream = nullptr;

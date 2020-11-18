@@ -46,22 +46,25 @@ void GBAAPU::AudioInit() {
 void GBAAPU::AudioCallback(void *apu, u8 *stream, int length) {
     auto APU = (GBAAPU*)apu;
 
+    APU->BufferMutex.lock();
     int gotten = 0;
     if (SDL_AudioStreamAvailable(APU->Stream)) {
         // buffer samples we provided
         gotten = SDL_AudioStreamGet(APU->Stream, stream, length);
     }
+    APU->BufferMutex.unlock();
 
     if (gotten < length) {
         int gotten_samples = gotten / sizeof(float);
         float* out = ((float*)stream) + gotten_samples;
 
+        float sample = 0;
+        if (gotten) {
+            // last sample the APU generated
+            sample = *(((float*)stream) + gotten_samples - 1);
+        }
+
         for (int i = gotten_samples; i < length / sizeof(float); i++) {
-            float sample = 0;
-            if (gotten) {
-                // last sample the APU generated
-                sample = *(((float*)stream) + gotten_samples - 1);
-            }
             *out++ = sample;
         }
     }
@@ -171,7 +174,9 @@ void GBAAPU::DoProvideSample() {
             (i16)((i32)(SampleRight * ExternalVolume) >> 4),  // right
     };
 
+    BufferMutex.lock();
     SDL_AudioStreamPut(Stream, samples, 2 * sizeof(i16));
+    BufferMutex.unlock();
 }
 
 SCHEDULER_EVENT(GBAAPU::ProvideSampleEvent) {

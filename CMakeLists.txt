@@ -18,8 +18,6 @@ set(CMAKE_C_FLAGS_RELEASE "-Ofast")
 add_compile_definitions(
         $<$<CONFIG:RELEASE>:NDEBUG>
         $<$<CONFIG:RELEASE>:BOOST_DISABLE_ASSERTS>
-        # SDL kept giving stuff with audio assertions
-        SDL_ASSERT_LEVEL=0
 )
 
 add_executable(DSHBA

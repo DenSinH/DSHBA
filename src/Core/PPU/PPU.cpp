@@ -86,10 +86,11 @@ void GBAPPU::BufferScanline(u32 scanline) {
 #ifndef FULL_VRAM_BUFFER
     s_UpdateRange range = Memory->VRAMUpdate;
     if (range.min <= range.max) {
+        // + 0xff cause we need to add 2 blocks because of the subtraction of the ranges
         memcpy(
                 VRAMBuffer[BufferFrame][scanline] + (range.min & ~0x7f),
                 Memory->VRAM + (range.min & ~0x7f),
-                (range.max + 0x80 - range.min) & ~0x7f
+                ((range.max + 0xff - range.min) & ~0x7f)
         );
 
         // go to next batch
@@ -803,9 +804,9 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     if (range.min <= range.max) {
         log_ppu("Buffering %x bytes of VRAM data (%x -> %x)", range.max + 4 - range.min, range.min, range.max);
         glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::VRAM));
-        glBindTexture(GL_TEXTURE_1D, VRAMTexture);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, range.min >> 7, 0x80, (range.max + 0x80 - range.min) >> 7,
-                        GL_RED_INTEGER, GL_UNSIGNED_BYTE, &VRAMBuffer[BufferFrame ^ 1][scanline][(range.min & ~0x7f)]);
+        glBindTexture(GL_TEXTURE_2D, VRAMTexture);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, range.min >> 7, 0x80, ((range.max + 0xff - range.min) >> 7),
+                        GL_RED_INTEGER, GL_UNSIGNED_BYTE, &VRAMBuffer[BufferFrame ^ 1][scanline][range.min & ~0x7f]);
 
         if (FrameSkip) {
             // reset range data here if we are frameskipping
@@ -814,7 +815,7 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     }
 #else
         glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::VRAM));
-        glBindTexture(GL_TEXTURE_1D, VRAMTexture);
+        glBindTexture(GL_TEXTURE_2D, VRAMTexture);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0x80, 0x300,
                         GL_RED_INTEGER, GL_UNSIGNED_BYTE, VRAMBuffer[BufferFrame ^ 1][scanline]);
 #endif
