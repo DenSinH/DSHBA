@@ -4,9 +4,6 @@
 
 #include <cmath>
 
-// release mode SDL assertions for audio stuff (Debug mode kept throwing stuff)
-#define SDL_ASSERT_LEVEL 0
-
 GBAAPU::GBAAPU(s_scheduler* scheduler, u8* wave_ram_ptr, const std::function<void(u32)>& fifo_callback) :
     sq{Square(scheduler), Square(scheduler)},
     ns(scheduler),

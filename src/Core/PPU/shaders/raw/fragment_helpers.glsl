@@ -6,15 +6,10 @@
 in vec2 OnScreenPos;
 
 uniform sampler2D PAL;
+uniform usampler2D VRAM;
 uniform usampler2D IO;
 uniform isampler1D OAM;
 uniform usampler2D Window;
-
-layout (std430, binding = ++VRAMSSBO++) readonly buffer VRAMSSBO
-{
-    uint VRAM[++VRAMSize++ >> 2];
-};
-
 
 // algorithm from https://byuu.net/video/color-emulation/
 const float lcdGamma = 4.0;
@@ -32,23 +27,21 @@ vec4 ColorCorrect(vec4 color) {
 }
 
 uint readVRAM8(uint address) {
-    uint alignment = address & 3u;
-    uint value = VRAM[address >> 2];
-    value = (value) >> (alignment << 3u);
-    value &= 0xffu;
-    return value;
+    return texelFetch(
+        VRAM, ivec2(address & 0x7fu, address >> 7u), 0
+    ).x;
 }
 
 uint readVRAM16(uint address) {
-    uint alignment = address & 2u;
-    uint value = VRAM[address >> 2];
-    value = (value) >> (alignment << 3u);
-    value &= 0xffffu;
-    return value;
+    address &= ~1u;
+    uint lsb = readVRAM8(address);
+    return lsb | (readVRAM8(address + 1) << 8u);
 }
 
 uint readVRAM32(uint address) {
-    return VRAM[address >> 2];
+    address &= ~3u;
+    uint lsh = readVRAM16(address);
+    return lsh | (readVRAM16(address + 2) << 16u);
 }
 
 uint readIOreg(uint address) {

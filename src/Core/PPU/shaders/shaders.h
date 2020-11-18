@@ -293,7 +293,7 @@ const char* FragmentShaderSource =
 ;
 
 
-// FragmentHelperSource (from fragment_helpers.glsl, lines 2 to 78)
+// FragmentHelperSource (from fragment_helpers.glsl, lines 2 to 71)
 const char* FragmentHelperSource = 
 "#version 430 core\n                                                                                "    // l:1
 "\n                                                                                                 "    // l:2
@@ -301,76 +301,69 @@ const char* FragmentHelperSource =
 "in vec2 OnScreenPos;\n                                                                             "    // l:4
 "\n                                                                                                 "    // l:5
 "uniform sampler2D PAL;\n                                                                           "    // l:6
-"uniform usampler2D IO;\n                                                                           "    // l:7
-"uniform isampler1D OAM;\n                                                                          "    // l:8
-"uniform usampler2D Window;\n                                                                       "    // l:9
-"\n                                                                                                 "    // l:10
-"layout (std430, binding = 4) readonly buffer VRAMSSBO\n                                            "    // l:11
-"{\n                                                                                                "    // l:12
-"    uint VRAM[0x18000u >> 2];\n                                                                    "    // l:13
-"};\n                                                                                               "    // l:14
-"\n                                                                                                 "    // l:15
-"\n                                                                                                 "    // l:16
-"// algorithm from https://byuu.net/video/color-emulation/\n                                        "    // l:17
-"const float lcdGamma = 4.0;\n                                                                      "    // l:18
-"const float outGamma = 2.2;\n                                                                      "    // l:19
-"const mat3x3 CorrectionMatrix = mat3x3(\n                                                          "    // l:20
-"        255.0,  10.0,  50.0,\n                                                                     "    // l:21
-"         50.0, 230.0,  10.0,\n                                                                     "    // l:22
-"          0.0,  30.0, 220.0\n                                                                      "    // l:23
-") / 255.0;\n                                                                                       "    // l:24
-"\n                                                                                                 "    // l:25
-"vec4 ColorCorrect(vec4 color) {\n                                                                  "    // l:26
-"    vec3 lrgb = pow(color.rgb, vec3(lcdGamma));\n                                                  "    // l:27
-"    vec3 rgb = pow(CorrectionMatrix * lrgb, vec3(1.0 / outGamma)) * (255.0 / 280.0);\n             "    // l:28
-"    return vec4(rgb, color.a);\n                                                                   "    // l:29
-"}\n                                                                                                "    // l:30
-"\n                                                                                                 "    // l:31
-"uint readVRAM8(uint address) {\n                                                                   "    // l:32
-"    uint alignment = address & 3u;\n                                                               "    // l:33
-"    uint value = VRAM[address >> 2];\n                                                             "    // l:34
-"    value = (value) >> (alignment << 3u);\n                                                        "    // l:35
-"    value &= 0xffu;\n                                                                              "    // l:36
-"    return value;\n                                                                                "    // l:37
-"}\n                                                                                                "    // l:38
-"\n                                                                                                 "    // l:39
-"uint readVRAM16(uint address) {\n                                                                  "    // l:40
-"    uint alignment = address & 2u;\n                                                               "    // l:41
-"    uint value = VRAM[address >> 2];\n                                                             "    // l:42
-"    value = (value) >> (alignment << 3u);\n                                                        "    // l:43
-"    value &= 0xffffu;\n                                                                            "    // l:44
-"    return value;\n                                                                                "    // l:45
-"}\n                                                                                                "    // l:46
-"\n                                                                                                 "    // l:47
-"uint readVRAM32(uint address) {\n                                                                  "    // l:48
-"    return VRAM[address >> 2];\n                                                                   "    // l:49
-"}\n                                                                                                "    // l:50
-"\n                                                                                                 "    // l:51
-"uint readIOreg(uint address) {\n                                                                   "    // l:52
-"    return texelFetch(\n                                                                           "    // l:53
-"        IO, ivec2(address >> 1u, uint(OnScreenPos.y)), 0\n                                         "    // l:54
-"    ).x;\n                                                                                         "    // l:55
-"}\n                                                                                                "    // l:56
-"\n                                                                                                 "    // l:57
-"ivec4 readOAMentry(uint index) {\n                                                                 "    // l:58
+"uniform usampler2D VRAM;\n                                                                         "    // l:7
+"uniform usampler2D IO;\n                                                                           "    // l:8
+"uniform isampler1D OAM;\n                                                                          "    // l:9
+"uniform usampler2D Window;\n                                                                       "    // l:10
+"\n                                                                                                 "    // l:11
+"// algorithm from https://byuu.net/video/color-emulation/\n                                        "    // l:12
+"const float lcdGamma = 4.0;\n                                                                      "    // l:13
+"const float outGamma = 2.2;\n                                                                      "    // l:14
+"const mat3x3 CorrectionMatrix = mat3x3(\n                                                          "    // l:15
+"        255.0,  10.0,  50.0,\n                                                                     "    // l:16
+"         50.0, 230.0,  10.0,\n                                                                     "    // l:17
+"          0.0,  30.0, 220.0\n                                                                      "    // l:18
+") / 255.0;\n                                                                                       "    // l:19
+"\n                                                                                                 "    // l:20
+"vec4 ColorCorrect(vec4 color) {\n                                                                  "    // l:21
+"    vec3 lrgb = pow(color.rgb, vec3(lcdGamma));\n                                                  "    // l:22
+"    vec3 rgb = pow(CorrectionMatrix * lrgb, vec3(1.0 / outGamma)) * (255.0 / 280.0);\n             "    // l:23
+"    return vec4(rgb, color.a);\n                                                                   "    // l:24
+"}\n                                                                                                "    // l:25
+"\n                                                                                                 "    // l:26
+"uint readVRAM8(uint address) {\n                                                                   "    // l:27
+"    return texelFetch(\n                                                                           "    // l:28
+"        VRAM, ivec2(address & 0x7fu, address >> 7u), 0\n                                           "    // l:29
+"    ).x;\n                                                                                         "    // l:30
+"}\n                                                                                                "    // l:31
+"\n                                                                                                 "    // l:32
+"uint readVRAM16(uint address) {\n                                                                  "    // l:33
+"    address &= ~1u;\n                                                                              "    // l:34
+"    uint lsb = readVRAM8(address);\n                                                               "    // l:35
+"    return lsb | (readVRAM8(address + 1) << 8u);\n                                                 "    // l:36
+"}\n                                                                                                "    // l:37
+"\n                                                                                                 "    // l:38
+"uint readVRAM32(uint address) {\n                                                                  "    // l:39
+"    address &= ~3u;\n                                                                              "    // l:40
+"    uint lsh = readVRAM16(address);\n                                                              "    // l:41
+"    return lsh | (readVRAM16(address + 2) << 16u);\n                                               "    // l:42
+"}\n                                                                                                "    // l:43
+"\n                                                                                                 "    // l:44
+"uint readIOreg(uint address) {\n                                                                   "    // l:45
+"    return texelFetch(\n                                                                           "    // l:46
+"        IO, ivec2(address >> 1u, uint(OnScreenPos.y)), 0\n                                         "    // l:47
+"    ).x;\n                                                                                         "    // l:48
+"}\n                                                                                                "    // l:49
+"\n                                                                                                 "    // l:50
+"ivec4 readOAMentry(uint index) {\n                                                                 "    // l:51
+"    return texelFetch(\n                                                                           "    // l:52
+"        OAM, int(index), 0\n                                                                       "    // l:53
+"    );\n                                                                                           "    // l:54
+"}\n                                                                                                "    // l:55
+"\n                                                                                                 "    // l:56
+"vec4 readPALentry(uint index) {\n                                                                  "    // l:57
+"    // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:\n"    // l:58
 "    return texelFetch(\n                                                                           "    // l:59
-"        OAM, int(index), 0\n                                                                       "    // l:60
+"        PAL, ivec2(index, uint(OnScreenPos.y)), 0\n                                                "    // l:60
 "    );\n                                                                                           "    // l:61
 "}\n                                                                                                "    // l:62
 "\n                                                                                                 "    // l:63
-"vec4 readPALentry(uint index) {\n                                                                  "    // l:64
-"    // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:\n"    // l:65
-"    return texelFetch(\n                                                                           "    // l:66
-"        PAL, ivec2(index, uint(OnScreenPos.y)), 0\n                                                "    // l:67
-"    );\n                                                                                           "    // l:68
-"}\n                                                                                                "    // l:69
-"\n                                                                                                 "    // l:70
-"uint getWindow(uint x, uint y) {\n                                                                 "    // l:71
-"    return texelFetch(\n                                                                           "    // l:72
-"        Window, ivec2(x, 160 - y), 0\n                                                             "    // l:73
-"    ).r;\n                                                                                         "    // l:74
-"}\n                                                                                                "    // l:75
-"\n                                                                                                 "    // l:76
+"uint getWindow(uint x, uint y) {\n                                                                 "    // l:64
+"    return texelFetch(\n                                                                           "    // l:65
+"        Window, ivec2(x, 160 - y), 0\n                                                             "    // l:66
+"    ).r;\n                                                                                         "    // l:67
+"}\n                                                                                                "    // l:68
+"\n                                                                                                 "    // l:69
 ;
 
 

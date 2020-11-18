@@ -87,9 +87,9 @@ void GBAPPU::BufferScanline(u32 scanline) {
     s_UpdateRange range = Memory->VRAMUpdate;
     if (range.min <= range.max) {
         memcpy(
-                VRAMBuffer[BufferFrame][scanline] + range.min,
-                Memory->VRAM + range.min,
-                range.max - range.min
+                VRAMBuffer[BufferFrame][scanline] + (range.min & ~0x7f),
+                Memory->VRAM + (range.min & ~0x7f),
+                (range.max + 0x7f - range.min) & ~0x7f
         );
 
         // go to next batch
@@ -389,14 +389,16 @@ void GBAPPU::InitBGBuffers() {
     BGPALLocation = glGetUniformLocation(BGProgram, "PAL");
 
     // Initially buffer the buffers with some data so we don't have to reallocate memory every time
-    glGenBuffers(1, &VRAMSSBO);
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::VRAM));
+    glGenTextures(1, &VRAMTexture);
+    glBindTexture(GL_TEXTURE_2D, VRAMTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, static_cast<unsigned int>(BufferBindings::VRAMSSBO), VRAMSSBO);
-    glBufferData(
-            GL_SHADER_STORAGE_BUFFER, sizeof(VRAMMEM),
-            VRAMBuffer[0][0], GL_STREAM_DRAW
-    );
+    // dimensions need to be a power of 2. Since VISIBLE_SCREEN_HEIGHT is not, we have to pick the next highest one
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 0x80, 0x400, 0, GL_RED_INTEGER,
+                 GL_UNSIGNED_BYTE, nullptr);
+    BGVRAMLocation = glGetUniformLocation(BGProgram, "VRAM");
 
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glGenTextures(1, &IOTexture);
@@ -432,6 +434,7 @@ void GBAPPU::InitBGBuffers() {
 
     glUseProgram(BGProgram);
     glUniform1i(BGPALLocation, static_cast<u32>(BufferBindings::PAL));
+    glUniform1i(BGVRAMLocation, static_cast<u32>(BufferBindings::VRAM));
     glUniform1i(BGIOLocation, static_cast<u32>(BufferBindings::LCDIO));
     glUniform1i(BGWindowLocation, static_cast<u32>(BufferBindings::Window));
 
@@ -477,14 +480,17 @@ void GBAPPU::InitObjBuffers() {
     glBindTexture(GL_TEXTURE_2D, PALTexture);
     ObjPALLocation = glGetUniformLocation(ObjProgram, "PAL");
 
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::VRAM));
+    glBindTexture(GL_TEXTURE_2D, VRAMTexture);
+    ObjVRAMLocation = glGetUniformLocation(ObjProgram, "VRAM");
+
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
     ObjIOLocation = glGetUniformLocation(ObjProgram, "IO");
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
-
     glUseProgram(ObjProgram);
     glUniform1i(ObjPALLocation, static_cast<u32>(BufferBindings::PAL));
+    glUniform1i(ObjVRAMLocation, static_cast<u32>(BufferBindings::VRAM));
     glUniform1i(ObjIOLocation, static_cast<u32>(BufferBindings::LCDIO));
     glUniform1i(ObjOAMLocation, static_cast<u32>(BufferBindings::OAM));
 
@@ -517,8 +523,13 @@ void GBAPPU::InitWinBGBuffers() {
     glBindTexture(GL_TEXTURE_2D, IOTexture);
     WinBGIOLocation = glGetUniformLocation(WinBGProgram, "IO");
 
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::VRAM));
+    glBindTexture(GL_TEXTURE_2D, VRAMTexture);
+    WinBGVRAMLocation = glGetUniformLocation(WinBGProgram, "VRAM");
+
     glUseProgram(WinBGProgram);
     glUniform1i(WinBGIOLocation, static_cast<u32>(BufferBindings::LCDIO));
+    glUniform1i(WinBGVRAMLocation, static_cast<u32>(BufferBindings::VRAM));
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -556,9 +567,12 @@ void GBAPPU::InitWinObjBuffers() {
     glBindTexture(GL_TEXTURE_2D, IOTexture);
     WinObjIOLocation = glGetUniformLocation(WinObjProgram, "IO");
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::VRAM));
+    glBindTexture(GL_TEXTURE_2D, VRAMTexture);
+    WinObjVRAMLocation = glGetUniformLocation(WinObjProgram, "VRAM");
 
     glUseProgram(WinObjProgram);
+    glUniform1i(WinObjVRAMLocation, static_cast<u32>(BufferBindings::VRAM));
     glUniform1i(WinObjIOLocation, static_cast<u32>(BufferBindings::LCDIO));
     glUniform1i(WinObjOAMLocation, static_cast<u32>(BufferBindings::OAM));
 
@@ -597,6 +611,9 @@ void GBAPPU::DrawBGWindow(int win_start, int win_end) const {
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
 
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::VRAM));
+    glBindTexture(GL_TEXTURE_2D, VRAMTexture);
+
     glBindBuffer(GL_ARRAY_BUFFER, BGVBO);
     const float quad[8] = {
             -1.0, (float)win_start,  // top left
@@ -619,6 +636,9 @@ void GBAPPU::DrawObjWindow(int win_start, int win_end) {
 
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
+
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::VRAM));
+    glBindTexture(GL_TEXTURE_2D, VRAMTexture);
 
     glBindBuffer(GL_ARRAY_BUFFER, ObjVBO);
 
@@ -729,6 +749,9 @@ void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glBindTexture(GL_TEXTURE_2D, PALTexture);
 
+    glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::VRAM));
+    glBindTexture(GL_TEXTURE_2D, VRAMTexture);
+
     // bind and buffer OAM texture
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
     glBindTexture(GL_TEXTURE_1D, OAMTexture);
@@ -768,39 +791,33 @@ void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
 
 void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     s_UpdateRange range;
-#ifndef FULL_VRAM_BUFFER
-    range = VRAMRanges[BufferFrame ^ 1][scanline];
-    if (range.min <= range.max) {
-        log_ppu("Buffering %x bytes of VRAM data (%x -> %x)", range.max + 4 - range.min, range.min, range.max);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
-        glBufferSubData(
-                GL_SHADER_STORAGE_BUFFER,
-                range.min,
-                range.max - range.min,
-                &VRAMBuffer[BufferFrame ^ 1][scanline][range.min]
-        );
-        if (FrameSkip) {
-            // reset range data here if we are frameskipping
-            VRAMRanges[BufferFrame ^ 1][scanline] = { .min = sizeof(VRAMMEM), .max = 0 };
-        }
-    }
-#else
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, VRAMSSBO);
-        glBufferSubData(
-                GL_SHADER_STORAGE_BUFFER,
-                0,
-                sizeof(VRAMMEM),
-                &VRAMBuffer[BufferFrame ^ 1][scanline][0]
-        );
-#endif
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
     // first render window, then actual backgrounds
     glUseProgram(BGProgram);
     glBindVertexArray(BGVAO);
 
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glBindTexture(GL_TEXTURE_2D, PALTexture);
+
+#ifndef FULL_VRAM_BUFFER
+    range = VRAMRanges[BufferFrame ^ 1][scanline];
+    if (range.min <= range.max) {
+        log_ppu("Buffering %x bytes of VRAM data (%x -> %x)", range.max + 4 - range.min, range.min, range.max);
+        glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::VRAM));
+        glBindTexture(GL_TEXTURE_1D, VRAMTexture);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, range.min >> 7, 0x80, (range.max + 0x7f - range.min) >> 7,
+                        GL_RED_INTEGER, GL_UNSIGNED_BYTE, &VRAMBuffer[BufferFrame ^ 1][scanline][(range.min & ~0x7f)]);
+
+        if (FrameSkip) {
+            // reset range data here if we are frameskipping
+            VRAMRanges[BufferFrame ^ 1][scanline] = { .min = sizeof(VRAMMEM), .max = 0 };
+        }
+    }
+#else
+        glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::VRAM));
+        glBindTexture(GL_TEXTURE_1D, VRAMTexture);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0x80, 0x300,
+                        GL_RED_INTEGER, GL_UNSIGNED_BYTE, VRAMBuffer[BufferFrame ^ 1][scanline]);
+#endif
 
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
@@ -968,7 +985,7 @@ struct s_framebuffer GBAPPU::RenderUntil(size_t ticks) {
 }
 
 void GBAPPU::VideoDestroy() {
-    glDeleteBuffers(1, &VRAMSSBO);
+    glDeleteTextures(1, &VRAMTexture);
     glDeleteTextures(1, &OAMTexture);
     glDeleteTextures(1, &PALTexture);
     glDeleteTextures(1, &IOTexture);

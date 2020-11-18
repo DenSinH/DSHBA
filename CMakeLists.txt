@@ -18,6 +18,8 @@ set(CMAKE_C_FLAGS_RELEASE "-Ofast")
 add_compile_definitions(
         $<$<CONFIG:RELEASE>:NDEBUG>
         $<$<CONFIG:RELEASE>:BOOST_DISABLE_ASSERTS>
+        # SDL kept giving stuff with audio assertions
+        SDL_ASSERT_LEVEL=0
 )
 
 add_executable(DSHBA
@@ -57,7 +59,7 @@ include_directories(
         modules
         $<TARGET_PROPERTY:Core,INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:Frontend,INCLUDE_DIRECTORIES>
-        )
+)
 
 target_link_libraries(DSHBA PRIVATE Core)
 target_link_libraries(DSHBA PRIVATE Frontend)

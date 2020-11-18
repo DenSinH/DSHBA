@@ -5,7 +5,7 @@ enum class BufferBindings : unsigned int {
     PAL      = 1,
     OAM      = 2,
     LCDIO    = 3,
-    VRAMSSBO = 4,
+    VRAM     = 4,
     Window   = 5,
 };
 

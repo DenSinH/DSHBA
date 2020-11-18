@@ -66,6 +66,7 @@ private:
 
     GLuint WinBGIOLocation, WinObjIOLocation;
     GLuint WinObjOAMLocation;
+    GLuint WinBGVRAMLocation, WinObjVRAMLocation;
 
     GLuint WinObjYClipStartLocation, WinObjYClipEndLocation;
 
@@ -77,7 +78,7 @@ private:
     GLuint IOTexture, BGIOLocation;
     GLuint ReferenceLine2Location, ReferenceLine3Location;
     GLuint PALTexture, BGPALLocation;
-    GLuint VRAMSSBO;
+    GLuint VRAMTexture, BGVRAMLocation;
 
     GLuint BGVAO;
     GLuint BGVBO;  // for drawing a batch of scanlines
@@ -110,6 +111,7 @@ private:
     GLuint ObjPALLocation;
     GLuint ObjWindowLocation;
     GLuint OAMTexture, ObjOAMLocation;
+    GLuint ObjVRAMLocation;
     GLuint ObjYClipStartLocation, ObjYClipEndLocation;
 
     GLuint ObjVAO;
