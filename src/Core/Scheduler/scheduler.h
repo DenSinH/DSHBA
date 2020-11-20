@@ -57,6 +57,7 @@ public:
             std::make_heap(this->c.begin(), this->c.end(), this->comp);
             return true;
         } else {
+            log_fatal("Failed to remove event");
             return false;
         }
     };

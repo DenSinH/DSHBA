@@ -243,8 +243,7 @@ void Initializer::frontend_audio_destroy() {
 }
 
 GBA* Initializer::init() {
-    gba = (GBA *) malloc(sizeof(GBA));
-    new(gba) GBA;
+    gba = new GBA;
 
     bind_video_init(frontend_video_init);
     bind_video_render(frontend_render);
@@ -301,6 +300,17 @@ GBA* Initializer::init() {
     add_register_data("IME", &gba->CPU.IME, 2, IO_tab);
     add_register_data("IE", &gba->CPU.IE, 2, IO_tab);
     add_register_data("IF", &gba->CPU.IF, 2, IO_tab);
+
+    add_register_data("", nullptr, 2, IO_tab);
+
+    add_register_data("TM0CNT_L", &gba->IO.Timers[0].Register.CNT_L, 2, IO_tab);
+    add_register_data("TM0CNT_H", &gba->IO.Timers[0].Register.CNT_H, 2, IO_tab);
+    add_register_data("TM1CNT_L", &gba->IO.Timers[1].Register.CNT_L, 2, IO_tab);
+    add_register_data("TM1CNT_H", &gba->IO.Timers[1].Register.CNT_H, 2, IO_tab);
+    add_register_data("TM2CNT_L", &gba->IO.Timers[2].Register.CNT_L, 2, IO_tab);
+    add_register_data("TM2CNT_H", &gba->IO.Timers[2].Register.CNT_H, 2, IO_tab);
+    add_register_data("TM3CNT_L", &gba->IO.Timers[3].Register.CNT_L, 2, IO_tab);
+    add_register_data("TM3CNT_H", &gba->IO.Timers[3].Register.CNT_H, 2, IO_tab);
 
     int APU_tab = add_register_tab("APU");
 
@@ -377,7 +387,7 @@ GBA* Initializer::init() {
     // separator
     add_menu_item(audio_tab, "", nullptr, nullptr);
 
-    char* const channel_names[4] = {
+    const char* channel_names[4] = {
             "Square 0",
             "Square 1",
             "Noise",

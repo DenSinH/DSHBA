@@ -92,7 +92,6 @@ WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
     /*
      * On writes to TMCNT_H we have to "flush" a timer to it's current value
      * */
-
     const bool was_enabled = (Timers[x].Register.CNT_H & static_cast<u16>(TMCNT_HFlags::Enabled)) != 0;
 
     if (was_enabled) {
@@ -107,6 +106,15 @@ WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
                 Timers[x].FlushDirect(*Scheduler->timer);
             }
         }
+
+        if (!(value & static_cast<u16>(TMCNT_HFlags::Enabled))) {
+            // timer got disabled
+            Timers[x].Register.CNT_H = value;
+            if (likely(Timers[x].Overflow.active)) {
+                Scheduler->RemoveEvent(&Timers[x].Overflow);
+            }
+            return;
+        }
     }
     else if (value & static_cast<u16>(TMCNT_HFlags::Enabled)) {
         // timer got enabled
@@ -115,7 +123,7 @@ WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
         Timers[x].TriggerTime = *Scheduler->timer;
     }
     else {
-        // nothing interesting happens
+        // nothing interesting happens (it wasnt enabled, and it is still not enabled)
         return;
     }
 
