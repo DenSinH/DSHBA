@@ -149,7 +149,7 @@ struct s_scheduler {
     }
 
     ALWAYS_INLINE bool ShouldDoEvents() const {
-        return top < *timer;
+        return top <= *timer;
     }
 };
 

@@ -1,6 +1,14 @@
 
 template<typename T, bool count>
 T Mem::Read(u32 address) {
+    // often, code will be ran from iWRAM
+    // this makes it the hottest path
+    // this will likely still be optimized as part of the switch statement by the compiler
+    if (likely(static_cast<MemoryRegion>(address >> 24) == MemoryRegion::iWRAM)) {
+        if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::iWRAM>(); }
+        return ReadArray<T>(iWRAM, address & 0x7fff);
+    }
+
     switch (static_cast<MemoryRegion>(address >> 24)) {
         case MemoryRegion::BIOS:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::BIOS>(); }
@@ -11,9 +19,6 @@ T Mem::Read(u32 address) {
         case MemoryRegion::eWRAM:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::eWRAM>(); }
             return ReadArray<T>(eWRAM, address & 0x3'ffff);
-        case MemoryRegion::iWRAM:
-            if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::iWRAM>(); }
-            return ReadArray<T>(iWRAM, address & 0x7fff);
         case MemoryRegion::IO:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::IO>(); }
             if ((address & 0x00ff'ffff) < 0x3ff) {

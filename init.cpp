@@ -125,7 +125,7 @@ OVERLAY_INFO(Initializer::fps_counter) {
             output,
             output_length,
                 "FPS        : %.1f\n"
-                "Frame time : %.1fms",
+                "Frame time : %.3fms",
             (double)(gba->PPU.Frame) / accum_time,
             1000.0 * delta_time / (float)(gba->PPU.Frame - prev_frame)
     );
@@ -338,6 +338,10 @@ GBA* Initializer::init() {
     add_register_data("WAVPos", &gba->APU.wav.PositionCounter, 4, APU_tab);
     add_register_data("WAVSmpl", &gba->APU.wav.CurrentSample, 2, APU_tab);
     add_register_data("", nullptr, 4, APU_tab);
+
+    int general_tab = add_register_tab("General");
+
+    add_register_data("Top event", &gba->Scheduler.top, 8, general_tab);
 
     add_command("RESET", "Resets the system. Add 'pause/freeze/break' to freeze on reload.", reset_system);
     add_command("PAUSE", "Pauses the system.", pause_system);
