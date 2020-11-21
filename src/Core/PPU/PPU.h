@@ -69,6 +69,7 @@ private:
     GLuint WinBGVRAMLocation, WinObjVRAMLocation;
 
     GLuint WinObjYClipStartLocation, WinObjYClipEndLocation;
+    GLuint WinObjAffLocation;
 
     GLuint BGProgram;
     GLuint Framebuffer;
@@ -113,6 +114,7 @@ private:
     GLuint OAMTexture, ObjOAMLocation;
     GLuint ObjVRAMLocation;
     GLuint ObjYClipStartLocation, ObjYClipEndLocation;
+    GLuint ObjAffLocation;
 
     GLuint ObjVAO;
     GLuint ObjVBO;
@@ -142,7 +144,7 @@ private:
     void InitWinBGBuffers();
     void InitWinObjBuffers();
 
-    template<bool ObjWindow>
+    template<bool ObjWindow, bool Affine>
     u32 BufferObjects(u32 buffer, i32 scanline, i32 batch_size);
 
     void DrawWindows();
@@ -153,7 +155,7 @@ private:
 };
 
 
-template<bool ObjWindow>
+template<bool ObjWindow, bool Affine>
 u32 GBAPPU::BufferObjects(u32 buffer, i32 scanline, i32 batch_size) {
     u32 NumberOfObjVerts = 0;
     i32 y;
@@ -163,6 +165,19 @@ u32 GBAPPU::BufferObjects(u32 buffer, i32 scanline, i32 batch_size) {
         if ((OAMBuffer[buffer][scanline][i + 1] & 0x03) == 0x02) {
             // rendering disabled
             continue;
+        }
+
+        if constexpr(!Affine) {
+            if ((OAMBuffer[buffer][scanline][i + 1] & 0x03) != 0x00) {
+                // not regular, while regular is requested
+                continue;
+            }
+        }
+        else {
+            if ((OAMBuffer[buffer][scanline][i + 1] & 0x03) == 0x00) {
+                // regular, while affine is requested
+                continue;
+            }
         }
 
         if constexpr(!ObjWindow) {

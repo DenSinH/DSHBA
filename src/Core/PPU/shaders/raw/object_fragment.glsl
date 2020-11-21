@@ -14,6 +14,7 @@ flat in uvec4 OBJ;
 flat in uint ObjWidth;
 flat in uint ObjHeight;
 
+uniform bool Affine;
 uniform uint YClipStart;
 uniform uint YClipEnd;
 
@@ -263,7 +264,7 @@ void main() {
     bool OAM2DMapping = (DISPCNT & (++OAM2DMap++)) != 0u;
 
     vec4 Color;
-    if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_REG++) {
+    if (!Affine) {
         Color = RegularObject(OAM2DMapping);
     }
     else{

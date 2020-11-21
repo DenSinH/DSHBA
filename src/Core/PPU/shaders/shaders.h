@@ -607,7 +607,7 @@ const char* FragmentShaderMode4Source =
 ;
 
 
-// ObjectFragmentShaderSource (from object_fragment.glsl, lines 5 to 284)
+// ObjectFragmentShaderSource (from object_fragment.glsl, lines 5 to 285)
 const char* ObjectFragmentShaderSource = 
 "#define attr0 x\n                                                                                  "    // l:1
 "#define attr1 y\n                                                                                  "    // l:2
@@ -620,379 +620,386 @@ const char* ObjectFragmentShaderSource =
 "flat in uint ObjWidth;\n                                                                           "    // l:9
 "flat in uint ObjHeight;\n                                                                          "    // l:10
 "\n                                                                                                 "    // l:11
-"uniform uint YClipStart;\n                                                                         "    // l:12
-"uniform uint YClipEnd;\n                                                                           "    // l:13
-"\n                                                                                                 "    // l:14
-"#ifdef OBJ_WINDOW\n                                                                                "    // l:15
-"    out uvec4 FragColor;\n                                                                         "    // l:16
-"#else\n                                                                                            "    // l:17
-"    out vec4 FragColor;\n                                                                          "    // l:18
-"#endif\n                                                                                           "    // l:19
-"\n                                                                                                 "    // l:20
-"out float gl_FragDepth;\n                                                                          "    // l:21
-"\n                                                                                                 "    // l:22
-"vec4 ColorCorrect(vec4 color);\n                                                                   "    // l:23
-"\n                                                                                                 "    // l:24
-"uint readVRAM8(uint address);\n                                                                    "    // l:25
-"uint readVRAM16(uint address);\n                                                                   "    // l:26
-"uint readVRAM32(uint address);\n                                                                   "    // l:27
-"\n                                                                                                 "    // l:28
-"uint readIOreg(uint address);\n                                                                    "    // l:29
-"ivec4 readOAMentry(uint index);\n                                                                  "    // l:30
-"vec4 readPALentry(uint index);\n                                                                   "    // l:31
-"\n                                                                                                 "    // l:32
-"uint getWindow(uint x, uint y);\n                                                                  "    // l:33
-"\n                                                                                                 "    // l:34
-"vec4 RegularObject(bool OAM2DMapping) {\n                                                          "    // l:35
-"    uint TID = OBJ.attr2 & 0x03ffu;\n                                                              "    // l:36
-"    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;\n                                                 "    // l:37
-"    gl_FragDepth = float(Priority) / 4.0;\n                                                        "    // l:38
-"\n                                                                                                 "    // l:39
-"    uint dx = uint(InObjPos.x);\n                                                                  "    // l:40
-"    uint dy = uint(InObjPos.y);\n                                                                  "    // l:41
-"\n                                                                                                 "    // l:42
-"    // mosaic effect\n                                                                             "    // l:43
-"    if ((OBJ.attr0 & 0x1000u) != 0u) {\n                                                           "    // l:44
-"        uint MOSAIC = readIOreg(0x4cu);\n                                                          "    // l:45
-"        dx -= dx % (((MOSAIC & 0xf00u) >> 8) + 1u);\n                                              "    // l:46
-"        dy -= dy % (((MOSAIC & 0xf000u) >> 12) + 1u);\n                                            "    // l:47
-"    }\n                                                                                            "    // l:48
-"\n                                                                                                 "    // l:49
-"    uint PixelAddress;\n                                                                           "    // l:50
-"    if ((OBJ.attr0 & 0x2000u) == 0x0000u) {\n                                                      "    // l:51
-"        uint PaletteBank = OBJ.attr2 >> 12;\n                                                      "    // l:52
-"        PixelAddress = TID << 5;\n                                                                 "    // l:53
-"\n                                                                                                 "    // l:54
-"        // get base address for line of tiles (vertically)\n                                       "    // l:55
-"        if (OAM2DMapping) {\n                                                                      "    // l:56
-"            PixelAddress += ObjWidth * (dy >> 3) << 2;\n                                           "    // l:57
-"        }\n                                                                                        "    // l:58
-"        else {\n                                                                                   "    // l:59
-"            PixelAddress += 32u * 0x20u * (dy >> 3);\n                                             "    // l:60
-"        }\n                                                                                        "    // l:61
-"        PixelAddress += (dy & 7u) << 2; // offset within tile for sliver\n                         "    // l:62
-"\n                                                                                                 "    // l:63
-"        // Sprites VRAM base address is 0x10000\n                                                  "    // l:64
-"        PixelAddress = (PixelAddress & 0x7fffu) | 0x10000u;\n                                      "    // l:65
-"\n                                                                                                 "    // l:66
-"        // horizontal offset:\n                                                                    "    // l:67
-"        PixelAddress += (dx >> 3) << 5;    // of tile\n                                            "    // l:68
-"        PixelAddress += ((dx & 7u) >> 1);  // in tile\n                                            "    // l:69
-"\n                                                                                                 "    // l:70
-"        uint VRAMEntry = readVRAM8(PixelAddress);\n                                                "    // l:71
-"        if ((dx & 1u) != 0u) {\n                                                                   "    // l:72
-"            // upper nibble\n                                                                      "    // l:73
-"            VRAMEntry >>= 4;\n                                                                     "    // l:74
-"        }\n                                                                                        "    // l:75
-"        else {\n                                                                                   "    // l:76
-"            VRAMEntry &= 0x0fu;\n                                                                  "    // l:77
-"        }\n                                                                                        "    // l:78
-"\n                                                                                                 "    // l:79
-"        if (VRAMEntry != 0u) {\n                                                                   "    // l:80
-"            return vec4(readPALentry(0x100u + (PaletteBank << 4) + VRAMEntry).rgb, 1);\n           "    // l:81
-"        }\n                                                                                        "    // l:82
-"        else {\n                                                                                   "    // l:83
-"            // transparent\n                                                                       "    // l:84
-"            discard;\n                                                                             "    // l:85
-"        }\n                                                                                        "    // l:86
-"    }\n                                                                                            "    // l:87
-"    else {\n                                                                                       "    // l:88
-"        // 8bpp\n                                                                                  "    // l:89
-"        PixelAddress = TID << 5;\n                                                                 "    // l:90
-"\n                                                                                                 "    // l:91
-"        if (OAM2DMapping) {\n                                                                      "    // l:92
-"            PixelAddress += ObjWidth * (dy & ~7u);\n                                               "    // l:93
-"        }\n                                                                                        "    // l:94
-"        else {\n                                                                                   "    // l:95
-"            PixelAddress += 32u * 0x20u * (dy >> 3);\n                                             "    // l:96
-"        }\n                                                                                        "    // l:97
-"        PixelAddress += (dy & 7u) << 3;\n                                                          "    // l:98
-"\n                                                                                                 "    // l:99
-"        // Sprites VRAM base address is 0x10000\n                                                  "    // l:100
-"        PixelAddress = (PixelAddress & 0x7fffu) | 0x10000u;\n                                      "    // l:101
-"\n                                                                                                 "    // l:102
-"        // horizontal offset:\n                                                                    "    // l:103
-"        PixelAddress += (dx >> 3) << 6;\n                                                          "    // l:104
-"        PixelAddress += dx & 7u;\n                                                                 "    // l:105
-"\n                                                                                                 "    // l:106
-"        uint VRAMEntry = readVRAM8(PixelAddress);\n                                                "    // l:107
-"\n                                                                                                 "    // l:108
-"        if (VRAMEntry != 0u) {\n                                                                   "    // l:109
-"            return vec4(readPALentry(0x100u + VRAMEntry).rgb, 1);\n                                "    // l:110
-"        }\n                                                                                        "    // l:111
-"        else {\n                                                                                   "    // l:112
-"            // transparent\n                                                                       "    // l:113
-"            discard;\n                                                                             "    // l:114
-"        }\n                                                                                        "    // l:115
-"    }\n                                                                                            "    // l:116
-"}\n                                                                                                "    // l:117
-"\n                                                                                                 "    // l:118
-"bool InsideBox(vec2 v, vec2 bottomLeft, vec2 topRight) {\n                                         "    // l:119
-"    vec2 s = step(bottomLeft, v) - step(topRight, v);\n                                            "    // l:120
-"    return (s.x * s.y) != 0.0;\n                                                                   "    // l:121
-"}\n                                                                                                "    // l:122
-"\n                                                                                                 "    // l:123
-"vec4 AffineObject(bool OAM2DMapping) {\n                                                           "    // l:124
-"    uint TID = OBJ.attr2 & 0x03ffu;\n                                                              "    // l:125
-"    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;\n                                                 "    // l:126
-"    gl_FragDepth = float(Priority) / 4.0;\n                                                        "    // l:127
-"\n                                                                                                 "    // l:128
-"    uint AffineIndex = (OBJ.attr1 & 0x3e00u) >> 9;\n                                               "    // l:129
-"    AffineIndex <<= 2;  // goes in groups of 4\n                                                   "    // l:130
-"\n                                                                                                 "    // l:131
-"    // scaling parameters\n                                                                        "    // l:132
-"    int PA = readOAMentry(AffineIndex).attr3;\n                                                    "    // l:133
-"    int PB = readOAMentry(AffineIndex + 1u).attr3;\n                                               "    // l:134
-"    int PC = readOAMentry(AffineIndex + 2u).attr3;\n                                               "    // l:135
-"    int PD = readOAMentry(AffineIndex + 3u).attr3;\n                                               "    // l:136
-"\n                                                                                                 "    // l:137
-"    // reference point\n                                                                           "    // l:138
-"    vec2 p0 = vec2(\n                                                                              "    // l:139
-"        float(ObjWidth  >> 1),\n                                                                   "    // l:140
-"        float(ObjHeight >> 1)\n                                                                    "    // l:141
-"    );\n                                                                                           "    // l:142
-"\n                                                                                                 "    // l:143
-"    vec2 p1;\n                                                                                     "    // l:144
-"    if ((OBJ.attr0 & 0x0300u) == 0x0300u) {\n                                                      "    // l:145
-"        // double rendering\n                                                                      "    // l:146
-"        p1 = 2 * p0;\n                                                                             "    // l:147
-"    }\n                                                                                            "    // l:148
-"    else {\n                                                                                       "    // l:149
-"        p1 = p0;\n                                                                                 "    // l:150
-"    }\n                                                                                            "    // l:151
-"\n                                                                                                 "    // l:152
-"    mat2x2 rotscale = mat2x2(\n                                                                    "    // l:153
-"        float(PA), float(PC),\n                                                                    "    // l:154
-"        float(PB), float(PD)\n                                                                     "    // l:155
-"    ) / 256.0;  // fixed point stuff\n                                                             "    // l:156
-"\n                                                                                                 "    // l:157
-"    ivec2 pos = ivec2(rotscale * (InObjPos - p1) + p0);\n                                          "    // l:158
-"    if (!InsideBox(pos, vec2(0, 0), vec2(ObjWidth, ObjHeight))) {\n                                "    // l:159
-"        // out of bounds\n                                                                         "    // l:160
-"        discard;\n                                                                                 "    // l:161
-"    }\n                                                                                            "    // l:162
-"\n                                                                                                 "    // l:163
-"    // mosaic effect\n                                                                             "    // l:164
-"    if ((OBJ.attr0 & 0x1000u) != 0u) {\n                                                           "    // l:165
-"        uint MOSAIC = readIOreg(0x4cu);\n                                                          "    // l:166
-"        pos.x -= pos.x % int(((MOSAIC & 0xf00u) >> 8) + 1u);\n                                     "    // l:167
-"        pos.y -= pos.y % int(((MOSAIC & 0xf000u) >> 12) + 1u);\n                                   "    // l:168
-"    }\n                                                                                            "    // l:169
-"\n                                                                                                 "    // l:170
-"    // get actual pixel\n                                                                          "    // l:171
-"    uint PixelAddress = 0x10000u;  // OBJ VRAM starts at 0x10000 in VRAM\n                         "    // l:172
-"    PixelAddress += TID << 5;\n                                                                    "    // l:173
-"    if (OAM2DMapping) {\n                                                                          "    // l:174
-"        PixelAddress += ObjWidth * uint(pos.y & ~7) >> 1;\n                                        "    // l:175
-"    }\n                                                                                            "    // l:176
-"    else {\n                                                                                       "    // l:177
-"        PixelAddress += 32u * 0x20u * uint(pos.y >> 3);\n                                          "    // l:178
-"    }\n                                                                                            "    // l:179
-"\n                                                                                                 "    // l:180
-"    // the rest is very similar to regular sprites:\n                                              "    // l:181
-"    if ((OBJ.attr0 & 0x2000u) == 0x0000u) {\n                                                      "    // l:182
-"        uint PaletteBank = OBJ.attr2 >> 12;\n                                                      "    // l:183
-"        PixelAddress += uint(pos.y & 7) << 2; // offset within tile for sliver\n                   "    // l:184
-"\n                                                                                                 "    // l:185
-"        // horizontal offset:\n                                                                    "    // l:186
-"        PixelAddress += uint(pos.x >> 3) << 5;    // of tile\n                                     "    // l:187
-"        PixelAddress += uint(pos.x & 7) >> 1;  // in tile\n                                        "    // l:188
-"\n                                                                                                 "    // l:189
-"        uint VRAMEntry = readVRAM8(PixelAddress);\n                                                "    // l:190
-"        if ((pos.x & 1) != 0) {\n                                                                  "    // l:191
-"            // upper nibble\n                                                                      "    // l:192
-"            VRAMEntry >>= 4;\n                                                                     "    // l:193
-"        }\n                                                                                        "    // l:194
-"        else {\n                                                                                   "    // l:195
-"            VRAMEntry &= 0x0fu;\n                                                                  "    // l:196
-"        }\n                                                                                        "    // l:197
-"\n                                                                                                 "    // l:198
-"        if (VRAMEntry != 0u) {\n                                                                   "    // l:199
-"            return vec4(readPALentry(0x100u + (PaletteBank << 4) + VRAMEntry).rgb, 1);\n           "    // l:200
-"        }\n                                                                                        "    // l:201
-"        else {\n                                                                                   "    // l:202
-"            // transparent\n                                                                       "    // l:203
-"            discard;\n                                                                             "    // l:204
-"        }\n                                                                                        "    // l:205
-"    }\n                                                                                            "    // l:206
-"    else {\n                                                                                       "    // l:207
-"        PixelAddress += (uint(pos.y) & 7u) << 3; // offset within tile for sliver\n                "    // l:208
-"\n                                                                                                 "    // l:209
-"        // horizontal offset:\n                                                                    "    // l:210
-"        PixelAddress += uint(pos.x >> 3) << 6;  // of tile\n                                       "    // l:211
-"        PixelAddress += uint(pos.x & 7);        // in tile\n                                       "    // l:212
-"\n                                                                                                 "    // l:213
-"        uint VRAMEntry = readVRAM8(PixelAddress);\n                                                "    // l:214
-"\n                                                                                                 "    // l:215
-"        if (VRAMEntry != 0u) {\n                                                                   "    // l:216
-"            return vec4(readPALentry(0x100u + VRAMEntry).rgb, 1);\n                                "    // l:217
-"        }\n                                                                                        "    // l:218
-"        else {\n                                                                                   "    // l:219
-"            // transparent\n                                                                       "    // l:220
-"            discard;\n                                                                             "    // l:221
-"        }\n                                                                                        "    // l:222
-"    }\n                                                                                            "    // l:223
-"}\n                                                                                                "    // l:224
-"\n                                                                                                 "    // l:225
-"void main() {\n                                                                                    "    // l:226
-"    if (OnScreenPos.x < 0) {\n                                                                     "    // l:227
-"        discard;\n                                                                                 "    // l:228
-"    }\n                                                                                            "    // l:229
-"    if (OnScreenPos.x > 240u) {\n                                                                  "    // l:230
-"        discard;\n                                                                                 "    // l:231
-"    }\n                                                                                            "    // l:232
-"\n                                                                                                 "    // l:233
-"    if (OnScreenPos.y < float(YClipStart)) {\n                                                     "    // l:234
-"        discard;\n                                                                                 "    // l:235
-"    }\n                                                                                            "    // l:236
-"    if (OnScreenPos.y > float(YClipEnd)) {\n                                                       "    // l:237
-"        discard;\n                                                                                 "    // l:238
-"    }\n                                                                                            "    // l:239
-"\n                                                                                                 "    // l:240
-"    uint DISPCNT = readIOreg(0x00u);\n                                                             "    // l:241
-"#ifndef OBJ_WINDOW\n                                                                               "    // l:242
-"    if ((DISPCNT & 0x1000u) == 0u) {\n                                                             "    // l:243
-"        // objects disabled in this scanline\n                                                     "    // l:244
-"        discard;\n                                                                                 "    // l:245
-"    }\n                                                                                            "    // l:246
-"    if ((getWindow(uint(OnScreenPos.x), uint(OnScreenPos.y)) & 0x10u) == 0u) {\n                   "    // l:247
-"        // disabled by window\n                                                                    "    // l:248
-"        discard;\n                                                                                 "    // l:249
-"    }\n                                                                                            "    // l:250
-"#else\n                                                                                            "    // l:251
-"    if ((DISPCNT & 0x8000u) == 0u) {\n                                                             "    // l:252
-"        // object window disabled in this scanline\n                                               "    // l:253
-"        discard;\n                                                                                 "    // l:254
-"    }\n                                                                                            "    // l:255
-"#endif\n                                                                                           "    // l:256
-"\n                                                                                                 "    // l:257
-"    bool OAM2DMapping = (DISPCNT & (0x0040u)) != 0u;\n                                             "    // l:258
-"\n                                                                                                 "    // l:259
-"    vec4 Color;\n                                                                                  "    // l:260
-"    if ((OBJ.attr0 & 0x0300u) == 0x0000u) {\n                                                      "    // l:261
-"        Color = RegularObject(OAM2DMapping);\n                                                     "    // l:262
-"    }\n                                                                                            "    // l:263
-"    else{\n                                                                                        "    // l:264
-"        Color = AffineObject(OAM2DMapping);\n                                                      "    // l:265
-"    }\n                                                                                            "    // l:266
-"\n                                                                                                 "    // l:267
-"#ifndef OBJ_WINDOW\n                                                                               "    // l:268
-"    FragColor = ColorCorrect(Color);\n                                                             "    // l:269
-"    // FragColor = vec4(InObjPos.x / float(ObjWidth), InObjPos.y / float(ObjHeight), 1, 1);\n      "    // l:270
-"#else\n                                                                                            "    // l:271
-"    // RegularObject/AffineObject will only return if it is nontransparent\n                       "    // l:272
-"    uint WINOBJ = (readIOreg(0x4au) >> 8) & 0x3fu;\n                                               "    // l:273
-"\n                                                                                                 "    // l:274
-"    FragColor.r = WINOBJ;\n                                                                        "    // l:275
-"    gl_FragDepth = -0.5;  // between WIN1 and WINOUT\n                                             "    // l:276
-"#endif\n                                                                                           "    // l:277
-"}\n                                                                                                "    // l:278
-"\n                                                                                                 "    // l:279
+"uniform bool Affine;\n                                                                             "    // l:12
+"uniform uint YClipStart;\n                                                                         "    // l:13
+"uniform uint YClipEnd;\n                                                                           "    // l:14
+"\n                                                                                                 "    // l:15
+"#ifdef OBJ_WINDOW\n                                                                                "    // l:16
+"    out uvec4 FragColor;\n                                                                         "    // l:17
+"#else\n                                                                                            "    // l:18
+"    out vec4 FragColor;\n                                                                          "    // l:19
+"#endif\n                                                                                           "    // l:20
+"\n                                                                                                 "    // l:21
+"out float gl_FragDepth;\n                                                                          "    // l:22
+"\n                                                                                                 "    // l:23
+"vec4 ColorCorrect(vec4 color);\n                                                                   "    // l:24
+"\n                                                                                                 "    // l:25
+"uint readVRAM8(uint address);\n                                                                    "    // l:26
+"uint readVRAM16(uint address);\n                                                                   "    // l:27
+"uint readVRAM32(uint address);\n                                                                   "    // l:28
+"\n                                                                                                 "    // l:29
+"uint readIOreg(uint address);\n                                                                    "    // l:30
+"ivec4 readOAMentry(uint index);\n                                                                  "    // l:31
+"vec4 readPALentry(uint index);\n                                                                   "    // l:32
+"\n                                                                                                 "    // l:33
+"uint getWindow(uint x, uint y);\n                                                                  "    // l:34
+"\n                                                                                                 "    // l:35
+"vec4 RegularObject(bool OAM2DMapping) {\n                                                          "    // l:36
+"    uint TID = OBJ.attr2 & 0x03ffu;\n                                                              "    // l:37
+"    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;\n                                                 "    // l:38
+"    gl_FragDepth = float(Priority) / 4.0;\n                                                        "    // l:39
+"\n                                                                                                 "    // l:40
+"    uint dx = uint(InObjPos.x);\n                                                                  "    // l:41
+"    uint dy = uint(InObjPos.y);\n                                                                  "    // l:42
+"\n                                                                                                 "    // l:43
+"    // mosaic effect\n                                                                             "    // l:44
+"    if ((OBJ.attr0 & 0x1000u) != 0u) {\n                                                           "    // l:45
+"        uint MOSAIC = readIOreg(0x4cu);\n                                                          "    // l:46
+"        dx -= dx % (((MOSAIC & 0xf00u) >> 8) + 1u);\n                                              "    // l:47
+"        dy -= dy % (((MOSAIC & 0xf000u) >> 12) + 1u);\n                                            "    // l:48
+"    }\n                                                                                            "    // l:49
+"\n                                                                                                 "    // l:50
+"    uint PixelAddress;\n                                                                           "    // l:51
+"    if ((OBJ.attr0 & 0x2000u) == 0x0000u) {\n                                                      "    // l:52
+"        uint PaletteBank = OBJ.attr2 >> 12;\n                                                      "    // l:53
+"        PixelAddress = TID << 5;\n                                                                 "    // l:54
+"\n                                                                                                 "    // l:55
+"        // get base address for line of tiles (vertically)\n                                       "    // l:56
+"        if (OAM2DMapping) {\n                                                                      "    // l:57
+"            PixelAddress += ObjWidth * (dy >> 3) << 2;\n                                           "    // l:58
+"        }\n                                                                                        "    // l:59
+"        else {\n                                                                                   "    // l:60
+"            PixelAddress += 32u * 0x20u * (dy >> 3);\n                                             "    // l:61
+"        }\n                                                                                        "    // l:62
+"        PixelAddress += (dy & 7u) << 2; // offset within tile for sliver\n                         "    // l:63
+"\n                                                                                                 "    // l:64
+"        // Sprites VRAM base address is 0x10000\n                                                  "    // l:65
+"        PixelAddress = (PixelAddress & 0x7fffu) | 0x10000u;\n                                      "    // l:66
+"\n                                                                                                 "    // l:67
+"        // horizontal offset:\n                                                                    "    // l:68
+"        PixelAddress += (dx >> 3) << 5;    // of tile\n                                            "    // l:69
+"        PixelAddress += ((dx & 7u) >> 1);  // in tile\n                                            "    // l:70
+"\n                                                                                                 "    // l:71
+"        uint VRAMEntry = readVRAM8(PixelAddress);\n                                                "    // l:72
+"        if ((dx & 1u) != 0u) {\n                                                                   "    // l:73
+"            // upper nibble\n                                                                      "    // l:74
+"            VRAMEntry >>= 4;\n                                                                     "    // l:75
+"        }\n                                                                                        "    // l:76
+"        else {\n                                                                                   "    // l:77
+"            VRAMEntry &= 0x0fu;\n                                                                  "    // l:78
+"        }\n                                                                                        "    // l:79
+"\n                                                                                                 "    // l:80
+"        if (VRAMEntry != 0u) {\n                                                                   "    // l:81
+"            return vec4(readPALentry(0x100u + (PaletteBank << 4) + VRAMEntry).rgb, 1);\n           "    // l:82
+"        }\n                                                                                        "    // l:83
+"        else {\n                                                                                   "    // l:84
+"            // transparent\n                                                                       "    // l:85
+"            discard;\n                                                                             "    // l:86
+"        }\n                                                                                        "    // l:87
+"    }\n                                                                                            "    // l:88
+"    else {\n                                                                                       "    // l:89
+"        // 8bpp\n                                                                                  "    // l:90
+"        PixelAddress = TID << 5;\n                                                                 "    // l:91
+"\n                                                                                                 "    // l:92
+"        if (OAM2DMapping) {\n                                                                      "    // l:93
+"            PixelAddress += ObjWidth * (dy & ~7u);\n                                               "    // l:94
+"        }\n                                                                                        "    // l:95
+"        else {\n                                                                                   "    // l:96
+"            PixelAddress += 32u * 0x20u * (dy >> 3);\n                                             "    // l:97
+"        }\n                                                                                        "    // l:98
+"        PixelAddress += (dy & 7u) << 3;\n                                                          "    // l:99
+"\n                                                                                                 "    // l:100
+"        // Sprites VRAM base address is 0x10000\n                                                  "    // l:101
+"        PixelAddress = (PixelAddress & 0x7fffu) | 0x10000u;\n                                      "    // l:102
+"\n                                                                                                 "    // l:103
+"        // horizontal offset:\n                                                                    "    // l:104
+"        PixelAddress += (dx >> 3) << 6;\n                                                          "    // l:105
+"        PixelAddress += dx & 7u;\n                                                                 "    // l:106
+"\n                                                                                                 "    // l:107
+"        uint VRAMEntry = readVRAM8(PixelAddress);\n                                                "    // l:108
+"\n                                                                                                 "    // l:109
+"        if (VRAMEntry != 0u) {\n                                                                   "    // l:110
+"            return vec4(readPALentry(0x100u + VRAMEntry).rgb, 1);\n                                "    // l:111
+"        }\n                                                                                        "    // l:112
+"        else {\n                                                                                   "    // l:113
+"            // transparent\n                                                                       "    // l:114
+"            discard;\n                                                                             "    // l:115
+"        }\n                                                                                        "    // l:116
+"    }\n                                                                                            "    // l:117
+"}\n                                                                                                "    // l:118
+"\n                                                                                                 "    // l:119
+"bool InsideBox(vec2 v, vec2 bottomLeft, vec2 topRight) {\n                                         "    // l:120
+"    vec2 s = step(bottomLeft, v) - step(topRight, v);\n                                            "    // l:121
+"    return (s.x * s.y) != 0.0;\n                                                                   "    // l:122
+"}\n                                                                                                "    // l:123
+"\n                                                                                                 "    // l:124
+"vec4 AffineObject(bool OAM2DMapping) {\n                                                           "    // l:125
+"    uint TID = OBJ.attr2 & 0x03ffu;\n                                                              "    // l:126
+"    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;\n                                                 "    // l:127
+"    gl_FragDepth = float(Priority) / 4.0;\n                                                        "    // l:128
+"\n                                                                                                 "    // l:129
+"    uint AffineIndex = (OBJ.attr1 & 0x3e00u) >> 9;\n                                               "    // l:130
+"    AffineIndex <<= 2;  // goes in groups of 4\n                                                   "    // l:131
+"\n                                                                                                 "    // l:132
+"    // scaling parameters\n                                                                        "    // l:133
+"    int PA = readOAMentry(AffineIndex).attr3;\n                                                    "    // l:134
+"    int PB = readOAMentry(AffineIndex + 1u).attr3;\n                                               "    // l:135
+"    int PC = readOAMentry(AffineIndex + 2u).attr3;\n                                               "    // l:136
+"    int PD = readOAMentry(AffineIndex + 3u).attr3;\n                                               "    // l:137
+"\n                                                                                                 "    // l:138
+"    // reference point\n                                                                           "    // l:139
+"    vec2 p0 = vec2(\n                                                                              "    // l:140
+"        float(ObjWidth  >> 1),\n                                                                   "    // l:141
+"        float(ObjHeight >> 1)\n                                                                    "    // l:142
+"    );\n                                                                                           "    // l:143
+"\n                                                                                                 "    // l:144
+"    vec2 p1;\n                                                                                     "    // l:145
+"    if ((OBJ.attr0 & 0x0300u) == 0x0300u) {\n                                                      "    // l:146
+"        // double rendering\n                                                                      "    // l:147
+"        p1 = 2 * p0;\n                                                                             "    // l:148
+"    }\n                                                                                            "    // l:149
+"    else {\n                                                                                       "    // l:150
+"        p1 = p0;\n                                                                                 "    // l:151
+"    }\n                                                                                            "    // l:152
+"\n                                                                                                 "    // l:153
+"    mat2x2 rotscale = mat2x2(\n                                                                    "    // l:154
+"        float(PA), float(PC),\n                                                                    "    // l:155
+"        float(PB), float(PD)\n                                                                     "    // l:156
+"    ) / 256.0;  // fixed point stuff\n                                                             "    // l:157
+"\n                                                                                                 "    // l:158
+"    ivec2 pos = ivec2(rotscale * (InObjPos - p1) + p0);\n                                          "    // l:159
+"    if (!InsideBox(pos, vec2(0, 0), vec2(ObjWidth, ObjHeight))) {\n                                "    // l:160
+"        // out of bounds\n                                                                         "    // l:161
+"        discard;\n                                                                                 "    // l:162
+"    }\n                                                                                            "    // l:163
+"\n                                                                                                 "    // l:164
+"    // mosaic effect\n                                                                             "    // l:165
+"    if ((OBJ.attr0 & 0x1000u) != 0u) {\n                                                           "    // l:166
+"        uint MOSAIC = readIOreg(0x4cu);\n                                                          "    // l:167
+"        pos.x -= pos.x % int(((MOSAIC & 0xf00u) >> 8) + 1u);\n                                     "    // l:168
+"        pos.y -= pos.y % int(((MOSAIC & 0xf000u) >> 12) + 1u);\n                                   "    // l:169
+"    }\n                                                                                            "    // l:170
+"\n                                                                                                 "    // l:171
+"    // get actual pixel\n                                                                          "    // l:172
+"    uint PixelAddress = 0x10000u;  // OBJ VRAM starts at 0x10000 in VRAM\n                         "    // l:173
+"    PixelAddress += TID << 5;\n                                                                    "    // l:174
+"    if (OAM2DMapping) {\n                                                                          "    // l:175
+"        PixelAddress += ObjWidth * uint(pos.y & ~7) >> 1;\n                                        "    // l:176
+"    }\n                                                                                            "    // l:177
+"    else {\n                                                                                       "    // l:178
+"        PixelAddress += 32u * 0x20u * uint(pos.y >> 3);\n                                          "    // l:179
+"    }\n                                                                                            "    // l:180
+"\n                                                                                                 "    // l:181
+"    // the rest is very similar to regular sprites:\n                                              "    // l:182
+"    if ((OBJ.attr0 & 0x2000u) == 0x0000u) {\n                                                      "    // l:183
+"        uint PaletteBank = OBJ.attr2 >> 12;\n                                                      "    // l:184
+"        PixelAddress += uint(pos.y & 7) << 2; // offset within tile for sliver\n                   "    // l:185
+"\n                                                                                                 "    // l:186
+"        // horizontal offset:\n                                                                    "    // l:187
+"        PixelAddress += uint(pos.x >> 3) << 5;    // of tile\n                                     "    // l:188
+"        PixelAddress += uint(pos.x & 7) >> 1;  // in tile\n                                        "    // l:189
+"\n                                                                                                 "    // l:190
+"        uint VRAMEntry = readVRAM8(PixelAddress);\n                                                "    // l:191
+"        if ((pos.x & 1) != 0) {\n                                                                  "    // l:192
+"            // upper nibble\n                                                                      "    // l:193
+"            VRAMEntry >>= 4;\n                                                                     "    // l:194
+"        }\n                                                                                        "    // l:195
+"        else {\n                                                                                   "    // l:196
+"            VRAMEntry &= 0x0fu;\n                                                                  "    // l:197
+"        }\n                                                                                        "    // l:198
+"\n                                                                                                 "    // l:199
+"        if (VRAMEntry != 0u) {\n                                                                   "    // l:200
+"            return vec4(readPALentry(0x100u + (PaletteBank << 4) + VRAMEntry).rgb, 1);\n           "    // l:201
+"        }\n                                                                                        "    // l:202
+"        else {\n                                                                                   "    // l:203
+"            // transparent\n                                                                       "    // l:204
+"            discard;\n                                                                             "    // l:205
+"        }\n                                                                                        "    // l:206
+"    }\n                                                                                            "    // l:207
+"    else {\n                                                                                       "    // l:208
+"        PixelAddress += (uint(pos.y) & 7u) << 3; // offset within tile for sliver\n                "    // l:209
+"\n                                                                                                 "    // l:210
+"        // horizontal offset:\n                                                                    "    // l:211
+"        PixelAddress += uint(pos.x >> 3) << 6;  // of tile\n                                       "    // l:212
+"        PixelAddress += uint(pos.x & 7);        // in tile\n                                       "    // l:213
+"\n                                                                                                 "    // l:214
+"        uint VRAMEntry = readVRAM8(PixelAddress);\n                                                "    // l:215
+"\n                                                                                                 "    // l:216
+"        if (VRAMEntry != 0u) {\n                                                                   "    // l:217
+"            return vec4(readPALentry(0x100u + VRAMEntry).rgb, 1);\n                                "    // l:218
+"        }\n                                                                                        "    // l:219
+"        else {\n                                                                                   "    // l:220
+"            // transparent\n                                                                       "    // l:221
+"            discard;\n                                                                             "    // l:222
+"        }\n                                                                                        "    // l:223
+"    }\n                                                                                            "    // l:224
+"}\n                                                                                                "    // l:225
+"\n                                                                                                 "    // l:226
+"void main() {\n                                                                                    "    // l:227
+"    if (OnScreenPos.x < 0) {\n                                                                     "    // l:228
+"        discard;\n                                                                                 "    // l:229
+"    }\n                                                                                            "    // l:230
+"    if (OnScreenPos.x > 240u) {\n                                                                  "    // l:231
+"        discard;\n                                                                                 "    // l:232
+"    }\n                                                                                            "    // l:233
+"\n                                                                                                 "    // l:234
+"    if (OnScreenPos.y < float(YClipStart)) {\n                                                     "    // l:235
+"        discard;\n                                                                                 "    // l:236
+"    }\n                                                                                            "    // l:237
+"    if (OnScreenPos.y > float(YClipEnd)) {\n                                                       "    // l:238
+"        discard;\n                                                                                 "    // l:239
+"    }\n                                                                                            "    // l:240
+"\n                                                                                                 "    // l:241
+"    uint DISPCNT = readIOreg(0x00u);\n                                                             "    // l:242
+"#ifndef OBJ_WINDOW\n                                                                               "    // l:243
+"    if ((DISPCNT & 0x1000u) == 0u) {\n                                                             "    // l:244
+"        // objects disabled in this scanline\n                                                     "    // l:245
+"        discard;\n                                                                                 "    // l:246
+"    }\n                                                                                            "    // l:247
+"    if ((getWindow(uint(OnScreenPos.x), uint(OnScreenPos.y)) & 0x10u) == 0u) {\n                   "    // l:248
+"        // disabled by window\n                                                                    "    // l:249
+"        discard;\n                                                                                 "    // l:250
+"    }\n                                                                                            "    // l:251
+"#else\n                                                                                            "    // l:252
+"    if ((DISPCNT & 0x8000u) == 0u) {\n                                                             "    // l:253
+"        // object window disabled in this scanline\n                                               "    // l:254
+"        discard;\n                                                                                 "    // l:255
+"    }\n                                                                                            "    // l:256
+"#endif\n                                                                                           "    // l:257
+"\n                                                                                                 "    // l:258
+"    bool OAM2DMapping = (DISPCNT & (0x0040u)) != 0u;\n                                             "    // l:259
+"\n                                                                                                 "    // l:260
+"    vec4 Color;\n                                                                                  "    // l:261
+"    if (!Affine) {\n                                                                               "    // l:262
+"        Color = RegularObject(OAM2DMapping);\n                                                     "    // l:263
+"    }\n                                                                                            "    // l:264
+"    else{\n                                                                                        "    // l:265
+"        Color = AffineObject(OAM2DMapping);\n                                                      "    // l:266
+"    }\n                                                                                            "    // l:267
+"\n                                                                                                 "    // l:268
+"#ifndef OBJ_WINDOW\n                                                                               "    // l:269
+"    FragColor = ColorCorrect(Color);\n                                                             "    // l:270
+"    // FragColor = vec4(InObjPos.x / float(ObjWidth), InObjPos.y / float(ObjHeight), 1, 1);\n      "    // l:271
+"#else\n                                                                                            "    // l:272
+"    // RegularObject/AffineObject will only return if it is nontransparent\n                       "    // l:273
+"    uint WINOBJ = (readIOreg(0x4au) >> 8) & 0x3fu;\n                                               "    // l:274
+"\n                                                                                                 "    // l:275
+"    FragColor.r = WINOBJ;\n                                                                        "    // l:276
+"    gl_FragDepth = -0.5;  // between WIN1 and WINOUT\n                                             "    // l:277
+"#endif\n                                                                                           "    // l:278
+"}\n                                                                                                "    // l:279
+"\n                                                                                                 "    // l:280
 ;
 
 
-// ObjectVertexShaderSource (from object_vertex.glsl, lines 5 to 105)
+// ObjectVertexShaderSource (from object_vertex.glsl, lines 5 to 111)
 const char* ObjectVertexShaderSource = 
 "#define attr0 x\n                                                                                  "    // l:1
 "#define attr1 y\n                                                                                  "    // l:2
 "#define attr2 z\n                                                                                  "    // l:3
 "#define attr3 w\n                                                                                  "    // l:4
 "\n                                                                                                 "    // l:5
-"layout (location = 0) in uvec4 InOBJ;\n                                                            "    // l:6
+"uniform bool Affine;\n                                                                             "    // l:6
 "\n                                                                                                 "    // l:7
-"out vec2 InObjPos;\n                                                                               "    // l:8
-"out vec2 OnScreenPos;\n                                                                            "    // l:9
-"flat out uvec4 OBJ;\n                                                                              "    // l:10
-"flat out uint ObjWidth;\n                                                                          "    // l:11
-"flat out uint ObjHeight;\n                                                                         "    // l:12
-"\n                                                                                                 "    // l:13
-"struct s_ObjSize {\n                                                                               "    // l:14
-"    uint width;\n                                                                                  "    // l:15
-"    uint height;\n                                                                                 "    // l:16
-"};\n                                                                                               "    // l:17
-"\n                                                                                                 "    // l:18
-"const s_ObjSize ObjSizeTable[12] = s_ObjSize[](\n                                                  "    // l:19
-"    s_ObjSize(8u, 8u),  s_ObjSize(16u, 16u), s_ObjSize(32u, 32u), s_ObjSize(64u, 64u),\n           "    // l:20
-"    s_ObjSize(16u, 8u), s_ObjSize(32u, 8u),  s_ObjSize(32u, 16u), s_ObjSize(64u, 32u),\n           "    // l:21
-"    s_ObjSize(8u, 16u), s_ObjSize(8u, 32u),  s_ObjSize(16u, 32u), s_ObjSize(32u, 62u)\n            "    // l:22
-");\n                                                                                               "    // l:23
-"\n                                                                                                 "    // l:24
-"struct s_Position {\n                                                                              "    // l:25
-"    bool right;\n                                                                                  "    // l:26
-"    bool low;\n                                                                                    "    // l:27
-"};\n                                                                                               "    // l:28
-"\n                                                                                                 "    // l:29
-"const s_Position PositionTable[4] = s_Position[](\n                                                "    // l:30
-"    s_Position(false, false), s_Position(true, false), s_Position(true, true), s_Position(false, true)\n"    // l:31
-");\n                                                                                               "    // l:32
-"\n                                                                                                 "    // l:33
-"void main() {\n                                                                                    "    // l:34
-"    OBJ = InOBJ;\n                                                                                 "    // l:35
-"    s_Position Position = PositionTable[gl_VertexID & 3];\n                                        "    // l:36
-"\n                                                                                                 "    // l:37
-"    uint Shape = OBJ.attr0 >> 14;\n                                                                "    // l:38
-"    uint Size  = OBJ.attr1 >> 14;\n                                                                "    // l:39
-"\n                                                                                                 "    // l:40
-"    s_ObjSize ObjSize = ObjSizeTable[(Shape * 4u) + Size];\n                                       "    // l:41
-"    ObjWidth = ObjSize.width;\n                                                                    "    // l:42
-"    ObjHeight = ObjSize.height;\n                                                                  "    // l:43
-"\n                                                                                                 "    // l:44
-"    ivec2 ScreenPos = ivec2(OBJ.attr1 & 0x1ffu, OBJ.attr0 & 0xffu);\n                              "    // l:45
+"layout (location = 0) in uvec4 InOBJ;\n                                                            "    // l:8
+"\n                                                                                                 "    // l:9
+"out vec2 InObjPos;\n                                                                               "    // l:10
+"out vec2 OnScreenPos;\n                                                                            "    // l:11
+"flat out uvec4 OBJ;\n                                                                              "    // l:12
+"flat out uint ObjWidth;\n                                                                          "    // l:13
+"flat out uint ObjHeight;\n                                                                         "    // l:14
+"\n                                                                                                 "    // l:15
+"struct s_ObjSize {\n                                                                               "    // l:16
+"    uint width;\n                                                                                  "    // l:17
+"    uint height;\n                                                                                 "    // l:18
+"};\n                                                                                               "    // l:19
+"\n                                                                                                 "    // l:20
+"const s_ObjSize ObjSizeTable[12] = s_ObjSize[](\n                                                  "    // l:21
+"    s_ObjSize(8u, 8u),  s_ObjSize(16u, 16u), s_ObjSize(32u, 32u), s_ObjSize(64u, 64u),\n           "    // l:22
+"    s_ObjSize(16u, 8u), s_ObjSize(32u, 8u),  s_ObjSize(32u, 16u), s_ObjSize(64u, 32u),\n           "    // l:23
+"    s_ObjSize(8u, 16u), s_ObjSize(8u, 32u),  s_ObjSize(16u, 32u), s_ObjSize(32u, 62u)\n            "    // l:24
+");\n                                                                                               "    // l:25
+"\n                                                                                                 "    // l:26
+"struct s_Position {\n                                                                              "    // l:27
+"    bool right;\n                                                                                  "    // l:28
+"    bool low;\n                                                                                    "    // l:29
+"};\n                                                                                               "    // l:30
+"\n                                                                                                 "    // l:31
+"const s_Position PositionTable[4] = s_Position[](\n                                                "    // l:32
+"    s_Position(false, false), s_Position(true, false), s_Position(true, true), s_Position(false, true)\n"    // l:33
+");\n                                                                                               "    // l:34
+"\n                                                                                                 "    // l:35
+"void main() {\n                                                                                    "    // l:36
+"    OBJ = InOBJ;\n                                                                                 "    // l:37
+"    s_Position Position = PositionTable[gl_VertexID & 3];\n                                        "    // l:38
+"\n                                                                                                 "    // l:39
+"    uint Shape = OBJ.attr0 >> 14;\n                                                                "    // l:40
+"    uint Size  = OBJ.attr1 >> 14;\n                                                                "    // l:41
+"\n                                                                                                 "    // l:42
+"    s_ObjSize ObjSize = ObjSizeTable[(Shape * 4u) + Size];\n                                       "    // l:43
+"    ObjWidth = ObjSize.width;\n                                                                    "    // l:44
+"    ObjHeight = ObjSize.height;\n                                                                  "    // l:45
 "\n                                                                                                 "    // l:46
-"    // correct position for screen wrapping\n                                                      "    // l:47
-"    if (ScreenPos.x > int(240u)) {\n                                                               "    // l:48
-"        ScreenPos.x -= 0x200;\n                                                                    "    // l:49
-"    }\n                                                                                            "    // l:50
-"\n                                                                                                 "    // l:51
-"    if (ScreenPos.y > int(160u)) {\n                                                               "    // l:52
-"        ScreenPos.y -= 0x100;\n                                                                    "    // l:53
-"    }\n                                                                                            "    // l:54
-"\n                                                                                                 "    // l:55
-"    InObjPos = uvec2(0, 0);\n                                                                      "    // l:56
-"    if (Position.right) {\n                                                                        "    // l:57
-"        InObjPos.x  += ObjWidth;\n                                                                 "    // l:58
-"        ScreenPos.x += int(ObjWidth);\n                                                            "    // l:59
-"\n                                                                                                 "    // l:60
-"        if ((OBJ.attr0 & 0x0300u) == 0x0300u) {\n                                                  "    // l:61
-"            // double rendering\n                                                                  "    // l:62
-"            InObjPos.x  += ObjWidth;\n                                                             "    // l:63
-"            ScreenPos.x += int(ObjWidth);\n                                                        "    // l:64
-"        }\n                                                                                        "    // l:65
-"    }\n                                                                                            "    // l:66
-"\n                                                                                                 "    // l:67
-"    if (Position.low) {\n                                                                          "    // l:68
-"        InObjPos.y  += ObjHeight;\n                                                                "    // l:69
-"        ScreenPos.y += int(ObjHeight);\n                                                           "    // l:70
+"    ivec2 ScreenPos = ivec2(OBJ.attr1 & 0x1ffu, OBJ.attr0 & 0xffu);\n                              "    // l:47
+"\n                                                                                                 "    // l:48
+"    // correct position for screen wrapping\n                                                      "    // l:49
+"    if (ScreenPos.x > int(240u)) {\n                                                               "    // l:50
+"        ScreenPos.x -= 0x200;\n                                                                    "    // l:51
+"    }\n                                                                                            "    // l:52
+"\n                                                                                                 "    // l:53
+"    if (ScreenPos.y > int(160u)) {\n                                                               "    // l:54
+"        ScreenPos.y -= 0x100;\n                                                                    "    // l:55
+"    }\n                                                                                            "    // l:56
+"\n                                                                                                 "    // l:57
+"    InObjPos = uvec2(0, 0);\n                                                                      "    // l:58
+"    if (Position.right) {\n                                                                        "    // l:59
+"        InObjPos.x  += ObjWidth;\n                                                                 "    // l:60
+"        ScreenPos.x += int(ObjWidth);\n                                                            "    // l:61
+"\n                                                                                                 "    // l:62
+"        if (Affine) {\n                                                                            "    // l:63
+"            if ((OBJ.attr0 & 0x0300u) == 0x0300u) {\n                                              "    // l:64
+"                // double rendering\n                                                              "    // l:65
+"                InObjPos.x  += ObjWidth;\n                                                         "    // l:66
+"                ScreenPos.x += int(ObjWidth);\n                                                    "    // l:67
+"            }\n                                                                                    "    // l:68
+"        }\n                                                                                        "    // l:69
+"    }\n                                                                                            "    // l:70
 "\n                                                                                                 "    // l:71
-"        if ((OBJ.attr0 & 0x0300u) == 0x0300u) {\n                                                  "    // l:72
-"            // double rendering\n                                                                  "    // l:73
-"            InObjPos.y  += ObjHeight;\n                                                            "    // l:74
-"            ScreenPos.y += int(ObjHeight);\n                                                       "    // l:75
-"        }\n                                                                                        "    // l:76
-"    }\n                                                                                            "    // l:77
-"\n                                                                                                 "    // l:78
-"    // flipping only applies to regular sprites\n                                                  "    // l:79
-"    if ((OBJ.attr0 & 0x0300u) == 0x0000u) {\n                                                      "    // l:80
-"        if ((OBJ.attr1 & 0x2000u) != 0u) {\n                                                       "    // l:81
-"            // VFlip\n                                                                             "    // l:82
-"            InObjPos.y = ObjHeight - InObjPos.y;\n                                                 "    // l:83
-"        }\n                                                                                        "    // l:84
-"\n                                                                                                 "    // l:85
-"        if ((OBJ.attr1 & 0x1000u) != 0u) {\n                                                       "    // l:86
-"            // HFlip\n                                                                             "    // l:87
-"            InObjPos.x = ObjWidth - InObjPos.x;\n                                                  "    // l:88
-"        }\n                                                                                        "    // l:89
-"    }\n                                                                                            "    // l:90
+"    if (Position.low) {\n                                                                          "    // l:72
+"        InObjPos.y  += ObjHeight;\n                                                                "    // l:73
+"        ScreenPos.y += int(ObjHeight);\n                                                           "    // l:74
+"\n                                                                                                 "    // l:75
+"        if (Affine) {\n                                                                            "    // l:76
+"            if ((OBJ.attr0 & 0x0300u) == 0x0300u) {\n                                              "    // l:77
+"                // double rendering\n                                                              "    // l:78
+"                InObjPos.y  += ObjHeight;\n                                                        "    // l:79
+"                ScreenPos.y += int(ObjHeight);\n                                                   "    // l:80
+"            }\n                                                                                    "    // l:81
+"        }\n                                                                                        "    // l:82
+"    }\n                                                                                            "    // l:83
+"\n                                                                                                 "    // l:84
+"    // flipping only applies to regular sprites\n                                                  "    // l:85
+"    if (!Affine) {\n                                                                               "    // l:86
+"        if ((OBJ.attr1 & 0x2000u) != 0u) {\n                                                       "    // l:87
+"            // VFlip\n                                                                             "    // l:88
+"            InObjPos.y = ObjHeight - InObjPos.y;\n                                                 "    // l:89
+"        }\n                                                                                        "    // l:90
 "\n                                                                                                 "    // l:91
-"    OnScreenPos = vec2(ScreenPos);\n                                                               "    // l:92
-"    gl_Position = vec4(\n                                                                          "    // l:93
-"        -1.0 + 2.0 * OnScreenPos.x / float(240u),\n                                                "    // l:94
-"        1 - 2.0 * OnScreenPos.y / float(160u),\n                                                   "    // l:95
-"        0,\n                                                                                       "    // l:96
-"        1\n                                                                                        "    // l:97
-"    );\n                                                                                           "    // l:98
-"}\n                                                                                                "    // l:99
-"\n                                                                                                 "    // l:100
+"        if ((OBJ.attr1 & 0x1000u) != 0u) {\n                                                       "    // l:92
+"            // HFlip\n                                                                             "    // l:93
+"            InObjPos.x = ObjWidth - InObjPos.x;\n                                                  "    // l:94
+"        }\n                                                                                        "    // l:95
+"    }\n                                                                                            "    // l:96
+"\n                                                                                                 "    // l:97
+"    OnScreenPos = vec2(ScreenPos);\n                                                               "    // l:98
+"    gl_Position = vec4(\n                                                                          "    // l:99
+"        -1.0 + 2.0 * OnScreenPos.x / float(240u),\n                                                "    // l:100
+"        1 - 2.0 * OnScreenPos.y / float(160u),\n                                                   "    // l:101
+"        0,\n                                                                                       "    // l:102
+"        1\n                                                                                        "    // l:103
+"    );\n                                                                                           "    // l:104
+"}\n                                                                                                "    // l:105
+"\n                                                                                                 "    // l:106
 ;
 
 

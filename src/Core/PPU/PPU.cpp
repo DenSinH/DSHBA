@@ -497,6 +497,7 @@ void GBAPPU::InitObjBuffers() {
 
     ObjYClipStartLocation = glGetUniformLocation(ObjProgram, "YClipStart");
     ObjYClipEndLocation   = glGetUniformLocation(ObjProgram, "YClipEnd");
+    ObjAffLocation        = glGetUniformLocation(ObjProgram, "Affine");
     ObjWindowLocation     = glGetUniformLocation(ObjProgram, "Window");
     glUniform1i(ObjWindowLocation, static_cast<u32>(BufferBindings::Window));
 
@@ -579,6 +580,7 @@ void GBAPPU::InitWinObjBuffers() {
 
     WinObjYClipStartLocation = glGetUniformLocation(WinObjProgram, "YClipStart");
     WinObjYClipEndLocation   = glGetUniformLocation(WinObjProgram, "YClipEnd");
+    WinObjAffLocation        = glGetUniformLocation(WinObjProgram, "Affine");
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -650,7 +652,8 @@ void GBAPPU::DrawObjWindow(int win_start, int win_end) {
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::OAM));
 
     size_t scanline = 0;
-    u32 NumberOfObjVerts;
+    u32 NumberOfRegularObjVerts;
+    u32 NumberOfAffineObjVerts;
     do {
         u32 batch_size = ScanlineOAMBatchSizes[BufferFrame ^ 1][scanline];
 
@@ -661,8 +664,16 @@ void GBAPPU::DrawObjWindow(int win_start, int win_end) {
             break;
         }
 
-        NumberOfObjVerts = BufferObjects<true>(BufferFrame ^ 1, scanline, batch_size);
-        if (!NumberOfObjVerts) {
+        NumberOfRegularObjVerts = BufferObjects<true, false>(BufferFrame ^ 1, scanline, batch_size);
+
+        // buffer data for regular objects
+        glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfRegularObjVerts, ObjAttrBuffer, GL_STATIC_DRAW);
+
+        // find affine objects
+        NumberOfAffineObjVerts = BufferObjects<true, true>(BufferFrame ^ 1, scanline, batch_size);
+
+        if (!(NumberOfRegularObjVerts + NumberOfAffineObjVerts)) {
+            // no objects enabled, don't bother setting uniforms/buffering OAM
             scanline += batch_size;
             continue;
         }
@@ -675,11 +686,22 @@ void GBAPPU::DrawObjWindow(int win_start, int win_end) {
         glUniform1ui(WinObjYClipStartLocation, scanline);
         glUniform1ui(WinObjYClipEndLocation, scanline + batch_size);
 
-        glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttrBuffer, GL_STATIC_DRAW);
-        // * 5 for the restartindex
-        glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
+        if (NumberOfRegularObjVerts) {
+            // draw regular objects
+            // * 5 for the restartindex
+            glUniform1ui(WinObjAffLocation, false);
+            glDrawElements(GL_TRIANGLE_FAN, (NumberOfRegularObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
+        }
 
-        log_ppu("%d objects enabled in lines %d - %d of object window", NumberOfObjVerts >> 2, scanline, scanline + batch_size);
+        if (NumberOfAffineObjVerts) {
+            // buffer and draw affine objects
+            glUniform1ui(WinObjAffLocation, true);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfAffineObjVerts, ObjAttrBuffer, GL_STATIC_DRAW);
+            glDrawElements(GL_TRIANGLE_FAN, (NumberOfAffineObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
+
+        }
+
+        log_ppu("%d objects enabled in lines %d - %d of object window", NumberOfRegularObjVerts >> 2, scanline, scanline + batch_size);
 
         scanline += batch_size;
 
@@ -739,11 +761,6 @@ void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
         return;
     }
 
-    u32 NumberOfObjVerts = BufferObjects<false>(BufferFrame ^ 1, scanline, amount);
-    if (!NumberOfObjVerts) {
-        return;
-    }
-
     glUseProgram(ObjProgram);
     glBindVertexArray(ObjVAO);
 
@@ -774,11 +791,25 @@ void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
     glUniform1ui(ObjYClipStartLocation, scanline);
     glUniform1ui(ObjYClipEndLocation, scanline + amount);
 
-    glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttrBuffer, GL_STATIC_DRAW);
-    // * 5 for the restartindex
-    glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
+    // draw regular objects
+    u32 NumberOfObjVerts = BufferObjects<false, false>(BufferFrame ^ 1, scanline, amount);
+    if (NumberOfObjVerts) {
+        glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttrBuffer, GL_STATIC_DRAW);
+        // * 5 for the restartindex
+        glUniform1ui(ObjAffLocation, false);
+        glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
+        log_ppu("%d regular objects enabled in lines %d - %d", NumberOfObjVerts >> 2, scanline, scanline + amount);
+    }
 
-    log_ppu("%d objects enabled in lines %d - %d", NumberOfObjVerts >> 2, scanline, scanline + amount);
+    // draw affine objects
+    NumberOfObjVerts = BufferObjects<false, true>(BufferFrame ^ 1, scanline, amount);
+    if (NumberOfObjVerts) {
+        glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttrBuffer, GL_STATIC_DRAW);
+        // * 5 for the restartindex
+        glUniform1ui(ObjAffLocation, true);
+        glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
+        log_ppu("%d affine objects enabled in lines %d - %d", NumberOfObjVerts >> 2, scanline, scanline + amount);
+    }
 
     glDisable(GL_PRIMITIVE_RESTART);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);

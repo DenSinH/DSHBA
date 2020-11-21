@@ -8,6 +8,8 @@
 #define attr2 z
 #define attr3 w
 
+uniform bool Affine;
+
 layout (location = 0) in uvec4 InOBJ;
 
 out vec2 InObjPos;
@@ -63,10 +65,12 @@ void main() {
         InObjPos.x  += ObjWidth;
         ScreenPos.x += int(ObjWidth);
 
-        if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_AFF_DBL++) {
-            // double rendering
-            InObjPos.x  += ObjWidth;
-            ScreenPos.x += int(ObjWidth);
+        if (Affine) {
+            if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_AFF_DBL++) {
+                // double rendering
+                InObjPos.x  += ObjWidth;
+                ScreenPos.x += int(ObjWidth);
+            }
         }
     }
 
@@ -74,15 +78,17 @@ void main() {
         InObjPos.y  += ObjHeight;
         ScreenPos.y += int(ObjHeight);
 
-        if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_AFF_DBL++) {
-            // double rendering
-            InObjPos.y  += ObjHeight;
-            ScreenPos.y += int(ObjHeight);
+        if (Affine) {
+            if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_AFF_DBL++) {
+                // double rendering
+                InObjPos.y  += ObjHeight;
+                ScreenPos.y += int(ObjHeight);
+            }
         }
     }
 
     // flipping only applies to regular sprites
-    if ((OBJ.attr0 & ++ATTR0_OM++) == ++ATTR0_REG++) {
+    if (!Affine) {
         if ((OBJ.attr1 & ++ATTR1_VF++) != 0u) {
             // VFlip
             InObjPos.y = ObjHeight - InObjPos.y;
