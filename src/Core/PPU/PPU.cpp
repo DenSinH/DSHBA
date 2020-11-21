@@ -827,6 +827,12 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     glUseProgram(BGProgram);
     glBindVertexArray(BGVAO);
 
+    if (scanline == 0) {
+        // buffer reference points for affine backgrounds
+        glUniform1uiv(ReferenceLine2Location, VISIBLE_SCREEN_HEIGHT, ReferenceLine2Buffer[BufferFrame ^ 1]);
+        glUniform1uiv(ReferenceLine3Location, VISIBLE_SCREEN_HEIGHT, ReferenceLine3Buffer[BufferFrame ^ 1]);
+    }
+
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glBindTexture(GL_TEXTURE_2D, PALTexture);
 
@@ -915,10 +921,6 @@ struct s_framebuffer GBAPPU::Render() {
 
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // buffer reference points for affine backgrounds
-    glUniform1uiv(ReferenceLine2Location, VISIBLE_SCREEN_HEIGHT, ReferenceLine2Buffer[BufferFrame ^ 1]);
-    glUniform1uiv(ReferenceLine3Location, VISIBLE_SCREEN_HEIGHT, ReferenceLine3Buffer[BufferFrame ^ 1]);
 
     size_t VRAM_scanline = 0, OAM_scanline = 0;
     do {

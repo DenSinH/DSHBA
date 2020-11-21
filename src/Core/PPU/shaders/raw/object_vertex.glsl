@@ -101,12 +101,25 @@ void main() {
     }
 
     OnScreenPos = vec2(ScreenPos);
+
+#ifndef OBJ_WINDOW
+    // depth is the same everywhere in the object anyway
+    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;
+
     gl_Position = vec4(
         -1.0 + 2.0 * OnScreenPos.x / float(++VISIBLE_SCREEN_WIDTH++),
         1 - 2.0 * OnScreenPos.y / float(++VISIBLE_SCREEN_HEIGHT++),
-        0,
+        -1 + float(Priority) / 4.0,
         1
     );
+#else
+    gl_Position = vec4(
+        -1.0 + 2.0 * OnScreenPos.x / float(++VISIBLE_SCREEN_WIDTH++),
+        1 - 2.0 * OnScreenPos.y / float(++VISIBLE_SCREEN_HEIGHT++),
+        -0.5,  // between WIN1 and WINOUT
+        1
+    );
+#endif
 }
 
 // END ObjectVertexShaderSource

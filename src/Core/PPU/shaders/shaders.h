@@ -607,7 +607,7 @@ const char* FragmentShaderMode4Source =
 ;
 
 
-// ObjectFragmentShaderSource (from object_fragment.glsl, lines 5 to 285)
+// ObjectFragmentShaderSource (from object_fragment.glsl, lines 5 to 284)
 const char* ObjectFragmentShaderSource = 
 "#define attr0 x\n                                                                                  "    // l:1
 "#define attr1 y\n                                                                                  "    // l:2
@@ -630,7 +630,7 @@ const char* ObjectFragmentShaderSource =
 "    out vec4 FragColor;\n                                                                          "    // l:19
 "#endif\n                                                                                           "    // l:20
 "\n                                                                                                 "    // l:21
-"out float gl_FragDepth;\n                                                                          "    // l:22
+"// out float gl_FragDepth;\n                                                                       "    // l:22
 "\n                                                                                                 "    // l:23
 "vec4 ColorCorrect(vec4 color);\n                                                                   "    // l:24
 "\n                                                                                                 "    // l:25
@@ -646,8 +646,8 @@ const char* ObjectFragmentShaderSource =
 "\n                                                                                                 "    // l:35
 "vec4 RegularObject(bool OAM2DMapping) {\n                                                          "    // l:36
 "    uint TID = OBJ.attr2 & 0x03ffu;\n                                                              "    // l:37
-"    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;\n                                                 "    // l:38
-"    gl_FragDepth = float(Priority) / 4.0;\n                                                        "    // l:39
+"//    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;\n                                               "    // l:38
+"//    gl_FragDepth = float(Priority) / 4.0;\n                                                      "    // l:39
 "\n                                                                                                 "    // l:40
 "    uint dx = uint(InObjPos.x);\n                                                                  "    // l:41
 "    uint dy = uint(InObjPos.y);\n                                                                  "    // l:42
@@ -735,8 +735,8 @@ const char* ObjectFragmentShaderSource =
 "\n                                                                                                 "    // l:124
 "vec4 AffineObject(bool OAM2DMapping) {\n                                                           "    // l:125
 "    uint TID = OBJ.attr2 & 0x03ffu;\n                                                              "    // l:126
-"    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;\n                                                 "    // l:127
-"    gl_FragDepth = float(Priority) / 4.0;\n                                                        "    // l:128
+"//    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;\n                                               "    // l:127
+"//    gl_FragDepth = float(Priority) / 4.0;\n                                                      "    // l:128
 "\n                                                                                                 "    // l:129
 "    uint AffineIndex = (OBJ.attr1 & 0x3e00u) >> 9;\n                                               "    // l:130
 "    AffineIndex <<= 2;  // goes in groups of 4\n                                                   "    // l:131
@@ -885,14 +885,13 @@ const char* ObjectFragmentShaderSource =
 "    uint WINOBJ = (readIOreg(0x4au) >> 8) & 0x3fu;\n                                               "    // l:274
 "\n                                                                                                 "    // l:275
 "    FragColor.r = WINOBJ;\n                                                                        "    // l:276
-"    gl_FragDepth = -0.5;  // between WIN1 and WINOUT\n                                             "    // l:277
-"#endif\n                                                                                           "    // l:278
-"}\n                                                                                                "    // l:279
-"\n                                                                                                 "    // l:280
+"#endif\n                                                                                           "    // l:277
+"}\n                                                                                                "    // l:278
+"\n                                                                                                 "    // l:279
 ;
 
 
-// ObjectVertexShaderSource (from object_vertex.glsl, lines 5 to 111)
+// ObjectVertexShaderSource (from object_vertex.glsl, lines 5 to 124)
 const char* ObjectVertexShaderSource = 
 "#define attr0 x\n                                                                                  "    // l:1
 "#define attr1 y\n                                                                                  "    // l:2
@@ -992,14 +991,27 @@ const char* ObjectVertexShaderSource =
 "    }\n                                                                                            "    // l:96
 "\n                                                                                                 "    // l:97
 "    OnScreenPos = vec2(ScreenPos);\n                                                               "    // l:98
-"    gl_Position = vec4(\n                                                                          "    // l:99
-"        -1.0 + 2.0 * OnScreenPos.x / float(240u),\n                                                "    // l:100
-"        1 - 2.0 * OnScreenPos.y / float(160u),\n                                                   "    // l:101
-"        0,\n                                                                                       "    // l:102
-"        1\n                                                                                        "    // l:103
-"    );\n                                                                                           "    // l:104
-"}\n                                                                                                "    // l:105
-"\n                                                                                                 "    // l:106
+"\n                                                                                                 "    // l:99
+"#ifndef OBJ_WINDOW\n                                                                               "    // l:100
+"    // depth is the same everywhere in the object anyway\n                                         "    // l:101
+"    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;\n                                                 "    // l:102
+"\n                                                                                                 "    // l:103
+"    gl_Position = vec4(\n                                                                          "    // l:104
+"        -1.0 + 2.0 * OnScreenPos.x / float(240u),\n                                                "    // l:105
+"        1 - 2.0 * OnScreenPos.y / float(160u),\n                                                   "    // l:106
+"        -1 + float(Priority) / 4.0,\n                                                              "    // l:107
+"        1\n                                                                                        "    // l:108
+"    );\n                                                                                           "    // l:109
+"#else\n                                                                                            "    // l:110
+"    gl_Position = vec4(\n                                                                          "    // l:111
+"        -1.0 + 2.0 * OnScreenPos.x / float(240u),\n                                                "    // l:112
+"        1 - 2.0 * OnScreenPos.y / float(160u),\n                                                   "    // l:113
+"        -0.5,  // between WIN1 and WINOUT\n                                                        "    // l:114
+"        1\n                                                                                        "    // l:115
+"    );\n                                                                                           "    // l:116
+"#endif\n                                                                                           "    // l:117
+"}\n                                                                                                "    // l:118
+"\n                                                                                                 "    // l:119
 ;
 
 
