@@ -53,7 +53,7 @@ int main() {
 #endif
 
 #ifdef DO_BREAKPOINTS
-    gba->Paused = false;
+    gba->Paused = true;
 #endif
 
     atexit(exception_handler);
@@ -62,15 +62,15 @@ int main() {
 
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/RotationScaling/OBJAffineSet/BIOSOBJAFFINESET.gba");
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Arithmetic/ARCTAN/BIOSARCTAN.gba");
-    // gba->LoadROM("D:/Data/CProjects/DSHBA/files/tonc/snd1_demo.gba");
+    // gba->LoadROM("D:/Data/CProjects/DSHBA/files/tonc/irq_demo.gba");
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/suite.gba");
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/ags.gba");
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/main.gba");
     // gba->LoadROM("D:/User/Downloads/Kirby - Nightmare in Dream Land (USA).gba");
     // gba->LoadROM("D:/User/Downloads/Mega Man Battle Network 6 - Cybeast Falzar (USA).gba");
-    // gba->LoadROM("D:/User/Downloads/Pokemon - Emerald Version (USA, Europe).gba");
+    gba->LoadROM("D:/User/Downloads/Pokemon - Emerald Version (USA, Europe).gba");
     // gba->LoadROM("D:/User/Downloads/Legend of Zelda, The - The Minish Cap (USA).gba");
-    gba->LoadROM("D:/User/Downloads/Pokemon - Ruby Version (USA, Europe) (Rev 2).gba");
+    // gba->LoadROM("D:/User/Downloads/Pokemon - Ruby Version (USA, Europe) (Rev 2).gba");
     // gba->LoadROM("D:/User/Downloads/WarioWare, Inc. - Mega Microgame$! (USA).gba");
     // gba->LoadROM("D:/User/Downloads/Mario & Luigi - Superstar Saga (USA, Australia).gba");
     // gba->LoadROM("D:/User/Downloads/Pokemon Mystery Dungeon - Red Rescue Team (USA, Australia).gba");

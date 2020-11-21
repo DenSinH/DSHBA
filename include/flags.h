@@ -19,6 +19,8 @@
 
 #define STUB_SIO
 
+#undef SINGLE_CPI
+
 #ifndef NDEBUG
 // change to change verbosity / component logging:
 #define VERBOSITY VERBOSITY_DEBUG

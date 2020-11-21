@@ -351,6 +351,10 @@ bool ARM7TDMI::CheckCondition(u8 condition) const {
 void ARM7TDMI::Step() {
     u32 instruction;
 
+#ifdef SINGLE_CPI
+    u64 old_timer = timer;
+#endif
+
 #ifdef ALWAYS_TRACE_LOG
     LogState();
 #elif defined(TRACE_LOG)
@@ -365,11 +369,11 @@ void ARM7TDMI::Step() {
     }
     else if (ARMMode) {
         // before the instruction gets executed, we are 2 instructions ahead
-        instruction = Memory->Mem::Read<u32, true>(pc - 8);
+        instruction = Memory->Mem::ReadInline<u32, true>(pc - 8);
     }
     else {
         // THUMB mode
-        instruction = Memory->Mem::Read<u16, true>(pc - 4);
+        instruction = Memory->Mem::ReadInline<u16, true>(pc - 4);
     }
 
     if (ARMMode) {
@@ -388,4 +392,8 @@ void ARM7TDMI::Step() {
         // same here
         pc += 2;
     }
+
+#ifdef SINGLE_CPI
+    timer = old_timer + 1;
+#endif
 }

@@ -47,6 +47,7 @@ public:
 
     void Reset();
 
+    template<typename T, bool count> ALWAYS_INLINE T ReadInline(u32 address);
     template<typename T, bool count> T Read(u32 address);
     template<typename T, bool count, bool do_reflush> void Write(u32 address, T value);
 

@@ -1,6 +1,6 @@
 
 template<typename T, bool count>
-T Mem::Read(u32 address) {
+ALWAYS_INLINE T Mem::ReadInline(u32 address) {
     // often, code will be ran from iWRAM
     // this makes it the hottest path
     // this will likely still be optimized as part of the switch statement by the compiler
@@ -64,6 +64,12 @@ T Mem::Read(u32 address) {
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::OOB>(); }
             return 0;
     }
+}
+
+
+template<typename T, bool count>
+T Mem::Read(u32 address) {
+    return ReadInline<T, count>(address);
 }
 
 template<typename T>

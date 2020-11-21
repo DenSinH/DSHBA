@@ -508,6 +508,7 @@ SCHEDULER_EVENT(MMIO::HaltEvent) {
 }
 
 WRITE_CALLBACK(MMIO::WritePOSTFLG_HALTCNT) {
+#ifndef SINGLE_CPI
     if (!(value & 0xff00)) {
         CPU->Halted = true;
 
@@ -517,4 +518,5 @@ WRITE_CALLBACK(MMIO::WritePOSTFLG_HALTCNT) {
         // reset to 0xff to detect HALT writes properly
         WriteArray<u8>(Registers, static_cast<u32>(IORegister::HALTCNT), 0xff);
     }
+#endif
 }
