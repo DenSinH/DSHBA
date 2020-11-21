@@ -327,11 +327,11 @@ WRITE_CALLBACK(MMIO::WriteDISPSTAT) {
     DISPSTAT = (DISPSTAT & 0x7) | (value & ~0x7);
 
     // VCount interrupt might happen with the newly written value
-    if (DISPSTAT & static_cast<u16>(DISPSTATFlags::VCountIRQ)) {
-        if ((DISPSTAT >> 8) == VCount) {
-            TriggerInterrupt(static_cast<u16>(Interrupt::VCount));
-        }
-    }
+//    if (DISPSTAT & static_cast<u16>(DISPSTATFlags::VCountIRQ)) {
+//        if ((DISPSTAT >> 8) == VCount) {
+//            TriggerInterrupt(static_cast<u16>(Interrupt::VCount));
+//        }
+//    }
 }
 
 READ_PRECALL(MMIO::ReadVCount) {
