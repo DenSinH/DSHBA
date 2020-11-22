@@ -2,6 +2,9 @@
 
 #include "CoreUtils.h"
 #include "Backup/BackupDB.h"
+#include "NormmattBIOS.h"
+
+#include <filesystem>
 
 #ifdef DUMP_MEM
 #include <fstream>
@@ -173,7 +176,16 @@ void Mem::LoadROM(const std::string file_path) {
 }
 
 void Mem::LoadBIOS(const std::string& file_path) {
-    LoadFileTo(reinterpret_cast<char *>(BIOS), file_path, 0x0000'4000);
+    if (std::filesystem::exists(file_path)) {
+        LoadFileTo(reinterpret_cast<char *>(BIOS), file_path, 0x0000'4000);
+    }
+    else {
+        if ((*(u32*)BIOS) == 0) {
+            // check if something has been loaded into the BIOS already (reset vector should not be 0)
+            log_warn("BIOS file %s does not exist, loading default...", file_path.c_str());
+            memcpy_s(BIOS, sizeof(BIOS), NormattsBIOS, sizeof(NormattsBIOS));
+        }
+    }
 }
 
 u8* Mem::GetPtr(u32 address) {

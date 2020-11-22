@@ -158,10 +158,12 @@ void Mem::SlowDMA(s_DMAData* DMA) {
 
     log_dma("Slow DMA %x -> %x (len: %x, control: %04x)", sad, dad, DMA->CNT_L, control);
 
+    u32 latch;
     for (u32 i = 0; i < length; i++) {
         // we don't want to reflush
         // if a game overwrites the area PC is in with DMA, the result is probably fairly unpredictable anyway
-        Write<T, true, false>(dad, Read<T, true, true>(sad));
+        latch = Read<T, true, true>(sad);
+        Write<T, true, false>(dad, latch);
 
         if constexpr(intermittent_events) {
             if (unlikely(Scheduler->ShouldDoEvents())) {
@@ -174,12 +176,13 @@ void Mem::SlowDMA(s_DMAData* DMA) {
     }
 
     // get last transferred word as DMA latch
+    // for slow DMAs we have to be careful with reading the latched value
     if constexpr(std::is_same_v<T, u16>) {
-        DMALatch = Read<u16, false, true>(dad - delta_dad);
+        DMALatch = latch;
         DMALatch |= DMALatch << 16;
     }
     else {
-        DMALatch = Read<u32, false, true>(dad - delta_dad);
+        DMALatch = latch;
     }
     log_dma("DMA latch (slow %dbit): %x", sizeof(T) << 3, DMALatch);
 
