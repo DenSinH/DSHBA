@@ -27,6 +27,8 @@ Mem::Mem(MMIO* IO, s_scheduler* scheduler, u32* registers_ptr, u32* CPSR_ptr, u6
 
     memset(BIOS, 0, sizeof(BIOS));
     memset(ROM, 0, sizeof(ROM));
+    const u8 IdleBranch[5] = "\xfe\xff\xff\xea";
+    memcpy(ROM, IdleBranch, 4);
     Reset();
 
     DumpSave = (s_event) {
