@@ -1,5 +1,5 @@
 
-template<typename T, bool count>
+template<typename T, bool count, bool in_dma>
 ALWAYS_INLINE T Mem::ReadInline(u32 address) {
     // often, code will be ran from iWRAM
     // this makes it the hottest path
@@ -12,6 +12,9 @@ ALWAYS_INLINE T Mem::ReadInline(u32 address) {
     switch (static_cast<MemoryRegion>(address >> 24)) {
         case MemoryRegion::BIOS:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::BIOS>(); }
+            if constexpr(in_dma) {
+                return ReadDMALatch<T>(address);
+            }
             if (likely((*pc_ptr) < 0x0100'0000)) {
                 // read from within BIOS
                 return ReadArray<T>(BIOS, address & 0x3fff);
@@ -19,6 +22,10 @@ ALWAYS_INLINE T Mem::ReadInline(u32 address) {
             return (T)static_cast<u32>(CurrentBIOSReadState);
         case MemoryRegion::Unused:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::Unused>(); }
+            if constexpr(in_dma) {
+                return ReadDMALatch<T>(address);
+            }
+            // todo: open bus
             return 0;
         case MemoryRegion::eWRAM:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::eWRAM>(); }
@@ -27,6 +34,9 @@ ALWAYS_INLINE T Mem::ReadInline(u32 address) {
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::IO>(); }
             if ((address & 0x00ff'ffff) < 0x3ff) {
                 return IO->Read<T>(address & 0x3ff);
+            }
+            if constexpr(in_dma) {
+                return ReadDMALatch<T>(address);
             }
             return 0;  // todo: invalid reads
         case MemoryRegion::PAL:
@@ -42,18 +52,30 @@ ALWAYS_INLINE T Mem::ReadInline(u32 address) {
         case MemoryRegion::ROM_L2:
         case MemoryRegion::ROM_L:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::ROM_L>(); }
+            if constexpr(in_dma) {
+                if ((address & 0x01ff'ffff) > ROMSize) {
+                    return ReadDMALatch<T>(address);
+                }
+            }
+
             return ReadArray<T>(ROM, address & 0x01ff'ffff);
         case MemoryRegion::ROM_H1:
         case MemoryRegion::ROM_H2:
         case MemoryRegion::ROM_H:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::ROM_H>(); }
-
             // EEPROM might be accessed in this region
             if (static_cast<u8>(Type) & static_cast<u8>(BackupType::EEPROM_bit)) {
                 if (IsEEPROMAccess(address)) {
                     return Backup->Read(address);
                 }
             }
+
+            if constexpr(in_dma) {
+                if ((address & 0x01ff'ffff) > ROMSize) {
+                    return ReadDMALatch<T>(address);
+                }
+            }
+
             return ReadArray<T>(ROM, address & 0x01ff'ffff);
         case MemoryRegion::SRAM:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::SRAM>(); }
@@ -71,9 +93,9 @@ ALWAYS_INLINE T Mem::ReadInline(u32 address) {
 }
 
 
-template<typename T, bool count>
+template<typename T, bool count, bool in_dma>
 T Mem::Read(u32 address) {
-    return ReadInline<T, count>(address);
+    return ReadInline<T, count, in_dma>(address);
 }
 
 template<typename T>

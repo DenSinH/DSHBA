@@ -47,6 +47,16 @@ void Mem::FastDMA(s_DMAData* DMA) {
         }
     }
 
+    // get last transferred value as DMA latched value
+    if constexpr(std::is_same_v<T, u16>) {
+        DMALatch = *(u16*)(dest - sizeof(u16));
+        DMALatch |= DMALatch << 16;
+    }
+    else {
+        DMALatch = *(u32*)(dest - sizeof(u32));
+    }
+
+    log_dma("DMA latch (fast %dbit): %x", sizeof(T) << 3, DMALatch);
     // update DMA data
     // handle writeback/reload in IO class
     DMA->DAD += length * sizeof(T);
@@ -110,6 +120,16 @@ void Mem::MediumDMA(s_DMAData* DMA) {
         }
     }
 
+    // get last transferred value as DMA latched value
+    if constexpr(std::is_same_v<T, u16>) {
+        DMALatch = *(u16*)(dest - delta_dad);
+        DMALatch |= DMALatch << 16;
+    }
+    else {
+        DMALatch = *(u32*)(dest - delta_dad);
+    }
+    log_dma("DMA latch (med %dbit): %x", sizeof(T) << 3, DMALatch);
+
     // update DMA data
     // handle writeback/reload in IO class
     DMA->DAD += length * delta_dad;
@@ -141,7 +161,7 @@ void Mem::SlowDMA(s_DMAData* DMA) {
     for (u32 i = 0; i < length; i++) {
         // we don't want to reflush
         // if a game overwrites the area PC is in with DMA, the result is probably fairly unpredictable anyway
-        Write<T, true, false>(dad, Read<T, true>(sad));
+        Write<T, true, false>(dad, Read<T, true, true>(sad));
 
         if constexpr(intermittent_events) {
             if (unlikely(Scheduler->ShouldDoEvents())) {
@@ -152,6 +172,16 @@ void Mem::SlowDMA(s_DMAData* DMA) {
         dad += delta_dad;
         sad += delta_sad;
     }
+
+    // get last transferred word as DMA latch
+    if constexpr(std::is_same_v<T, u16>) {
+        DMALatch = Read<u16, false, true>(dad - delta_dad);
+        DMALatch |= DMALatch << 16;
+    }
+    else {
+        DMALatch = Read<u32, false, true>(dad - delta_dad);
+    }
+    log_dma("DMA latch (slow %dbit): %x", sizeof(T) << 3, DMALatch);
 
     // handle writeback/reload in IO class
     DMA->DAD = dad;
@@ -165,7 +195,6 @@ void Mem::DoDMA(s_DMAData* DMA) {
 
     DMAAction dma_action = AllowFastDMA<T>(DMA->DAD, DMA->SAD, length, DMA->CNT_H);
 #endif
-
 
     if (unlikely(Type == BackupType::EEPROM)) {
         // unspecified EEPROM
@@ -196,6 +225,10 @@ void Mem::DoDMA(s_DMAData* DMA) {
             // log_mem("Potential EEPROM DMA: %x -> %x", DMA->SAD, DMA->DAD);
             dma_action = DMAAction::Slow;
         }
+    }
+
+    if (DMA->DAD > (0x0800'0000 + ROMSize)) {
+        dma_action = DMAAction::Slow;  // ROM OOB DMA
     }
 #endif
 

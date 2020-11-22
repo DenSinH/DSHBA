@@ -56,8 +56,8 @@ public:
 
     void Reset();
 
-    template<typename T, bool count> ALWAYS_INLINE T ReadInline(u32 address);
-    template<typename T, bool count> T Read(u32 address);
+    template<typename T, bool count, bool in_dma = false> ALWAYS_INLINE T ReadInline(u32 address);
+    template<typename T, bool count, bool in_dma = false> T Read(u32 address);
     template<typename T, bool count, bool do_reflush> void Write(u32 address, T value);
 
     void LoadROM(const std::string file_path);
@@ -132,20 +132,20 @@ public:
             case MemoryRegion::ROM_L:
             case MemoryRegion::ROM_H:
                 if constexpr(std::is_same_v<T, u32>) {
-                    return 5;
+                    return 6;
                 }
                 return 2;
             case MemoryRegion::ROM_L1:
             case MemoryRegion::ROM_H1:
                 if constexpr(std::is_same_v<T, u32>) {
-                    return 9;
+                    return 10;
                 }
                 return 5;
             case MemoryRegion::ROM_L2:
             case MemoryRegion::ROM_H2:
                 // todo: waitstates/sequential accesses
                 if constexpr(std::is_same_v<T, u32>) {
-                    return 17;
+                    return 18;
                 }
                 return 9;
             case MemoryRegion::SRAM:
@@ -177,6 +177,15 @@ private:
         return ((address & 0x01ff'ffff) > 0x01ff'feff) || ((ROMSize <= 0x0100'0000) && (address >= 0x0d00'0000));
     }
 
+    template<typename T> ALWAYS_INLINE T ReadDMALatch(u32 address) {
+        if constexpr(std::is_same_v<T, u16>) {
+            return DMALatch >> ((address & 2) << 2);  // alignment
+        }
+        else {
+            return DMALatch;
+        }
+    }
+
     s_scheduler* Scheduler;
     u32* pc_ptr;
     u64* timer;
@@ -205,6 +214,7 @@ private:
     s_event DumpSave;
     static SCHEDULER_EVENT(DumpSaveEvent);
 
+    u32 DMALatch = 0;
 #define INLINED_INCLUDES
 #include "MemDMAUtil.inl"
 #undef INLINED_INCLUDES

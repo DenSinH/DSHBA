@@ -68,9 +68,38 @@ static constexpr u32 AllowFastDMAAddressMask[16] = {
 };
 
 template<typename T>
-static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 length, const u16 control) {
+static DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 length, const u16 control) {
     const auto dar = static_cast<MemoryRegion>(dad >> 24);
     const auto sar = static_cast<MemoryRegion>(sad >> 24);
+
+    switch (sar) {
+        case MemoryRegion::IO:
+        case MemoryRegion::SRAM:
+            return DMAAction::Slow;
+        case MemoryRegion::VRAM:
+            if (MaskVRAMAddress(sad) + (length * sizeof(T)) > 0x1'8000) {
+                return DMAAction::Slow;
+            }
+        case MemoryRegion::BIOS:
+        case MemoryRegion::Unused:
+            return DMAAction::Slow;  // read latch
+        case MemoryRegion::eWRAM:
+        case MemoryRegion::iWRAM:
+        case MemoryRegion::PAL:
+        case MemoryRegion::OAM:
+            break;  // allow fast
+        case MemoryRegion::ROM_L:
+        case MemoryRegion::ROM_L1:
+        case MemoryRegion::ROM_L2:
+        case MemoryRegion::ROM_H:
+        case MemoryRegion::ROM_H1:
+        case MemoryRegion::ROM_H2:
+            break;  // allow fast
+            // EEPROM / DMA size checks happen after this
+        default:
+            return DMAAction::Slow; // read latch
+    }
+    log_dma("SAR okay for fast DMA");
 
     switch (dar) {
         case MemoryRegion::ROM_H:
@@ -98,34 +127,6 @@ static constexpr DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 
             break;  // allow fast
     }
     log_dma("DAR okay for fast DMA");
-
-    switch (sar) {
-        case MemoryRegion::IO:
-        case MemoryRegion::SRAM:
-        case MemoryRegion::BIOS:
-        case MemoryRegion::Unused:
-            return DMAAction::Slow;
-        case MemoryRegion::VRAM:
-            if (MaskVRAMAddress(sad) + (length * sizeof(T)) > 0x1'8000) {
-                return DMAAction::Slow;
-            }
-        case MemoryRegion::eWRAM:
-        case MemoryRegion::iWRAM:
-        case MemoryRegion::PAL:
-        case MemoryRegion::OAM:
-        case MemoryRegion::ROM_L:
-        case MemoryRegion::ROM_L1:
-        case MemoryRegion::ROM_L2:
-            break;  // allow fast
-        case MemoryRegion::ROM_H:
-        case MemoryRegion::ROM_H1:
-        case MemoryRegion::ROM_H2:
-            // EEPROM checks happen after this
-            break; // allow fast
-        default:
-            return DMAAction::Skip;
-    }
-    log_dma("SAR okay for fast DMA");
 
     const u32 dad_start_masked = dad & ~AllowFastDMAAddressMask[static_cast<u32>(dar)];
     const u32 dad_end_masked   = (dad + (length * sizeof(T))) & ~AllowFastDMAAddressMask[static_cast<u32>(dar)];
