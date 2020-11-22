@@ -658,6 +658,11 @@ inline void ImGui::FileBrowser::SetTypeFilters(
 
 inline void ImGui::FileBrowser::SetPwdUncatched(const std::filesystem::path &pwd)
 {
+    if (!std::filesystem::exists(pwd)) {
+        SetPwd(std::filesystem::current_path());
+        return;
+    }
+
     fileRecords_ = { FileRecord{ true, "..", "[D] ..", "" } };
 
     for(auto &p : std::filesystem::directory_iterator(pwd))

@@ -572,7 +572,7 @@ void GBAPPU::InitWinObjBuffers() {
     glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA16I, sizeof(OAMMEM) >> 3, 0, GL_RGBA_INTEGER,
                  GL_SHORT, nullptr);
 
-    WinObjOAMLocation = glGetUniformLocation(ObjProgram, "OAM");
+    WinObjOAMLocation = glGetUniformLocation(WinObjProgram, "OAM");
 
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
