@@ -32,7 +32,7 @@ void __fastcall Multiply(u32 instruction) {
     }
 
     // todo: timings
-    timer++;
+    (*timer)++;
 }
 
 template<bool U, bool A, bool S>
@@ -102,7 +102,7 @@ void __fastcall MultiplyLong(u32 instruction) {
         }
     }
 
-    timer += cycles;
+    (*timer) += cycles;
 }
 
 #ifndef INLINED_INCLUDES

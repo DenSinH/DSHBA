@@ -112,7 +112,7 @@ CONSOLE_COMMAND(Initializer::tester) {
 
 static u64 ticks, prev_ticks;
 OVERLAY_INFO(Initializer::cpu_ticks) {
-    ticks = gba->CPU.timer;
+    ticks = gba->timer;
     SPRINTF(output, output_length, "CPU ticks/s: %.1f", (float)(ticks - prev_ticks) / delta_time);
     prev_ticks = ticks;
 }
@@ -289,7 +289,7 @@ GBA* Initializer::init() {
     add_register_data("", nullptr, 4, cpu_tab);
     add_register_data("", nullptr, 8, cpu_tab);
 
-    add_register_data("Time", &gba->CPU.timer, 8, cpu_tab);
+    add_register_data("Time", &gba->timer, 8, cpu_tab);
 
     int IO_tab = add_register_tab("MMIO");
 

@@ -502,7 +502,7 @@ SCHEDULER_EVENT(MMIO::HaltEvent) {
     auto IO = (MMIO*)caller;
 
     while (IO->CPU->Halted) {
-        IO->CPU->timer = IO->Scheduler->PeekEvent();
+        *IO->Scheduler->timer = IO->Scheduler->PeekEvent();
         IO->Scheduler->DoEvents();
     }
 }

@@ -58,7 +58,9 @@ void __fastcall SingleDataTransfer(u32 instruction) {
         }
 
         if (unlikely(rd == 15)) {
+            Memory->OpenBusOverride   = pc;  // loaded value
             FakePipelineFlush();
+            Memory->OpenBusOverrideAt = pc + 4;  // instruction + 8 of where the load happened
         }
     }
     else {
@@ -98,7 +100,7 @@ void __fastcall SingleDataTransfer(u32 instruction) {
 
     if constexpr(L) {
         // internal cycle
-        timer++;
+        (*timer)++;
     }
 }
 
@@ -201,7 +203,7 @@ void __fastcall HalfwordDataTransfer(u32 instruction) {
 
     if constexpr(L) {
         // internal cycle
-        timer++;
+        (*timer)++;
     }
 }
 
@@ -231,7 +233,7 @@ void __fastcall SWP(u32 instruction) {
     }
 
     // internal cycle
-    timer++;
+    (*timer)++;
 }
 
 #ifndef INLINED_INCLUDES

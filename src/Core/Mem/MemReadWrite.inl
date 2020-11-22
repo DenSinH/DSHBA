@@ -17,7 +17,9 @@ ALWAYS_INLINE T Mem::ReadInline(u32 address) {
             }
             if (likely((*pc_ptr) < 0x0100'0000)) {
                 // read from within BIOS
-                return ReadArray<T>(BIOS, address & 0x3fff);
+                if (address < 0x4000) {
+                    return ReadArray<T>(BIOS, address & 0x3fff);
+                }
             }
             return (T)static_cast<u32>(CurrentBIOSReadState);
         case MemoryRegion::Unused:
@@ -25,8 +27,7 @@ ALWAYS_INLINE T Mem::ReadInline(u32 address) {
             if constexpr(in_dma) {
                 return ReadDMALatch<T>(address);
             }
-            // todo: open bus
-            return 0;
+            return BusValue();
         case MemoryRegion::eWRAM:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::eWRAM>(); }
             return ReadArray<T>(eWRAM, address & 0x3'ffff);
@@ -35,10 +36,7 @@ ALWAYS_INLINE T Mem::ReadInline(u32 address) {
             if ((address & 0x00ff'ffff) < 0x3ff) {
                 return IO->Read<T>(address & 0x3ff);
             }
-            if constexpr(in_dma) {
-                return ReadDMALatch<T>(address);
-            }
-            return 0;  // todo: invalid reads
+            return BusValue();
         case MemoryRegion::PAL:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::PAL>(); }
             return ReadArray<T>(PAL, address & 0x3ff);
@@ -52,12 +50,6 @@ ALWAYS_INLINE T Mem::ReadInline(u32 address) {
         case MemoryRegion::ROM_L2:
         case MemoryRegion::ROM_L:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::ROM_L>(); }
-            if constexpr(in_dma) {
-                if ((address & 0x01ff'ffff) > ROMSize) {
-                    return ReadDMALatch<T>(address);
-                }
-            }
-
             return ReadArray<T>(ROM, address & 0x01ff'ffff);
         case MemoryRegion::ROM_H1:
         case MemoryRegion::ROM_H2:
@@ -69,13 +61,6 @@ ALWAYS_INLINE T Mem::ReadInline(u32 address) {
                     return Backup->Read(address);
                 }
             }
-
-            if constexpr(in_dma) {
-                if ((address & 0x01ff'ffff) > ROMSize) {
-                    return ReadDMALatch<T>(address);
-                }
-            }
-
             return ReadArray<T>(ROM, address & 0x01ff'ffff);
         case MemoryRegion::SRAM:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::SRAM>(); }
@@ -88,7 +73,7 @@ ALWAYS_INLINE T Mem::ReadInline(u32 address) {
             return Backup->Read(address);
         default:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::OOB>(); }
-            return 0;
+            return BusValue();
     }
 }
 

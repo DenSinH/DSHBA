@@ -74,7 +74,8 @@ int main() {
     // gba->LoadROM("D:/User/Downloads/WarioWare, Inc. - Mega Microgame$! (USA).gba");
     // gba->LoadROM("D:/User/Downloads/Mario & Luigi - Superstar Saga (USA, Australia).gba");
     // gba->LoadROM("D:/User/Downloads/Pokemon Mystery Dungeon - Red Rescue Team (USA, Australia).gba");
-    // gba->LoadROM("D:/User/Downloads/bios.gba");
+    // gba->LoadROM("D:/User/Downloads/openbuster.gba");
+    // gba->LoadROM("D:/User/Downloads/openbus-test_easy.gba");
     gba->Run();
 
     ui_thread.join();

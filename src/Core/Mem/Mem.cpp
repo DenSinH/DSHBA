@@ -16,10 +16,12 @@
  * the `count` bool in the templates it so we can count cycles conditionally
  * */
 
-Mem::Mem(MMIO* IO, s_scheduler* scheduler, u32* pc_ptr, u64* timer, std::function<void(void)> reflush) {
+Mem::Mem(MMIO* IO, s_scheduler* scheduler, u32* registers_ptr, u32* CPSR_ptr, u64* timer, std::function<void(void)> reflush) {
     this->IO = IO;
     this->Scheduler = scheduler;
-    this->pc_ptr = pc_ptr;
+    this->registers_ptr = registers_ptr;
+    this->pc_ptr = &registers_ptr[15];
+    this->CPSR_ptr = CPSR_ptr;
     this->Reflush = std::move(reflush);
     this->timer = timer;
 
@@ -229,4 +231,169 @@ SCHEDULER_EVENT(Mem::DumpSaveEvent) {
     else {
         Memory->Backup->Dump(Memory->SaveFile);
     }
+}
+
+u32 Mem::BusValue() {
+    if ((*CPSR_ptr) & 0x0000'0020) {
+        // THUMB mode (this is a bit more involved)
+        u32 value;
+        switch (static_cast<MemoryRegion>((*pc_ptr) >> 24)) {
+            case MemoryRegion::eWRAM:
+            case MemoryRegion::PAL:
+            case MemoryRegion::VRAM:
+            case MemoryRegion::ROM_L:
+            case MemoryRegion::ROM_L1:
+            case MemoryRegion::ROM_L2:
+            case MemoryRegion::ROM_H:
+            case MemoryRegion::ROM_H1:
+            case MemoryRegion::ROM_H2:
+                value = Read<u16, false>(*pc_ptr);
+                value |= (value << 16);
+                return value;
+            case MemoryRegion::BIOS:
+            case MemoryRegion::OAM:
+                if ((*pc_ptr) & 0x3) {
+                    // non-4 byte aligned location
+                    value  = Read<u16, false>((*pc_ptr) - 2);
+                    value |= Read<u16, false>((*pc_ptr)) << 16;
+                }
+                else {
+                    value  = Read<u16, false>((*pc_ptr));
+                    value |= Read<u16, false>((*pc_ptr) + 2) << 16;
+                }
+                return value;
+            case MemoryRegion::iWRAM:
+            {
+                /*
+                 * Note: this is not necessarily accurate!
+                 * byte load/stores where the base register is already misaligned, but overwritten by the loaded value
+                 * will give inaccurate open bus results
+                 * */
+                // get previous instruction
+                u16 instruction = Read<u16, false>((*pc_ptr) - 6);
+
+                // previous prefetched instruction
+                value = Read<u16, false>((*pc_ptr) - 2);
+                value |= value << 16;
+
+                switch (instruction & 0xf000) {
+                    case 0x4000:
+                        if (!(instruction & 0x0800)) {
+                            break;
+                        }
+                        // PC-relative load, always 32 bit, value is in Rd
+                    case 0x9000:
+                        // SP relative load/store
+                        // always a word value
+                        value = registers_ptr[(instruction >> 8) & 7];
+                        break;
+                    case 0x5000:
+                    {
+                        u32 address = registers_ptr[(instruction >> 3) & 0x7] + registers_ptr[(instruction >> 6) & 0x7];
+                        if (instruction & 0x0200) {
+                            // Load/store with reg offset
+                            // load or store doesnt make a difference for the bus value affected
+                            if (instruction & 0x0400) {
+                                // byte
+                                u32 rot = (address & 3) << 3;
+                                u32 mask = ~ROTL32(0xff, rot);
+                                value = (value & mask) | ROTL32((u8)registers_ptr[instruction & 7], rot);
+                            }
+                            else {
+                                // word
+                                value = registers_ptr[instruction & 7];
+                            }
+                        }
+                        else {
+                            // load/store sign-extended byte/halfword
+                            if (instruction & 0x0800) {
+                                // halfword
+                                u32 rot = (address & 2) << 3;
+                                u32 mask = ~ROTL32(0xffff, rot);
+                                value = (value & mask) | ROTL32((u16)registers_ptr[instruction & 7], rot);
+                            }
+                            else {
+                                // byte
+                                u32 rot = (address & 3) << 3;
+                                u32 mask = ~ROTL32(0xff, rot);
+                                value = (value & mask) | ROTL32((u8)registers_ptr[instruction & 7], rot);
+                            }
+                        }
+                        break;
+                    }
+                    case 0x6000:
+                    {
+                        // Load/store word with immediate offset
+                        // again, loading or storing does not make much of a difference for the bus value
+                        value = registers_ptr[instruction & 7];
+                        break;
+                    }
+                    case 0x7000:
+                    {
+                        // load/store byte with immediate offset
+                        u32 address;
+                        if (((instruction >> 3) ^ instruction) & 7) {
+                            // Rb != Rd
+                            address = ((instruction >> 6) & 0x1f); // + registers_ptr[(instruction >> 3) & 0x7];
+                        }
+                        else {
+                            // Rb == Rd, just guess that Rb was word aligned...
+                            address = ((instruction >> 6) & 0x1f);
+                        }
+                        log_debug("LRDB %x: %x", instruction, address);
+                        u32 rot = (address & 3) << 3;
+                        log_debug("Rot %d", rot);
+                        u32 mask = ~ROTL32(0xff, rot);
+                        value = (value & mask) | ROTL32((u8)registers_ptr[instruction & 7], rot);
+                        log_debug("value %x", value);
+                        break;
+                    }
+                    case 0x8000:
+                    {
+                        // load/store halfword
+                        u32 address;
+                        if (((instruction >> 3) ^ instruction) & 7) {
+                            // Rb != Rd
+                            address = (((instruction >> 6) & 0x1f) << 1) + registers_ptr[(instruction >> 3) & 0x7];
+                        }
+                        else {
+                            // Rb == Rd, just guess that Rb was word aligned...
+                            address = (((instruction >> 6) & 0x1f) << 1);
+                        }
+                        u32 rot = (address & 2) << 3;
+                        u32 mask = ~ROTL32(0xffff, rot);
+                        value = (value & mask) | ROTL32((u16)registers_ptr[instruction & 7], rot);
+                        break;
+                    }
+                    default:
+                        // no relevant instruction that affected the bus value
+                        break;
+                }
+
+                // last prefetched instruction
+                if ((*pc_ptr) & 2) {
+                    // prefetched value is misaligned
+                    value >>= 16;
+                    value = (value & 0x0000'ffff) | ((u32)Read<u16, false>(*pc_ptr) << 16);
+                }
+                else {
+                    // prefetched value is aligned
+                    value = (value & 0xffff'0000) | (u32)Read<u16, false>(*pc_ptr);
+                }
+
+                return value;
+            }
+            default:
+                return 0;
+        }
+    }
+
+    // last instruction fetched
+    if (OpenBusOverrideAt == (*pc_ptr)) {
+        OpenBusOverrideAt = 0;
+        return OpenBusOverride;
+    }
+
+    // last prefetched instruction
+    return Read<u32, false>((*pc_ptr) - 4);
 }

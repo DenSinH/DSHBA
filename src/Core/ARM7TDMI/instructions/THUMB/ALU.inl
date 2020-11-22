@@ -175,7 +175,7 @@ void __fastcall AddSubtract(u16 instruction) {
 
     if constexpr(I) {
         // internal cycle
-        timer++;
+        (*timer)++;
     }
 }
 
@@ -249,7 +249,7 @@ void __fastcall MoveShifted(u16 instruction) {
     LastNZ = Registers[rd];
 
     // internal cycle
-    timer++;
+    (*timer)++;
 }
 
 template<u8 Op, u8 rd>
@@ -277,7 +277,7 @@ void __fastcall ALUImmediate(u16 instruction) {
     LastNZ = result;
 
     // internal cycle
-    timer++;
+    (*timer)++;
 }
 
 template<bool SP, u8 rd>
@@ -302,7 +302,7 @@ void __fastcall AddOffsToSP(u16 instruction) {
     }
 
     // internal cycle
-    timer++;
+    (*timer)++;
 }
 
 

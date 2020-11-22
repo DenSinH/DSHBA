@@ -61,7 +61,7 @@ typedef void __fastcall (ARM7TDMI::*THUMBInstructionPtr)(u16 instruction);
 
 class ARM7TDMI {
 public:
-    u64 timer = 0;
+    u64* timer;
 
     ARM7TDMI(s_scheduler* scheduler, Mem* memory);
     ~ARM7TDMI() {
@@ -207,7 +207,7 @@ private:
     ALWAYS_INLINE u32 subs_cv(u32 op1, u32 op2);
 
     ALWAYS_INLINE void Idle() {
-        timer = Scheduler->PeekEvent();
+        *timer = Scheduler->PeekEvent();
     }
 
     [[nodiscard]] ALWAYS_INLINE bool CheckCondition(u8 condition) const;

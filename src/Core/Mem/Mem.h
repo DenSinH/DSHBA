@@ -49,8 +49,11 @@ enum class BIOSReadState : u32 {
 
 class Mem {
 public:
-    Mem(MMIO* IO, s_scheduler* scheduler, u32* pc_ptr, u64* timer, std::function<void(void)> reflush);
+    Mem(MMIO* IO, s_scheduler* scheduler, u32* registers_ptr, u32* CPSR_ptr, u64* timer, std::function<void(void)> reflush);
     ~Mem();
+
+    u32 OpenBusOverride = 0;
+    u32 OpenBusOverrideAt = 0;
 
     BIOSReadState CurrentBIOSReadState = BIOSReadState::StartUp;
 
@@ -188,6 +191,8 @@ private:
 
     s_scheduler* Scheduler;
     u32* pc_ptr;
+    u32* registers_ptr;
+    u32* CPSR_ptr;
     u64* timer;
     std::function<void(void)> Reflush;
     s_UpdateRange VRAMUpdate = { .min=sizeof(VRAMMEM), .max=0 };
@@ -207,6 +212,7 @@ private:
     size_t ROMSize = 0;
 
     BackupType FindBackupType();
+    u32 BusValue();
 
     std::string ROMFile;
     std::string SaveFile;

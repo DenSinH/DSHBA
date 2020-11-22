@@ -392,7 +392,7 @@ void __fastcall DataProcessing(u32 instruction) {
 
     if constexpr(I) {
         // internal cycle for immediate operand
-        timer++;
+        (*timer)++;
     }
 }
 

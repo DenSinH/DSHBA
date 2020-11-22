@@ -6,6 +6,7 @@
 
 ARM7TDMI::ARM7TDMI(s_scheduler *scheduler, Mem *memory)  {
     Scheduler = scheduler;
+    timer = scheduler->timer;
     Memory = memory;
 
     BuildARMTable();
@@ -62,12 +63,12 @@ void ARM7TDMI::FakePipelineFlush() {
     this->Pipeline.Clear();
 
     if (!(CPSR & static_cast<u32>(CPSRFlags::T))) {
-        timer += Mem::GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24)) << 1;
+        *timer += Mem::GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24)) << 1;
         // ARM mode
         this->pc += 4;
     }
     else {
-        timer += Mem::GetAccessTime<u16>(static_cast<MemoryRegion>(pc >> 24)) << 1;
+        *timer += Mem::GetAccessTime<u16>(static_cast<MemoryRegion>(pc >> 24)) << 1;
         // THUMB mode
         this->pc += 2;
     }

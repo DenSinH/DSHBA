@@ -136,7 +136,9 @@ void __fastcall BlockDataTransfer(u32 instruction) {
         if (unlikely(register_list & (1 << 15))) {
             if constexpr(L && !S) {
                 // the L && S case is checked below
+                Memory->OpenBusOverride = pc;  // loaded value (on bus)
                 FakePipelineFlush();
+                Memory->OpenBusOverrideAt = pc + 4;  // address of instruction where this happened + 8
             }
             else if (!L){
                 // we wrote the value of PC + 8, while it should be + 12, so we correct for that now
@@ -167,7 +169,7 @@ void __fastcall BlockDataTransfer(u32 instruction) {
 
     if constexpr(L) {
         // internal cycle
-        timer++;
+        (*timer)++;
     }
 }
 

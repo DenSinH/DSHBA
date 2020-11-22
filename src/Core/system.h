@@ -50,14 +50,43 @@ private:
 
 #endif
 
-    s_scheduler Scheduler = s_scheduler(&CPU.timer);
-    GBAAPU APU = GBAAPU(&Scheduler, IO.GetWaveRAM_ptr(), std::function<void(u32)> ([this](u32 addr){ IO.TriggerAudioDMA(addr); }));
-    MMIO IO = MMIO(&PPU, &APU, &CPU, &Memory, &Scheduler);
-    Mem Memory = Mem(&IO, &Scheduler, &CPU.pc, &CPU.timer, [&cpu = CPU]() -> void {
-        cpu.PipelineReflush();
-    });
-    ARM7TDMI CPU = ARM7TDMI(&Scheduler, &Memory);
-    GBAPPU PPU = GBAPPU(&Scheduler, &Memory);
+    u64 timer = 0;
+    s_scheduler Scheduler = s_scheduler(&timer);
+
+    MMIO IO = MMIO(
+            &PPU,
+            &APU,
+            &CPU,
+            &Memory,
+            &Scheduler
+    );
+
+    Mem Memory = Mem(
+            &IO,
+            &Scheduler,
+            CPU.Registers,
+            &CPU.CPSR,
+            &timer,
+            [&cpu = CPU]() -> void {
+                    cpu.PipelineReflush();
+            }
+    );
+
+    GBAAPU APU = GBAAPU(
+            &Scheduler,
+            IO.GetWaveRAM_ptr(),
+            std::function<void(u32)> ([this](u32 addr){ IO.TriggerAudioDMA(addr); })
+    );
+
+    ARM7TDMI CPU = ARM7TDMI(
+            &Scheduler,
+            &Memory
+    );
+
+    GBAPPU PPU = GBAPPU(
+            &Scheduler,
+            &Memory
+    );
 };
 
 #endif //GC__SYSTEM_H

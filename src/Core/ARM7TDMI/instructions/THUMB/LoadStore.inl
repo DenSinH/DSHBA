@@ -31,7 +31,7 @@ void __fastcall LoadStoreHalfword(u16 instruction) {
         }
 
         // internal cycle
-        timer++;
+        (*timer)++;
     }
     else {
         Memory->Mem::Write<u16, true, true>(address, (u16)Registers[rd]);
@@ -123,7 +123,7 @@ void __fastcall LoadStoreSEBH(u16 instruction) {
         }
 
         // internal cycle
-        timer++;
+        (*timer)++;
     }
     else {
         if constexpr(H) {
@@ -137,7 +137,7 @@ void __fastcall LoadStoreSEBH(u16 instruction) {
             }
 
             // internal cycle
-            timer++;
+            (*timer)++;
         }
         else {
             // STRH
@@ -172,7 +172,7 @@ void __fastcall PushPop(u16 instruction) {
         }
 
         // internal cycle
-        timer++;
+        (*timer)++;
     }
     else {
         // push
@@ -210,7 +210,7 @@ void __fastcall MultipleLoadStore(u16 instruction) {
             FakePipelineFlush();
 
             // internal cycle
-            timer++;
+            (*timer)++;
         }
         else {
             Memory->Mem::Write<u32, true, true>(address, pc + 2);  // PC is 4 ahead, should be 6
@@ -234,7 +234,7 @@ void __fastcall MultipleLoadStore(u16 instruction) {
         Registers[rb] = address;
 
         // internal cycle
-        timer++;
+        (*timer)++;
     }
     else {
         // Writeback with Rb in RList:
@@ -281,7 +281,7 @@ void __fastcall PCRelativeLoad(u16 instruction) {
     Registers[rd] = Memory->Mem::Read<u32, true>(address);
 
     // internal cycle
-    timer++;
+    (*timer)++;
 }
 
 template<bool L, u8 rd>
@@ -300,7 +300,7 @@ void __fastcall SPRelativeLoadStore(u16 instruction) {
         Registers[rd] = loaded;
 
         // internal cycle
-        timer++;
+        (*timer)++;
     }
     else {
         Memory->Write<u32, true, true>(sp + word8, Registers[rd]);
