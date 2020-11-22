@@ -13,7 +13,7 @@ class ARM7TDMI_INL : ARM7TDMI {
 #endif
 
 template<u8 cond>
-void ConditionalBranch(u16 instruction) {
+void __fastcall ConditionalBranch(u16 instruction) {
     FlushNZ();  // calculate NZ flags
     if (CheckCondition(cond)) {
         i32 offset = (i32)((i8)((u8)instruction)) << 1;
@@ -30,7 +30,7 @@ void ConditionalBranch(u16 instruction) {
 }
 
 template<bool H>
-void LongBranchLink(u16 instruction) {
+void __fastcall LongBranchLink(u16 instruction) {
     // part of a bigger instruction (H bit clear, H bit set)
     u16 offset = (instruction & 0x07ff);
 
@@ -51,7 +51,7 @@ void LongBranchLink(u16 instruction) {
     }
 }
 
-void UnconditionalBranch(u16 instruction) {
+void __fastcall UnconditionalBranch(u16 instruction) {
     i32 offs11 = (instruction & 0x7ff);
     offs11 = (offs11 << 21) >> 20;  // sign extend and shift by 1
 

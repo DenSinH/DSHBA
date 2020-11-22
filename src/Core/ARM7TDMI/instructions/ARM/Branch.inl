@@ -9,7 +9,7 @@
 class ARM7TDMI_INL : ARM7TDMI {
 #endif
 
-void BranchExchange(u32 instruction) {
+void __fastcall BranchExchange(u32 instruction) {
     u8 rn = instruction & 0x0f;
     u32 target = Registers[rn];
     bool was_thumb = (CPSR & static_cast<u32>(CPSRFlags::T)) != 0;
@@ -69,7 +69,7 @@ void BranchExchange(u32 instruction) {
 }
 
 template<bool Link>
-void Branch(u32 instruction) {
+void __fastcall Branch(u32 instruction) {
     if constexpr(Link) {
         log_cpu_verbose("Branch with link");
         this->lr = this->pc - 4;

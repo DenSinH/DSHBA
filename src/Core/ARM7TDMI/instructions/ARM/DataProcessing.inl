@@ -119,7 +119,7 @@ ALWAYS_INLINE u32 DoShift(u32 Rm, u32 shift_amount) {
 }
 
 template<bool S, u8 shift_type>
-inline __attribute__((always_inline)) u32 ShiftByImmediate(u32 Rm, u32 shift_amount) {
+ALWAYS_INLINE u32 ShiftByImmediate(u32 Rm, u32 shift_amount) {
     if (!shift_amount) {
         switch (static_cast<ShiftType>(shift_type)) {
             case ShiftType::LSL:  // no shift
@@ -149,7 +149,7 @@ inline __attribute__((always_inline)) u32 ShiftByImmediate(u32 Rm, u32 shift_amo
 }
 
 template<bool S, u8 shift_type, bool shift_imm>
-inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
+ALWAYS_INLINE u32 GetShiftedRegister(u32 instruction) {
     // When the I bit is 0
     u32 shift_amount;
     u32 Rm;
@@ -183,7 +183,7 @@ inline __attribute__((always_inline)) u32 GetShiftedRegister(u32 instruction) {
 }
 
 template<u8 opcode, bool S, bool I_OR_shift_imm>
-inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32 op2) {
+ALWAYS_INLINE void DoDataProcessing(u32 instruction, u32 op2) {
     u32 op1;
     if constexpr(!I_OR_shift_imm) {
         if (unlikely(((instruction & 0x000f0000) >> 16) == 15)) {
@@ -326,7 +326,7 @@ inline __attribute__((always_inline)) void DoDataProcessing(u32 instruction, u32
  * this allows for some pretty intense specialization
  * */
 template<bool I, u8 opcode, bool S, u8 shift_type, bool shift_imm>
-void DataProcessing(u32 instruction) {
+void __fastcall DataProcessing(u32 instruction) {
     log_cpu_verbose("Data Processing %08x (imm: %d, opcode: %x, S: %d, shift_type: %d, imm_shif_amt: %d)",
                     instruction, I, opcode, S, shift_type, shift_imm);
 

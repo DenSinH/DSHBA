@@ -56,8 +56,8 @@ enum class ExceptionVector : u32 {
     IRQ   = 0x0000'0018,
 };
 
-typedef void (ARM7TDMI::*ARMInstructionPtr)(u32 instruction);
-typedef void (ARM7TDMI::*THUMBInstructionPtr)(u16 instruction);
+typedef void __fastcall (ARM7TDMI::*ARMInstructionPtr)(u32 instruction);
+typedef void __fastcall (ARM7TDMI::*THUMBInstructionPtr)(u16 instruction);
 
 class ARM7TDMI {
 public:
@@ -248,11 +248,11 @@ private:
             ScheduleInterruptPoll();
         }
 
-    void ARMUnimplemented(u32 instruction) {
+    void __fastcall ARMUnimplemented(u32 instruction) {
         log_fatal("Unimplemented ARM instruction: %08x at PC = %08x", instruction, this->pc - 8);
     };
 
-    void THUMBUnimplemented(u16 instruction) {
+    void __fastcall THUMBUnimplemented(u16 instruction) {
         log_fatal("Unimplemented THUMB instruction: %04x at PC = %08x", instruction, this->pc - 4);
     }
 #define INLINED_INCLUDES
