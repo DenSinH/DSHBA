@@ -9,7 +9,7 @@ void MMIO::OverflowTimer() {
     ASSUME(x < 4);
 
     Timers[x].Counter = Timers[x].Register.CNT_L;  // reload counter
-    Timers[x].TriggerTime = *Scheduler->timer;     // reset triggertime
+    Timers[x].TriggerTime = *Scheduler->timer;     // reset triggertime (no startup delay now)
 
     if constexpr(x < 2) {
         // trigger bound FIFO channels
@@ -120,7 +120,7 @@ WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
         // timer got enabled
         // trigger timing still needs to be set
         Timers[x].Counter = Timers[x].Register.CNT_L;
-        Timers[x].TriggerTime = *Scheduler->timer;
+        Timers[x].TriggerTime = *Scheduler->timer + 2;  // 2 cycle startup delay
     }
     else {
         // nothing interesting happens (it wasnt enabled, and it is still not enabled)

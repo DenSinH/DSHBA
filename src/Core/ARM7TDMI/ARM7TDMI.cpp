@@ -110,7 +110,7 @@ SCHEDULER_EVENT(ARM7TDMI::InterruptPollEvent) {
             cpu->ChangeMode(Mode::IRQ);
             cpu->CPSR |= static_cast<u32>(CPSRFlags::I);
 
-            // todo: set memory BIOS readstate
+            cpu->Memory->CurrentBIOSReadState = BIOSReadState::DuringIRQ;
 
             // address of instruction that did not get executed + 4
             // in THUMB mode, we are 4 bytes ahead, in ARM mode, we are 8 bytes ahead

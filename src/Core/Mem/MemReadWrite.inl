@@ -12,7 +12,11 @@ ALWAYS_INLINE T Mem::ReadInline(u32 address) {
     switch (static_cast<MemoryRegion>(address >> 24)) {
         case MemoryRegion::BIOS:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::BIOS>(); }
-            return ReadArray<T>(BIOS, address & 0x3fff);
+            if (likely((*pc_ptr) < 0x0100'0000)) {
+                // read from within BIOS
+                return ReadArray<T>(BIOS, address & 0x3fff);
+            }
+            return (T)static_cast<u32>(CurrentBIOSReadState);
         case MemoryRegion::Unused:
             if constexpr(count) { (*timer) += AccessTiming<T, MemoryRegion::Unused>(); }
             return 0;

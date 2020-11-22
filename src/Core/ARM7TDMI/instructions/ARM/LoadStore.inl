@@ -134,8 +134,8 @@ void __fastcall HalfwordDataTransfer(u32 instruction) {
             if constexpr(L) {
                 log_cpu_verbose("LDRSH r%d, [r%d, #%x]%c", rd, rn, offset, W ? '!' : '\0');
                 if (unlikely(address & 1)) {
-                    // misaligned, loads sign extended byte instead
-                    Registers[rd] = (u32)((i32)((i8)Memory->Mem::Read<u8, true>(address)));
+                    // misaligned, loads sign extended byte instead (we load a halfword to fix the BIOS readstate)
+                    Registers[rd] = (u32)((i32)((i8)(Memory->Mem::Read<u16, true>(address) >> 8)));
                 }
                 else {
                     Registers[rd] = (u32)((i32)((i16)Memory->Mem::Read<u16, true>(address)));

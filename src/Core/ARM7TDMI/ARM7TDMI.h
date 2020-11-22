@@ -230,10 +230,23 @@ private:
                 memcpy( &Registers[8], FIQBank[1], 5 * sizeof(u32));
                 // other 2 registers are just banked as normal
             }
-            else if (unlikely(static_cast<Mode>(this->CPSR & static_cast<u32>(CPSRFlags::Mode)) == Mode::FIQ)) {
-                // coming from FIQ mode, exact same thing in reverse
-                memcpy(FIQBank[1], &Registers[8], 5 * sizeof(u32));
-                memcpy( &Registers[8], FIQBank[0], 5 * sizeof(u32));
+
+            switch (static_cast<Mode>(this->CPSR & static_cast<u32>(CPSRFlags::Mode))) {
+                case Mode::FIQ:
+                    // coming from FIQ mode, exact same thing in reverse
+                    memcpy(FIQBank[1], &Registers[8], 5 * sizeof(u32));
+                    memcpy( &Registers[8], FIQBank[0], 5 * sizeof(u32));
+                    break;
+                case Mode::IRQ:
+                    // coming from IRQ, change BIOS readstate
+                    Memory->CurrentBIOSReadState = BIOSReadState::AfterIRQ;
+                    break;
+                case Mode::Supervisor:
+                    // coming from SWI, change BIOS readstate
+                    Memory->CurrentBIOSReadState = BIOSReadState::AfterSWI;
+                    break;
+                default:
+                    break;
             }
 
             this->SPLRBank[this->CPSR & 0xf][0] = this->sp;

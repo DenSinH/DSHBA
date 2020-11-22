@@ -56,6 +56,7 @@ void Mem::Reset() {
     memset(VRAM, 0, sizeof(VRAMMEM));
     memset(OAM, 0, sizeof(OAMMEM));
 
+    CurrentBIOSReadState = BIOSReadState::StartUp;
     DirtyOAM = true;
     VRAMUpdate = { .min=0, .max=sizeof(VRAMMEM) };
 }
@@ -164,8 +165,9 @@ void Mem::LoadROM(const std::string file_path) {
     }
     Backup->Load(SaveFile);
 
-    for (size_t addr = ROMSize; addr < sizeof(ROM); addr += 2) {
+    for (size_t addr = ((ROMSize + 3) & ~3); addr < sizeof(ROM); addr += 2) {
         // out of bounds ROM accesses
+        // start at next power of 2
         WriteArray<u16>(ROM, addr, addr >> 1);
     }
 }

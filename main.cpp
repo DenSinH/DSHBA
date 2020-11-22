@@ -53,7 +53,7 @@ int main() {
 #endif
 
 #ifdef DO_BREAKPOINTS
-    gba->Paused = true;
+    gba->Paused = false;
 #endif
 
     atexit(exception_handler);
@@ -68,17 +68,16 @@ int main() {
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/main.gba");
     // gba->LoadROM("D:/User/Downloads/Kirby - Nightmare in Dream Land (USA).gba");
     // gba->LoadROM("D:/User/Downloads/Mega Man Battle Network 6 - Cybeast Falzar (USA).gba");
-    gba->LoadROM("D:/User/Downloads/Pokemon - Emerald Version (USA, Europe).gba");
+    // gba->LoadROM("D:/User/Downloads/Pokemon - Emerald Version (USA, Europe).gba");
     // gba->LoadROM("D:/User/Downloads/Legend of Zelda, The - The Minish Cap (USA).gba");
     // gba->LoadROM("D:/User/Downloads/Pokemon - Ruby Version (USA, Europe) (Rev 2).gba");
     // gba->LoadROM("D:/User/Downloads/WarioWare, Inc. - Mega Microgame$! (USA).gba");
     // gba->LoadROM("D:/User/Downloads/Mario & Luigi - Superstar Saga (USA, Australia).gba");
     // gba->LoadROM("D:/User/Downloads/Pokemon Mystery Dungeon - Red Rescue Team (USA, Australia).gba");
-    // gba->LoadROM("D:/User/Downloads/vcountirq.gba");
+    gba->LoadROM("D:/User/Downloads/bios.gba");
     gba->Run();
 
     ui_thread.join();
 
-    // delete &gba->Memory;
     return 0;
 }

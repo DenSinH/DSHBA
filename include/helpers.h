@@ -124,7 +124,7 @@ static ALWAYS_INLINE u32 cttz(u32 x)
 #define UNREACHABLE
 #endif
 
-#if __has_builtin(__builtin_unreachable)
+#if __has_builtin(__builtin_assume)
 #define ASSUME(x) __builtin_assume(x);
 #else
 #define ASSUME(x)

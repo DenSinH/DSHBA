@@ -40,10 +40,19 @@ enum class MemoryRegion {
     OOB,
 };
 
+enum class BIOSReadState : u32 {
+    StartUp   = 0xe129f000,
+    DuringIRQ = 0xe25ef004,
+    AfterIRQ  = 0xe55ec002,
+    AfterSWI  = 0xe3a02004,
+};
+
 class Mem {
 public:
     Mem(MMIO* IO, s_scheduler* scheduler, u32* pc_ptr, u64* timer, std::function<void(void)> reflush);
     ~Mem();
+
+    BIOSReadState CurrentBIOSReadState = BIOSReadState::StartUp;
 
     void Reset();
 
