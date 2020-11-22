@@ -21,7 +21,7 @@ void main() {
         // windows are disabled, enable all windows
         // we should have caught this before rendering, but eh, I guess we'll check again...
         FragColor.x = 0x3fu;
-        gl_FragDepth = -1.0;
+        gl_FragDepth = 1.0;
         return;
     }
 
@@ -82,7 +82,7 @@ void main() {
     }
 
     FragColor.x = readIOreg(++WINOUT++) & 0x3fu;  // WINOUT
-    gl_FragDepth = -1.0;
+    gl_FragDepth = 1.0;
 }
 
 // END WindowFragmentShaderSource

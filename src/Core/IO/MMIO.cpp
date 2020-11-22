@@ -94,6 +94,9 @@ void MMIO::Reset() {
         }
     }
 
+    // set to 0xff to detect HALT writes properly
+    WriteArray<u8>(Registers, static_cast<u32>(IORegister::HALTCNT), 0xff);
+
     CPU->IE  = 0;
     CPU->IF  = 0;
     CPU->IME = 0;

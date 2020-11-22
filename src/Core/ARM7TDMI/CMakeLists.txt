@@ -3,7 +3,7 @@ add_library(ARM7TDMI STATIC
         ARM7TDMI.cpp
         Pipeline.h
         Tables.cpp
-        instructions/SWI.inl Tables.h)
+)
 
 # for logging / stuff I want to use in all files
 include_directories(

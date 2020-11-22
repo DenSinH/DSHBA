@@ -24,8 +24,6 @@ uniform uint YClipEnd;
     out vec4 FragColor;
 #endif
 
-// out float gl_FragDepth;
-
 vec4 ColorCorrect(vec4 color);
 
 uint readVRAM8(uint address);
@@ -40,8 +38,6 @@ uint getWindow(uint x, uint y);
 
 vec4 RegularObject(bool OAM2DMapping) {
     uint TID = OBJ.attr2 & ++ATTR2_TID++;
-//    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;
-//    gl_FragDepth = float(Priority) / 4.0;
 
     uint dx = uint(InObjPos.x);
     uint dy = uint(InObjPos.y);
@@ -129,8 +125,6 @@ bool InsideBox(vec2 v, vec2 bottomLeft, vec2 topRight) {
 
 vec4 AffineObject(bool OAM2DMapping) {
     uint TID = OBJ.attr2 & ++ATTR2_TID++;
-//    uint Priority = (OBJ.attr2 & 0x0c00u) >> 10;
-//    gl_FragDepth = float(Priority) / 4.0;
 
     uint AffineIndex = (OBJ.attr1 & 0x3e00u) >> 9;
     AffineIndex <<= 2;  // goes in groups of 4
@@ -273,7 +267,6 @@ void main() {
 
 #ifndef OBJ_WINDOW
     FragColor = ColorCorrect(Color);
-    // FragColor = vec4(InObjPos.x / float(ObjWidth), InObjPos.y / float(ObjHeight), 1, 1);
 #else
     // RegularObject/AffineObject will only return if it is nontransparent
     uint WINOBJ = (readIOreg(++WINOUT++) >> 8) & 0x3fu;

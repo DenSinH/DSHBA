@@ -21,6 +21,9 @@ ARM7TDMI::ARM7TDMI(s_scheduler *scheduler, Mem *memory)  {
 #ifdef TRACE_LOG
     trace.open("DSHBA.log", std::fstream::out | std::fstream::app);
 #endif
+
+    // if BIOS is not skipped, we need to start pc at 8 to start fetching instructions properly
+    pc += 8;
 }
 
 void ARM7TDMI::Reset() {
@@ -38,6 +41,7 @@ void ARM7TDMI::Reset() {
     Halted = false;
     Pipeline.Clear();
     SkipBIOS();
+    // pc += 8;
 }
 
 void ARM7TDMI::SkipBIOS() {

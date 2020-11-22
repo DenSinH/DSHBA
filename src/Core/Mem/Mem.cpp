@@ -340,12 +340,9 @@ u32 Mem::BusValue() {
                             // Rb == Rd, just guess that Rb was word aligned...
                             address = ((instruction >> 6) & 0x1f);
                         }
-                        log_debug("LRDB %x: %x", instruction, address);
                         u32 rot = (address & 3) << 3;
-                        log_debug("Rot %d", rot);
                         u32 mask = ~ROTL32(0xff, rot);
                         value = (value & mask) | ROTL32((u8)registers_ptr[instruction & 7], rot);
-                        log_debug("value %x", value);
                         break;
                     }
                     case 0x8000:
