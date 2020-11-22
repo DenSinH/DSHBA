@@ -87,6 +87,10 @@ public:
         return &Registers[static_cast<u32>(IORegister::WAVE_RAM)];
     }
     void TriggerAudioDMA(u32 addr);
+    void ResetAccumLayerFlags() {
+        ScanlineAccumLayerFlags.DISPCNT = DISPCNT;
+        ScanlineAccumLayerFlags.ModeChange = false;
+    }
 
 private:
     friend void GBAPPU::BufferScanline(u32); // allow registers to be buffered
@@ -96,6 +100,8 @@ private:
     void TriggerInterrupt(u16 interrupt);
 
     /*============== LCD ==============*/
+    AccumLayerFlags ScanlineAccumLayerFlags = {};
+    u16 DISPCNT  = 0;
     u16 DISPSTAT = 0;
     u16 VCount   = 0;
 
@@ -110,6 +116,7 @@ private:
     u32 ReferenceLine2 = 0;
     u32 ReferenceLine3 = 0;
     template<bool BG2> WRITE_CALLBACK(WriteReferencePoint);
+    WRITE_CALLBACK(WriteDISPCNT);
     READ_PRECALL(ReadDISPSTAT);
     WRITE_CALLBACK(WriteDISPSTAT);
     READ_PRECALL(ReadVCount);
@@ -205,6 +212,7 @@ private:
     static constexpr auto WriteCallback = [] {
         std::array<IOWriteCallback, (0x400 >> 1)> table = {};
 
+        table[static_cast<u32>(IORegister::DISPCNT) >> 1]  = &MMIO::WriteDISPCNT;
         table[static_cast<u32>(IORegister::DISPSTAT) >> 1]  = &MMIO::WriteDISPSTAT;
 
         table[static_cast<u32>(IORegister::BG2X) >> 1] = &MMIO::WriteReferencePoint<true>;

@@ -72,6 +72,9 @@ void GBAPPU::BufferScanline(u32 scanline) {
         ScanlineVRAMBatchSizes[BufferFrame][0] = 0;
         CurrentOAMScanlineBatch = 0;  // reset batch
         ScanlineOAMBatchSizes[BufferFrame][0] = 0;
+
+        // leftover mode/layer changes
+        ScanlineAccumLayerFlags[BufferFrame][CurrentVRAMScanlineBatch] = Memory->IO->ScanlineAccumLayerFlags;
     }
 
     // copy over range data
@@ -93,9 +96,15 @@ void GBAPPU::BufferScanline(u32 scanline) {
                 ((range.max + 0xff - range.min) & ~0x7f)
         );
 
+        // report mode/layer changes for last batch
+        ScanlineAccumLayerFlags[BufferFrame][CurrentVRAMScanlineBatch] = Memory->IO->ScanlineAccumLayerFlags;
+
         // go to next batch
         CurrentVRAMScanlineBatch = scanline;
         ScanlineVRAMBatchSizes[BufferFrame][CurrentVRAMScanlineBatch] = 1;
+
+        // reset mode / flag changes
+        Memory->IO->ResetAccumLayerFlags();
 
         if (range.max > 0x10000) {
             // mark OAM as dirty as well if the object VRAM region has been updated
@@ -821,6 +830,17 @@ void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
     glUseProgram(0);
 }
 
+static constexpr const bool LayerEnabled[8][4] {
+        { true,  true,  true,  true },   // mode 0
+        { true,  true,  true,  false },  // mode 1
+        { false, false, true,  true },   // mode 2
+        { false, false, true,  false },  // mode 3
+        { false, false, true,  false },  // mode 4
+        { false, false, true,  false },  // mode 5
+        { false, false, false, false },  // mode 6 [invalid]
+        { false, false, false, false },  // mode 7 [invalid]
+};
+
 void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     s_UpdateRange range;
     // first render window, then actual backgrounds
@@ -873,13 +893,31 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     };
     glBufferSubData(GL_ARRAY_BUFFER, 0, 8 * sizeof(float), quad);
 
-    for (u32 BG = 0; BG <= 4; BG++) {
-        if (likely(ExternalBGEnable[BG])) {
-            // draw each of the backgrounds separately
-            glUniform1ui(BGLocation, BG);
-            glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
+    AccumLayerFlags layer_flags = ScanlineAccumLayerFlags[BufferFrame ^ 1][scanline];
+    u16 mode = layer_flags.DISPCNT & 7;  // if mode has not changed, this is the accumulate, but also the mode for the entire scanline
+    for (u32 BG = 0; BG <= 3; BG++) {
+        if (!(layer_flags.DISPCNT & (0x100 << BG))) {
+            // layer disabled for entire batch
+            continue;
         }
+
+        if (!(LayerEnabled[mode][BG])) {
+            // layer disabled through mode for the entire batch
+            continue;
+        }
+
+        if (unlikely(!ExternalBGEnable[BG])) {
+            continue;
+        }
+
+        // draw each of the backgrounds separately
+        glUniform1ui(BGLocation, BG);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
     }
+
+    // always draw backdrop
+    glUniform1ui(BGLocation, 4);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glActiveTexture(GL_TEXTURE0);

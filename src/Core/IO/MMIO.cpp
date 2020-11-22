@@ -321,6 +321,14 @@ SCHEDULER_EVENT(MMIO::VBlankEvent) {
     }
 }
 
+WRITE_CALLBACK(MMIO::WriteDISPCNT) {
+    DISPCNT = value;
+    if ((ScanlineAccumLayerFlags.DISPCNT & 7) != (value & 7)) {
+        ScanlineAccumLayerFlags.ModeChange = true;
+    }
+    ScanlineAccumLayerFlags.DISPCNT |= value;
+}
+
 READ_PRECALL(MMIO::ReadDISPSTAT) {
     return DISPSTAT;
 }

@@ -293,7 +293,7 @@ GBA* Initializer::init() {
 
     int IO_tab = add_register_tab("MMIO");
 
-    add_register_data("DISPCNT", &gba->IO.Registers[0], 2, IO_tab);
+    add_register_data("DISPCNT", &gba->IO.DISPCNT, 2, IO_tab);
     add_register_data("DISPSTAT", &gba->IO.DISPSTAT, 2, IO_tab);
     add_register_data("VCOUNT", &gba->IO.VCount, 2, IO_tab);
     add_register_data("KEYINPUT", &gba->IO.KEYINPUT, 2, IO_tab);

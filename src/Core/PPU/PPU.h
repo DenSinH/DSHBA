@@ -16,6 +16,12 @@
 
 class Mem;
 
+struct AccumLayerFlags {
+    // accumulate certain flags for LCD stuff to save resources
+    u16 DISPCNT = 0;
+    bool ModeChange = false;
+};
+
 class GBAPPU {
 
 public:
@@ -49,6 +55,8 @@ private:
 
     u32 ScanlineVRAMBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
     u32 CurrentVRAMScanlineBatch = 0;
+    AccumLayerFlags ScanlineAccumLayerFlags[2][VISIBLE_SCREEN_HEIGHT] = {};
+
     u32 ScanlineOAMBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
     u32 CurrentOAMScanlineBatch = 0;
 
