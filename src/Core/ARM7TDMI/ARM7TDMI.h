@@ -211,7 +211,21 @@ private:
     }
 
     [[nodiscard]] ALWAYS_INLINE bool CheckCondition(u8 condition) const;
-    void FakePipelineFlush();
+
+    ALWAYS_INLINE void FakePipelineFlush() {
+        this->Pipeline.Clear();
+
+        if (ARMMode) {
+            *timer += Memory->GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24)) << 1;
+            // ARM mode
+            this->pc += 4;
+        }
+        else {
+            *timer += Memory->Mem::GetAccessTime<u16>(static_cast<MemoryRegion>(pc >> 24)) << 1;
+            // THUMB mode
+            this->pc += 2;
+        }
+    }
 
     void ChangeMode(Mode NewMode) {
             if (NewMode == static_cast<Mode>(this->CPSR & static_cast<u32>(CPSRFlags::Mode))) {

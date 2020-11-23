@@ -64,21 +64,6 @@ void ARM7TDMI::SkipBIOS() {
     this->pc += 4;
 }
 
-void ARM7TDMI::FakePipelineFlush() {
-    this->Pipeline.Clear();
-
-    if (ARMMode) {
-        *timer += Memory->GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24)) << 1;
-        // ARM mode
-        this->pc += 4;
-    }
-    else {
-        *timer += Memory->Mem::GetAccessTime<u16>(static_cast<MemoryRegion>(pc >> 24)) << 1;
-        // THUMB mode
-        this->pc += 2;
-    }
-}
-
 void ARM7TDMI::PipelineReflush() {
     this->Pipeline.Clear();
     // if instructions that should be in the pipeline get written to
