@@ -42,7 +42,7 @@ void __fastcall BranchExchange(u32 instruction) {
         }
 #endif
         // for fake pipeline flushes, it does not matter that PC has been altered
-        FakePipelineFlush();
+        FakePipelineFlush<true>();
     }
     else {
         // enter THUMB mode
@@ -65,7 +65,7 @@ void __fastcall BranchExchange(u32 instruction) {
             Idle();
         }
 #endif
-        FakePipelineFlush();
+        FakePipelineFlush<false>();
     }
 }
 
@@ -89,7 +89,7 @@ void __fastcall Branch(u32 instruction) {
 #endif
 
     this->pc += offset;
-    this->FakePipelineFlush();
+    this->FakePipelineFlush<true>();
 }
 
 #ifndef INLINED_INCLUDES

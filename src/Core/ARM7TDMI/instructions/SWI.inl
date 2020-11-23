@@ -51,7 +51,7 @@ void __fastcall SWI(T instruction) {
         pc = static_cast<u32>(ExceptionVector::SWI) + 2;
     }
 
-    FakePipelineFlush();
+    FakePipelineFlush<true>();
 }
 
 #ifndef INLINED_INCLUDES

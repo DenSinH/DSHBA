@@ -25,7 +25,7 @@ void __fastcall ConditionalBranch(u16 instruction) {
         }
 #endif
         pc += offset;
-        FakePipelineFlush();
+        FakePipelineFlush<false>();
     }
 }
 
@@ -47,7 +47,7 @@ void __fastcall LongBranchLink(u16 instruction) {
         // todo: idle loop detection?
 
         lr = old_pc | 1;
-        FakePipelineFlush();
+        FakePipelineFlush<false>();
     }
 }
 
@@ -56,7 +56,7 @@ void __fastcall UnconditionalBranch(u16 instruction) {
     offs11 = (offs11 << 21) >> 20;  // sign extend and shift by 1
 
     pc += offs11;
-    FakePipelineFlush();
+    FakePipelineFlush<false>();
 #ifdef BASIC_IDLE_DETECTION
     if (unlikely(offs11 == -4)) {
         // We know we are in THUMB mode

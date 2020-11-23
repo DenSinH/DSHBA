@@ -60,7 +60,7 @@ void ARM7TDMI::SkipBIOS() {
     CPSR = 0x6000'001f;
 
     ARMMode = true;
-    this->FakePipelineFlush();
+    this->FakePipelineFlush<true>();
     this->pc += 4;
 }
 
@@ -114,7 +114,7 @@ SCHEDULER_EVENT(ARM7TDMI::InterruptPollEvent) {
             }
 
             cpu->pc = static_cast<u32>(ExceptionVector::IRQ);
-            cpu->FakePipelineFlush();
+            cpu->FakePipelineFlush<true>();
             cpu->pc += 4;  // get ready to receive next instruction
         }
     }

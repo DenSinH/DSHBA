@@ -59,7 +59,7 @@ void __fastcall SingleDataTransfer(u32 instruction) {
 
         if (unlikely(rd == 15)) {
             Memory->OpenBusOverride   = pc;  // loaded value
-            FakePipelineFlush();
+            FakePipelineFlush<true>();
             Memory->OpenBusOverrideAt = pc + 4;  // instruction + 8 of where the load happened
         }
     }

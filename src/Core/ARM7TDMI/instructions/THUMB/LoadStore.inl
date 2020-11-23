@@ -168,7 +168,7 @@ void __fastcall PushPop(u16 instruction) {
             // load PC/LR
             pc = Memory->Mem::Read<u32, true>(sp) & ~1;  // make sure it's aligned
             sp += 4;
-            FakePipelineFlush();
+            FakePipelineFlush<false>();
         }
 
         // internal cycle
@@ -207,7 +207,7 @@ void __fastcall MultipleLoadStore(u16 instruction) {
         // invalid register list
         if constexpr(L) {
             pc = Memory->Mem::Read<u32, true>(address);
-            FakePipelineFlush();
+            FakePipelineFlush<false>();
 
             // internal cycle
             (*timer)++;

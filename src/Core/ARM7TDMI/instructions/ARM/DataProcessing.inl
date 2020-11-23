@@ -382,9 +382,15 @@ void __fastcall DataProcessing(u32 instruction) {
                 pc -= 2;  // we add 4 after instruction, should be 2
                 SetLastNZ();
                 ARMMode = false;
+                FakePipelineFlush<false>();
+            }
+            else {
+                FakePipelineFlush<true>();
             }
         }
-        FakePipelineFlush();
+        else {
+            FakePipelineFlush<true>();
+        }
     }
     else {
         DoDataProcessing<opcode, S, I || shift_imm>(instruction, op2);

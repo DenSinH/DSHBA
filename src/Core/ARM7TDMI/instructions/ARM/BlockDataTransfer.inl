@@ -40,7 +40,7 @@ void __fastcall BlockDataTransfer(u32 instruction) {
         // invalid register lists
         if constexpr(L) {
             pc = Memory->Mem::Read<u32, true>(address);
-            FakePipelineFlush();
+            FakePipelineFlush<true>();
         }
         else {
             if constexpr(U) {
@@ -137,7 +137,7 @@ void __fastcall BlockDataTransfer(u32 instruction) {
             if constexpr(L && !S) {
                 // the L && S case is checked below
                 Memory->OpenBusOverride = pc;  // loaded value (on bus)
-                FakePipelineFlush();
+                FakePipelineFlush<true>();
                 Memory->OpenBusOverrideAt = pc + 4;  // address of instruction where this happened + 8
             }
             else if (!L){
@@ -162,7 +162,7 @@ void __fastcall BlockDataTransfer(u32 instruction) {
                 SetLastNZ();
                 ARMMode = false;
 
-                FakePipelineFlush();
+                FakePipelineFlush<false>();
             }
         }
     }

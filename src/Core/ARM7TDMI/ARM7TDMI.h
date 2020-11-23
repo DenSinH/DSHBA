@@ -212,10 +212,13 @@ private:
 
     [[nodiscard]] ALWAYS_INLINE bool CheckCondition(u8 condition) const;
 
+    // when flushing the pipeline, we _always_ know what state we are in
+    // this saves a couple of ASM instructions
+    template<bool arm_mode>
     ALWAYS_INLINE void FakePipelineFlush() {
         this->Pipeline.Clear();
 
-        if (ARMMode) {
+        if constexpr(arm_mode) {
             *timer += Memory->GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24)) << 1;
             // ARM mode
             this->pc += 4;
