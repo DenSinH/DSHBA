@@ -137,7 +137,6 @@ void Mem::LoadROM(const std::string file_path) {
     ROMSize = LoadFileTo(reinterpret_cast<char *>(ROM), file_path, 0x0200'0000);
     SaveFile = file_path.substr(0, file_path.find_last_of('.')) + ".dshba";
 
-    // todo: check backup type
     Type = FindBackupType();
 
     switch (Type) {
@@ -170,6 +169,14 @@ void Mem::LoadROM(const std::string file_path) {
         default:
             log_fatal("Unspecified save type");
     }
+
+    if (static_cast<u8>(Type) & static_cast<u8>(BackupType::EEPROM_bit)) {
+        SetPageTableEEPROM();
+    }
+    else {
+        SetPageTableNoEEPROM();
+    }
+
     Backup->Load(SaveFile);
 
     for (size_t addr = ((ROMSize + 3) & ~3); addr < sizeof(ROM); addr += 2) {

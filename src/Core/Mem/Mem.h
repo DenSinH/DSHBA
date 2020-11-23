@@ -21,7 +21,7 @@
 #include <utility>
 #include <type_traits>
 
-enum class MemoryRegion {
+enum class MemoryRegion : u8 {
     BIOS   = 0x00,
     Unused = 0x01,
     eWRAM  = 0x02,
@@ -37,7 +37,6 @@ enum class MemoryRegion {
     ROM_L2 = 0x0c,
     ROM_H2 = 0x0d,
     SRAM   = 0x0e,
-    OOB,
 };
 
 enum class BIOSReadState : u32 {
@@ -59,8 +58,8 @@ public:
 
     void Reset();
 
-    template<typename T, bool count, bool in_dma = false> ALWAYS_INLINE T ReadInline(u32 address);
-    template<typename T, bool count, bool in_dma = false> T Read(u32 address);
+    template<typename T, bool count, bool in_dma = false> ALWAYS_INLINE T Read(u32 address);
+
     template<typename T, bool count, bool do_reflush> void Write(u32 address, T value);
 
     void LoadROM(const std::string file_path);
@@ -72,99 +71,21 @@ public:
     template<typename T, bool intermittent_events> void DoDMA(s_DMAData* DMA);
 
     template<typename T>
-    static constexpr u8 GetAccessTime(MemoryRegion R) {
-        switch (R) {
-            case MemoryRegion::BIOS:
-                return Mem::AccessTiming<T, MemoryRegion::BIOS>();
-            case MemoryRegion::iWRAM:
-                return Mem::AccessTiming<T, MemoryRegion::iWRAM>();
-            case MemoryRegion::eWRAM:
-                return Mem::AccessTiming<T, MemoryRegion::eWRAM>();
-            case MemoryRegion::IO:
-                return Mem::AccessTiming<T, MemoryRegion::IO>();
-            case MemoryRegion::PAL:
-                return Mem::AccessTiming<T, MemoryRegion::PAL>();
-            case MemoryRegion::VRAM:
-                return Mem::AccessTiming<T, MemoryRegion::VRAM>();
-            case MemoryRegion::OAM:
-                return Mem::AccessTiming<T, MemoryRegion::OAM>();
-            case MemoryRegion::ROM_L:
-                return Mem::AccessTiming<T, MemoryRegion::ROM_L>();
-            case MemoryRegion::ROM_L1:
-                return Mem::AccessTiming<T, MemoryRegion::ROM_L1>();
-            case MemoryRegion::ROM_L2:
-                return Mem::AccessTiming<T, MemoryRegion::ROM_L2>();
-            case MemoryRegion::ROM_H:
-                return Mem::AccessTiming<T, MemoryRegion::ROM_H>();
-            case MemoryRegion::ROM_H1:
-                return Mem::AccessTiming<T, MemoryRegion::ROM_H1>();
-            case MemoryRegion::ROM_H2:
-                return Mem::AccessTiming<T, MemoryRegion::ROM_H2>();
-            case MemoryRegion::SRAM:
-                return Mem::AccessTiming<T, MemoryRegion::SRAM>();
-            case MemoryRegion::Unused:
-                return Mem::AccessTiming<T, MemoryRegion::Unused>();
-            case MemoryRegion::OOB:
-                return Mem::AccessTiming<T, MemoryRegion::OOB>();
-            default:
-                return 1;
+    [[nodiscard]] ALWAYS_INLINE u8 GetAccessTime(MemoryRegion R) const {
+        if constexpr(std::is_same_v<T, u32>) {
+            return WordAccessTime[static_cast<u8>(R)];
         }
-    }
-
-    // timings for ROM are different
-    template<typename T, MemoryRegion R>
-    static constexpr u8 AccessTiming() {
-        switch (R) {
-            case MemoryRegion::BIOS:
-            case MemoryRegion::iWRAM:
-            case MemoryRegion::IO:
-            case MemoryRegion::OAM:  // todo: check if VBlank/HBlank for extra cycle
-                return 1;
-            case MemoryRegion::eWRAM:
-                if constexpr(std::is_same_v<T, u32>) {
-                    return 6;
-                }
-                return 3;
-            case MemoryRegion::PAL:
-            case MemoryRegion::VRAM:
-                // todo: check if VBlank/HBlank for extra cycle
-                if constexpr(std::is_same_v<T, u32>) {
-                    return 2;
-                }
-                return 1;
-            case MemoryRegion::ROM_L:
-            case MemoryRegion::ROM_H:
-                if constexpr(std::is_same_v<T, u32>) {
-                    return 6;
-                }
-                return 2;
-            case MemoryRegion::ROM_L1:
-            case MemoryRegion::ROM_H1:
-                if constexpr(std::is_same_v<T, u32>) {
-                    return 10;
-                }
-                return 5;
-            case MemoryRegion::ROM_L2:
-            case MemoryRegion::ROM_H2:
-                // todo: waitstates/sequential accesses
-                if constexpr(std::is_same_v<T, u32>) {
-                    return 18;
-                }
-                return 9;
-            case MemoryRegion::SRAM:
-                return 5;
-            case MemoryRegion::Unused:
-            case MemoryRegion::OOB:
-            default:
-                // todo: ?
-                return 1;
+        else {
+            return SubWordAccessTime[static_cast<u8>(R)];
         }
     }
 
 private:
     friend class GBAPPU;   // allow VMEM to be buffered
-    friend class MEM_INL;  // to cheese IDEs
+    friend class Mem_INL;  // to cheese IDEs
     friend class Initializer;
+
+    template<typename T, bool in_dma = false> T RawReadSlow(u32 address);
 
     template<typename T> ALWAYS_INLINE void WriteVRAM(u32 address, T value);
     static ALWAYS_INLINE constexpr u32 MaskVRAMAddress(const u32 address) {
@@ -221,8 +142,63 @@ private:
     static SCHEDULER_EVENT(DumpSaveEvent);
 
     u32 DMALatch = 0;
+
+    std::array<u8, 255> SubWordAccessTime = [] {
+        std::array<u8, 255> table = {};
+
+        // fill with 1s
+        for (u8 & i : table) {
+            i = 1;
+        }
+
+        table[static_cast<u8>(MemoryRegion::eWRAM)]  = 3;
+        table[static_cast<u8>(MemoryRegion::ROM_L)]  = 2;
+        table[static_cast<u8>(MemoryRegion::ROM_L1)] = 5;
+        table[static_cast<u8>(MemoryRegion::ROM_L2)] = 9;
+        table[static_cast<u8>(MemoryRegion::ROM_H)]  = 2;
+        table[static_cast<u8>(MemoryRegion::ROM_H1)] = 5;
+        table[static_cast<u8>(MemoryRegion::ROM_H2)] = 9;
+        table[static_cast<u8>(MemoryRegion::SRAM)]   = 5;
+
+        return table;
+    }();
+
+    std::array<u8, 255> WordAccessTime = [] {
+        std::array<u8, 255> table = {};
+
+        // fill with 1s
+        for (u8 & i : table) {
+            i = 1;
+        }
+
+        table[static_cast<u8>(MemoryRegion::eWRAM)]  = 6;
+        table[static_cast<u8>(MemoryRegion::ROM_L)]  = 6;
+        table[static_cast<u8>(MemoryRegion::ROM_L1)] = 10;
+        table[static_cast<u8>(MemoryRegion::ROM_L2)] = 18;
+        table[static_cast<u8>(MemoryRegion::ROM_H)]  = 6;
+        table[static_cast<u8>(MemoryRegion::ROM_H1)] = 10;
+        table[static_cast<u8>(MemoryRegion::ROM_H2)] = 18;
+        table[static_cast<u8>(MemoryRegion::SRAM)]   = 5;
+
+        return table;
+    }();
+
+    std::array<u32, 255> ReflushMask = [] {
+        std::array<u32, 255> table = {};
+
+        table[static_cast<u8>(MemoryRegion::eWRAM)] = 0x3ffff;
+        table[static_cast<u8>(MemoryRegion::iWRAM)] = 0x7fff;
+        table[static_cast<u8>(MemoryRegion::IO)]    = 0x3ff;
+        table[static_cast<u8>(MemoryRegion::PAL)]   = 0x3ff;
+        table[static_cast<u8>(MemoryRegion::VRAM)]  = 0x7fff;
+        table[static_cast<u8>(MemoryRegion::OAM)]   = 0x3ff;
+
+        return table;
+    }();
+
 #define INLINED_INCLUDES
 #include "MemDMAUtil.inl"
+#include "MemPageTables.inl"
 #undef INLINED_INCLUDES
 
 #ifdef FAST_DMA

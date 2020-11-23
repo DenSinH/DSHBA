@@ -382,11 +382,11 @@ void ARM7TDMI::Step() {
     }
     else if (ARMMode) {
         // before the instruction gets executed, we are 2 instructions ahead
-        instruction = Memory->Mem::ReadInline<u32, true>(pc - 8);
+        instruction = Memory->Mem::Read<u32, true>(pc - 8);
     }
     else {
         // THUMB mode
-        instruction = Memory->Mem::ReadInline<u16, true>(pc - 4);
+        instruction = Memory->Mem::Read<u16, true>(pc - 4);
     }
 
     if (ARMMode) {

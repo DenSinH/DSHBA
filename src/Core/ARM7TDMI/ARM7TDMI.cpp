@@ -59,6 +59,7 @@ void ARM7TDMI::SkipBIOS() {
     pc = 0x0800'0000;
     CPSR = 0x6000'001f;
 
+    ARMMode = true;
     this->FakePipelineFlush();
     this->pc += 4;
 }
@@ -66,13 +67,13 @@ void ARM7TDMI::SkipBIOS() {
 void ARM7TDMI::FakePipelineFlush() {
     this->Pipeline.Clear();
 
-    if (!(CPSR & static_cast<u32>(CPSRFlags::T))) {
-        *timer += Mem::GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24)) << 1;
+    if (ARMMode) {
+        *timer += Memory->GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24)) << 1;
         // ARM mode
         this->pc += 4;
     }
     else {
-        *timer += Mem::GetAccessTime<u16>(static_cast<MemoryRegion>(pc >> 24)) << 1;
+        *timer += Memory->Mem::GetAccessTime<u16>(static_cast<MemoryRegion>(pc >> 24)) << 1;
         // THUMB mode
         this->pc += 2;
     }

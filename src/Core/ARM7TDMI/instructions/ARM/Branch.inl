@@ -24,7 +24,6 @@ void __fastcall BranchExchange(u32 instruction) {
         u32 instruction_address = pc - 8;
 #endif
         pc = target & 0xffff'fffc;
-        FakePipelineFlush();
 
         if (was_thumb) {
             // reflush NZ
@@ -42,6 +41,8 @@ void __fastcall BranchExchange(u32 instruction) {
             Idle();
         }
 #endif
+        // for fake pipeline flushes, it does not matter that PC has been altered
+        FakePipelineFlush();
     }
     else {
         // enter THUMB mode
@@ -49,7 +50,6 @@ void __fastcall BranchExchange(u32 instruction) {
         u32 instruction_address = pc - 4;
 #endif
         pc = target & 0xffff'fffe;
-        FakePipelineFlush();
 
         if (!was_thumb) {
             // correct for adding 4 after instruction because we were in ARM mode
@@ -65,6 +65,7 @@ void __fastcall BranchExchange(u32 instruction) {
             Idle();
         }
 #endif
+        FakePipelineFlush();
     }
 }
 
