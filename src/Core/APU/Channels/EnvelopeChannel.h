@@ -2,6 +2,8 @@
 
 #include "Channel.h"
 
+#include <algorithm>
+
 class EnvelopeChannel : public Channel {
 
     /*

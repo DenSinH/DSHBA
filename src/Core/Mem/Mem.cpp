@@ -129,7 +129,7 @@ void Mem::LoadROM(const std::string file_path) {
     // dump old save
     if (Backup) {
         Backup->Dump(SaveFile);
-        free(Backup);
+        delete Backup;
     }
 
     log_debug("Loading %s", file_path.c_str());

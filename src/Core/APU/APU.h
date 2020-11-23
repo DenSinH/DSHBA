@@ -13,6 +13,7 @@
 #include <SDL.h>
 
 #include <mutex>
+#include <functional>
 
 #define AUDIO_BUFFER_SIZE 1024
 

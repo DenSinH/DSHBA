@@ -3,6 +3,7 @@
 #include "default.h"
 
 #include <queue>
+#include <functional>
 
 class MMIO;
 
