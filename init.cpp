@@ -145,6 +145,15 @@ OVERLAY_INFO(Initializer::scheduler_events) {
     );
 }
 
+OVERLAY_INFO(Initializer::scheduler_time_until) {
+    SPRINTF(
+            output,
+            output_length,
+            "Sched. next: %d cycles",
+            gba->Scheduler.top - *gba->Scheduler.timer
+    );
+}
+
 OVERLAY_INFO(Initializer::audio_samples) {
     if (gba->APU.Stream) {
         SPRINTF(
@@ -357,6 +366,7 @@ GBA* Initializer::init() {
     add_overlay_info(cpu_ticks);
     add_overlay_info(fps_counter);
     add_overlay_info(scheduler_events);
+    add_overlay_info(scheduler_time_until);
     add_overlay_info(audio_samples);
 
     int game_tab = add_menu_tab((char*)"Game");
