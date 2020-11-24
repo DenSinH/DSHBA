@@ -24,7 +24,7 @@ typedef struct s_event {
     SCHEDULER_EVENT((*callback));
 
     void *caller;
-    u64 time;
+    i32 time;
     bool active;   // signifies if event is in the scheduler or not
 } s_event;
 
@@ -61,24 +61,40 @@ public:
             return false;
         }
     };
+
+    void map(void (*f)(T*)) {
+        for (auto it = this->c.begin(); it != this->c.end(); it++) {
+            f(&(*it));
+        }
+    }
 };
 
 // we know that there is always _something_ in the queue
 struct s_scheduler {
 
+    const static i32 TimeMask = 0x3fff'ffff;
+
     deleteable_priority_queue<s_event*, std::vector<s_event*>, decltype(cmp)> queue;
-    u64* timer;
-    u64 top;
+    i32* timer;
+    i32 top;
 
     // event to put in queue to make sure it is not empty
-    inline static s_event infty = (s_event) {
-        .callback = [](void* caller, s_event* event, s_scheduler* scheduler) {
-            return;
-        },
-        .time = (u64)-1
-    };
+    s_event infty;
 
-    explicit s_scheduler(u64* timer) {
+    explicit s_scheduler(i32* timer) {
+        this->infty = (s_event) {
+            .callback = [](void* caller, s_event* event, s_scheduler* scheduler) {
+                *(scheduler->timer) -= 0x7000'0000;
+                scheduler->queue.map([](s_event** value) {
+                    (*value)->time -= 0x7000'0000;
+                });
+
+                // schedule at 0x7000'0000 again
+                scheduler->AddEvent(event);
+            },
+            .caller = this,
+            .time = 0x7000'0000
+        };
         this->timer = timer;
 
         this->Reset();
@@ -88,7 +104,7 @@ struct s_scheduler {
         // clear queue (fill queue with initial event)
         queue = {};
         queue.push(&infty);
-        top = (u64)-1;
+        top = 0x7000'0000;
     }
 
     void AddEvent(s_event* event) {

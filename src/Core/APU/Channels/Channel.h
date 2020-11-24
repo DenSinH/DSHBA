@@ -43,12 +43,12 @@ public:
         if (SoundOn()) {
             if (Tick.active) {
                 // already was active
-                i32 diff = (u32)Tick.time - TriggerTime + Period;
+                i32 diff = (Tick.time - TriggerTime + Period) & s_scheduler::TimeMask;
                 if (std::abs(diff) > 0x100) {
                     // only reschedule if time has actually changed
                     // we keep a bit of a resolution cause a 0x100 tick difference we can probably barely hear anyway
                     // and rescheduling events is expensive
-                    Scheduler->RescheduleEvent(&Tick, TriggerTime + Period);
+                    Scheduler->RescheduleEvent(&Tick, Tick.time - diff);
                 }
             }
             else {
@@ -99,7 +99,7 @@ private:
 
     s_event Tick;
     s_scheduler* Scheduler;
-    u32 TriggerTime;
+    i32 TriggerTime;
 
     static SCHEDULER_EVENT(TickEvent) {
         auto chan = (Channel*)caller;

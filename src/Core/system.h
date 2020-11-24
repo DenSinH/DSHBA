@@ -50,7 +50,7 @@ private:
 
 #endif
 
-    u64 timer = 0;
+    i32 timer = 0;
     s_scheduler Scheduler = s_scheduler(&timer);
 
     MMIO IO = MMIO(

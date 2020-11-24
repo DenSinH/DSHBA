@@ -287,9 +287,9 @@ GBA* Initializer::init() {
     add_register_data("Pipe 3", &gba->CPU.Pipeline.Storage[3], 4, cpu_tab);
 
     add_register_data("", nullptr, 4, cpu_tab);
-    add_register_data("", nullptr, 8, cpu_tab);
+    add_register_data("", nullptr, 4, cpu_tab);
 
-    add_register_data("Time", &gba->timer, 8, cpu_tab);
+    add_register_data("Time", &gba->timer, 4, cpu_tab);
 
     int IO_tab = add_register_tab("MMIO");
 

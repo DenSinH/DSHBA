@@ -61,7 +61,7 @@ typedef void __fastcall (ARM7TDMI::*THUMBInstructionPtr)(u16 instruction);
 
 class ARM7TDMI {
 public:
-    u64* timer;
+    i32* timer;
 
     ARM7TDMI(s_scheduler* scheduler, Mem* memory);
     ~ARM7TDMI() {

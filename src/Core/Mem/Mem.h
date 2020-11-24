@@ -48,7 +48,7 @@ enum class BIOSReadState : u32 {
 
 class Mem {
 public:
-    Mem(MMIO* IO, s_scheduler* scheduler, u32* registers_ptr, u32* CPSR_ptr, u64* timer, std::function<void(void)> reflush);
+    Mem(MMIO* IO, s_scheduler* scheduler, u32* registers_ptr, u32* CPSR_ptr, i32* timer, std::function<void(void)> reflush);
     ~Mem();
 
     u32 OpenBusOverride = 0;
@@ -114,7 +114,7 @@ private:
     u32* pc_ptr;
     u32* registers_ptr;
     u32* CPSR_ptr;
-    u64* timer;
+    i32* timer;
     std::function<void(void)> Reflush;
     s_UpdateRange VRAMUpdate = { .min=sizeof(VRAMMEM), .max=0 };
     bool DirtyOAM     = false;

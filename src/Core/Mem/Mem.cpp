@@ -16,7 +16,7 @@
  * the `count` bool in the templates it so we can count cycles conditionally
  * */
 
-Mem::Mem(MMIO* IO, s_scheduler* scheduler, u32* registers_ptr, u32* CPSR_ptr, u64* timer, std::function<void(void)> reflush) {
+Mem::Mem(MMIO* IO, s_scheduler* scheduler, u32* registers_ptr, u32* CPSR_ptr, i32* timer, std::function<void(void)> reflush) {
     this->IO = IO;
     this->Scheduler = scheduler;
     this->registers_ptr = registers_ptr;

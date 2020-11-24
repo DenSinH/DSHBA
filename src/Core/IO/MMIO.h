@@ -52,16 +52,16 @@ struct s_TimerData {
 
     u8 PrescalerShift;   // shift amount
     u32 Counter;         // used in count-up mode
-    u64 TriggerTime;     // used in direct mode
+    i32 TriggerTime;     // used in direct mode
 
     FIFOChannel* FIFOA = nullptr;
     FIFOChannel* FIFOB = nullptr;
 
     s_event Overflow;
 
-    void FlushDirect(u64 CurrentTime) {
+    void FlushDirect(i32 CurrentTime) {
         // we assume that Reload + (TriggerTime - CurrentTime) / Prescaler < 0x10000 at all times!
-        u64 dt = (CurrentTime - TriggerTime) >> PrescalerShift;
+        u64 dt = ((CurrentTime - TriggerTime) >> PrescalerShift) & s_scheduler::TimeMask;
         Counter += dt;
         TriggerTime += dt << PrescalerShift;  // don't lose resolution
     }

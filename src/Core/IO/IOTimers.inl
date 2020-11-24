@@ -9,7 +9,7 @@ void MMIO::OverflowTimer() {
     ASSUME(x < 4);
 
     Timers[x].Counter = Timers[x].Register.CNT_L;  // reload counter
-    Timers[x].TriggerTime = *Scheduler->timer;     // reset triggertime (no startup delay now)
+    Timers[x].TriggerTime = (*Scheduler->timer) & s_scheduler::TimeMask;     // reset triggertime (no startup delay now)
 
     if constexpr(x < 2) {
         // trigger bound FIFO channels
@@ -120,7 +120,7 @@ WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
         // timer got enabled
         // trigger timing still needs to be set
         Timers[x].Counter = Timers[x].Register.CNT_L;
-        Timers[x].TriggerTime = *Scheduler->timer + 2;  // 2 cycle startup delay
+        Timers[x].TriggerTime = (*Scheduler->timer + 2) & s_scheduler::TimeMask;  // 2 cycle startup delay
     }
     else {
         // nothing interesting happens (it wasnt enabled, and it is still not enabled)
@@ -139,13 +139,11 @@ WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
         }
 
         // delta time
-        u64 new_time = (0x10000 - Timers[x].Counter) << Timers[x].PrescalerShift;
-        // absolute time
-        u64 current_time = *Scheduler->timer;
-        new_time = current_time + (current_time - Timers[x].TriggerTime) + new_time;
-        Timers[x].Overflow.time = new_time;
+        i32 new_period = (0x10000 - Timers[x].Counter) << Timers[x].PrescalerShift;
+        // time that has already passed
+        i32 passed = (((*Scheduler->timer) & Scheduler->TimeMask) - Timers[x].TriggerTime);
 
-        Scheduler->AddEvent(&Timers[x].Overflow);
+        Scheduler->AddEventAfter(&Timers[x].Overflow, new_period - passed);
     }
     else if (unlikely(Timers[x].Overflow.active)) {
         Scheduler->RemoveEvent(&Timers[x].Overflow);
