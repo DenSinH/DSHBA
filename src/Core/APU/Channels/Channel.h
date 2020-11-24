@@ -6,18 +6,20 @@
 #include "helpers.h"
 #include "const.h"
 
+#include <cmath>
+
 class Channel {
 public:
     explicit Channel(s_scheduler* scheduler) {
         Tick = (s_event) {
             .callback = TickEvent,
             .caller = this,
-            .time = Period
         };
 
         // we don't need to store a reference to the scheduler in this class,
         // all events are recursive and nonstop anyway
         scheduler->AddEvent(&Tick);
+        Scheduler = scheduler;
     }
 
     i16 CurrentSample = 0;
@@ -32,6 +34,31 @@ public:
         Enabled = true;
         if (LengthCounter == 0) {
             LengthCounter = 64;
+        }
+
+        UpdateEvent();
+    }
+
+    void UpdateEvent() {
+        if (SoundOn()) {
+            if (Tick.active) {
+                // already was active
+                i32 diff = (u32)Tick.time - TriggerTime + Period;
+                if (std::abs(diff) > 0x100) {
+                    // only reschedule if time has actually changed
+                    // we keep a bit of a resolution cause a 0x100 tick difference we can probably barely hear anyway
+                    // and rescheduling events is expensive
+                    Scheduler->RescheduleEvent(&Tick, TriggerTime + Period);
+                }
+            }
+            else {
+                // event was activated
+                TriggerTime = *Scheduler->timer;
+                Scheduler->AddEventAfter(&Tick, Period);
+            }
+        }
+        else if (Tick.active) {
+            Scheduler->RemoveEvent(&Tick);
         }
     }
 
@@ -71,6 +98,9 @@ private:
     friend class MMIO;
 
     s_event Tick;
+    s_scheduler* Scheduler;
+    u32 TriggerTime;
+
     static SCHEDULER_EVENT(TickEvent) {
         auto chan = (Channel*)caller;
 
@@ -80,6 +110,7 @@ private:
             chan->CurrentSample = chan->GetSample();
         }
 
+        chan->TriggerTime = event->time;
         event->time += chan->Period;
         scheduler->AddEvent(event);
     }

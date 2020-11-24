@@ -12,7 +12,14 @@ WRITE_CALLBACK(MMIO::WriteSquareCNT_L) {
     APU->sq[x].SetDuty((value >> 6) & 3);
     APU->sq[x].EnvelopeTime = (value >> 8) & 7;
     APU->sq[x].EnvelopeUp  = (value & 0x0800) != 0;
+
+    bool was_off = APU->sq[x].Volume == 0;
     APU->sq[x].Volume = value >> 12;
+
+    // might change event state if volume was turned on/off
+    if (was_off ^ (APU->sq[x].Volume == 0)) {
+        APU->sq[x].UpdateEvent();
+    }
 }
 
 template<u8 x>
@@ -23,6 +30,10 @@ WRITE_CALLBACK(MMIO::WriteSquareCNT_H) {
     APU->sq[x].LengthFlag = (value & 0x4000) != 0;
     if (value & 0x8000) {
         APU->sq[x].Trigger();
+    }
+    else {
+        // channel might already be triggered
+        APU->sq[x].UpdateEvent();
     }
 }
 

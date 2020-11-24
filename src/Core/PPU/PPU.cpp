@@ -839,9 +839,9 @@ void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
 }
 
 static constexpr const bool LayerEnabled[8][4] {
-        { true,  true,  true,  true },   // mode 0
+        { true,  true,  true,  true  },  // mode 0
         { true,  true,  true,  false },  // mode 1
-        { false, false, true,  true },   // mode 2
+        { false, false, true,  true  },  // mode 2
         { false, false, true,  false },  // mode 3
         { false, false, true,  false },  // mode 4
         { false, false, true,  false },  // mode 5

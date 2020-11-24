@@ -388,7 +388,14 @@ WRITE_CALLBACK(MMIO::WriteNoiseCNT_L) {
     APU->ns.LengthCounter = (64 - value & 0x001f);
     APU->ns.EnvelopeTime = (value >> 8) & 7;
     APU->ns.EnvelopeUp   = (value & 0x0800) != 0;
+
+    bool was_off = APU->ns.Volume == 0;
     APU->ns.Volume = value >> 12;
+
+    // might change event state if volume was turned on/off
+    if (was_off ^ (APU->ns.Volume == 0)) {
+        APU->ns.UpdateEvent();
+    }
 }
 
 WRITE_CALLBACK(MMIO::WriteNoiseCNT_H) {
@@ -409,19 +416,31 @@ WRITE_CALLBACK(MMIO::WriteNoiseCNT_H) {
     APU->ns.LengthFlag = (value & 0x4000) > 0;
     if (value & 0x8000)  {
         APU->ns.Trigger();
-    };
+    }
+    else {
+        // event might still change because of period change
+        APU->ns.UpdateEvent();
+    }
 }
 
 WRITE_CALLBACK(MMIO::WriteWaveCNT_L) {
     APU->wav.DoubleBanked = (value & 0x0020) != 0;
     APU->wav.SwitchBanks((value & 0x0040) >> 6);
+
+    bool old_playback = APU->wav.PlayBack;
     APU->wav.PlayBack = (value & 0x0080) != 0;
+
+    if (old_playback ^ APU->wav.PlayBack) {
+        APU->wav.UpdateEvent();
+    }
 }
 
 WRITE_CALLBACK(MMIO::WriteWaveCNT_H) {
     APU->wav.LengthCounter = 256 - (value & 0xff);
     APU->wav.SetVolume((value & 0x6000) >> 13);
     APU->wav.ForceVolume = (value & 0x8000) != 0;
+
+    APU->wav.UpdateEvent();
 }
 
 WRITE_CALLBACK(MMIO::WriteWaveCNT_X) {
@@ -429,6 +448,9 @@ WRITE_CALLBACK(MMIO::WriteWaveCNT_X) {
     APU->wav.LengthFlag = (value & 0x4000) != 0;
     if (value & 0x8000) {
         APU->wav.Trigger();
+    }
+    else {
+        APU->wav.UpdateEvent();
     }
 }
 

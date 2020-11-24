@@ -39,6 +39,8 @@ public:
             Period = std::clamp(Period, 1u, (u32)CLOCK_FREQUENCY);
 
             SweepTimer = SweepPeriod;
+
+            UpdateEvent();
         }
     }
 
