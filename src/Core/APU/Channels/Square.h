@@ -7,6 +7,7 @@ class Square : public EnvelopeChannel {
 public:
     explicit Square(s_scheduler* scheduler) : EnvelopeChannel(scheduler) {
         Period = 128 * 100;
+        TruePeriod = 128 * 100;
     }
 
     void SetDuty(u8 index) {
@@ -28,15 +29,17 @@ public:
         }
 
         if (--SweepTimer == 0) {
-            i32 dPeriod = Period >> SweepNumber;
+            i32 dPeriod = TruePeriod >> SweepNumber;
             if (!SweepUp) {
                 dPeriod *= -1;
             }
 
-            Period += dPeriod;
+            TruePeriod += dPeriod;
             // we dont want to underflow/overflow the period
             // setting a max on the period makes it so (in this case) for at most 1 second, the channel is frozen
-            Period = std::clamp(Period, 1u, (u32)CLOCK_FREQUENCY);
+            TruePeriod = std::clamp(TruePeriod, 1u, (u32)CLOCK_FREQUENCY);
+
+            SetPeriod(TruePeriod);
 
             SweepTimer = SweepPeriod;
 

@@ -62,14 +62,26 @@ public:
         }
     }
 
+    ALWAYS_INLINE void SetPeriod(u32 new_val) {
+        // make sure that this is called before UpdateEvent
+        // explanation is below
+        TruePeriod = Period = new_val | 1;  // make sure it's never 0
+        BatchSize = 1;
+        while (unlikely(Period < 512)) {
+            Period <<= 1;
+            BatchSize <<= 1;
+        }
+    }
+
 protected:
     // channels with a period lower/higher than these bounds will not be marked as enabled
     static const u32 UpperPeriodBound = CLOCK_FREQUENCY / 20;
     static const u32 LowerPeriodBound = CLOCK_FREQUENCY / 22000;
 
-    i32  LengthCounter = 0;
-    u32  Period        = 128 * 2048;  // square channel default period, just some arbitrary value
-    u32  Volume        = 0;
+    i32 LengthCounter = 0;
+    u32 TruePeriod    = 128 * 2048;  // wanted for sweep channels
+    u32 Period        = 128 * 2048;  // square channel default period, just some arbitrary value
+    u32 Volume        = 0;
 
     bool LengthFlag    = false;
     bool Enabled       = false;
@@ -97,6 +109,14 @@ private:
     friend class Initializer;
     friend class MMIO;
 
+    /* batch up tick events
+     * the GBA's CPU clock runs at 16853760Hz
+     * the sample rate is ~33kHz
+     * that makes for ~512 cycles per sample
+     * if the period is less than 512 cycles, we want to batch up a few ticks so that we don't have to
+     * do the channel event more times than necessary, when we don't hear it anyway
+     * */
+    u32 BatchSize = 1;
     s_event Tick;
     s_scheduler* Scheduler;
     i32 TriggerTime;
@@ -104,7 +124,9 @@ private:
     static SCHEDULER_EVENT(TickEvent) {
         auto chan = (Channel*)caller;
 
-        chan->OnTick();
+        for (u32 i = 0; i < chan->BatchSize; i++) {
+            chan->OnTick();
+        }
 
         if (chan->SoundOn()) {
             chan->CurrentSample = chan->GetSample();

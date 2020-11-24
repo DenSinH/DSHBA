@@ -405,11 +405,11 @@ WRITE_CALLBACK(MMIO::WriteNoiseCNT_H) {
     if (r == 0)
     {
         // interpret as 0.5 instead
-        APU->ns.Period = 32 * 2 * (2 << s);
+        APU->ns.SetPeriod(32 * 2 * (2 << s));
     }
     else
     {
-        APU->ns.Period = 32 * (r * (2 << s));
+        APU->ns.SetPeriod(32 * (r * (2 << s)));
     }
 
     APU->ns.CounterStepWidth = (value & 0x0008) != 0;
@@ -444,7 +444,7 @@ WRITE_CALLBACK(MMIO::WriteWaveCNT_H) {
 }
 
 WRITE_CALLBACK(MMIO::WriteWaveCNT_X) {
-    APU->wav.Period = (2048 - (value & 0x07ff)) << 3;
+    APU->wav.SetPeriod((2048 - (value & 0x07ff)) << 3);
     APU->wav.LengthFlag = (value & 0x4000) != 0;
     if (value & 0x8000) {
         APU->wav.Trigger();
