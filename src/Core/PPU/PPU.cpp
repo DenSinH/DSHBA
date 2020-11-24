@@ -47,9 +47,11 @@ void GBAPPU::BufferScanline(u32 scanline) {
 
         // we really only need to lock for swapping the frame
         if (FrameSkip) {
-            DrawMutex.lock();
-            BufferFrame ^= 1;
-            DrawMutex.unlock();
+            if (DrawMutex.try_lock()) {
+                // only swap frames if we are not rendering
+                BufferFrame ^= 1;
+                DrawMutex.unlock();
+            }
         }
         else {
             {
@@ -154,9 +156,15 @@ void GBAPPU::BufferScanline(u32 scanline) {
 
     if (FrameSkip) {
         // next time: update whatever was new last frame, plus what gets drawn next
-        DrawMutex.lock();
-        Memory->VRAMUpdate = VRAMRanges[BufferFrame ^ 1][scanline];
-        DrawMutex.unlock();
+        if (DrawMutex.try_lock()) {
+            // we are not drawing, get updated range from last frame
+            Memory->VRAMUpdate = VRAMRanges[BufferFrame ^ 1][scanline];
+            DrawMutex.unlock();
+        }
+        else {
+            // we are drawing, get updated range from current frame
+            Memory->VRAMUpdate = VRAMRanges[BufferFrame][scanline];
+        }
     }
     else {
         Memory->VRAMUpdate = { .min = sizeof(VRAMMEM), .max = 0 };
@@ -937,6 +945,7 @@ struct s_framebuffer GBAPPU::Render() {
     if (FrameSkip) {
         DrawMutex.lock();
     }
+
     // buffer PAL texture
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glBindTexture(GL_TEXTURE_2D, PALTexture);

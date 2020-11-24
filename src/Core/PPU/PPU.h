@@ -49,6 +49,12 @@ private:
     VRAMMEM VRAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
     s_UpdateRange VRAMRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
     OAMMEM OAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
+    LCDIO LCDIOBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
+
+    PALMEM PALDrawBuffer[VISIBLE_SCREEN_HEIGHT] = {};
+    VRAMMEM VRAMDrawBuffer[VISIBLE_SCREEN_HEIGHT] = {};
+    OAMMEM OAMDrawBuffer[VISIBLE_SCREEN_HEIGHT] = {};
+    LCDIO LCDIODrawBuffer[VISIBLE_SCREEN_HEIGHT] = {};
 
     u32 ReferenceLine2Buffer[2][VISIBLE_SCREEN_HEIGHT] = {};
     u32 ReferenceLine3Buffer[2][VISIBLE_SCREEN_HEIGHT] = {};
@@ -60,7 +66,6 @@ private:
     u32 ScanlineOAMBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
     u32 CurrentOAMScanlineBatch = 0;
 
-    LCDIO LCDIOBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
 
     s_scheduler* Scheduler;
 
