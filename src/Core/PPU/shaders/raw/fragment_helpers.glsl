@@ -11,6 +11,8 @@ uniform usampler2D IO;
 uniform isampler1D OAM;
 uniform usampler2D Window;
 
+uniform int PALBufferIndex[++VISIBLE_SCREEN_HEIGHT++];
+
 // algorithm from https://byuu.net/video/color-emulation/
 const float lcdGamma = 4.0;
 const float outGamma = 2.2;
@@ -59,7 +61,7 @@ ivec4 readOAMentry(uint index) {
 vec4 readPALentry(uint index) {
     // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:
     return texelFetch(
-        PAL, ivec2(index, uint(OnScreenPos.y)), 0
+        PAL, ivec2(index, PALBufferIndex[uint(OnScreenPos.y)]), 0
     );
 }
 

@@ -42,6 +42,8 @@ GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
 }
 
 void GBAPPU::BufferScanline(u32 scanline) {
+    u32 DrawFrame = BufferFrame ^ 1;
+
     if (unlikely(scanline == 0)) {
         Frame++;
 
@@ -49,8 +51,12 @@ void GBAPPU::BufferScanline(u32 scanline) {
         if (FrameSkip) {
             if (DrawMutex.try_lock()) {
                 // only swap frames if we are not rendering
+                DrawFrame = BufferFrame;
                 BufferFrame ^= 1;
                 DrawMutex.unlock();
+            }
+            else {
+                DrawFrame = BufferFrame ^ 1;
             }
         }
         else {
@@ -58,9 +64,9 @@ void GBAPPU::BufferScanline(u32 scanline) {
                 std::unique_lock<std::mutex> lock(DrawMutex);
                 FrameDrawnVariable.wait(lock, [this]{ return FrameDrawn; });
                 FrameDrawn = false;
+                DrawFrame = BufferFrame;
+                BufferFrame ^= 1;
             }
-
-            BufferFrame ^= 1;
 
             if (unlikely(!SyncToVideo)) {
                 std::lock_guard<std::mutex> lock(FrameWaitMutex);
@@ -75,19 +81,40 @@ void GBAPPU::BufferScanline(u32 scanline) {
         CurrentOAMScanlineBatch = 0;  // reset batch
         ScanlineOAMBatchSizes[BufferFrame][0] = 0;
 
+        // buffer PAL on first scanline, if something has changed since last frame
+        // PALBufferIndexBuffer[BufferFrame][0] = 0; (this never changes)
+        if (Memory->DirtyPAL || PALBuffer[DrawFrame][VISIBLE_SCREEN_HEIGHT - 1]) {
+            memcpy(
+                    PALBuffer[BufferFrame][0],
+                    Memory->PAL,
+                    sizeof(PALMEM)
+            );
+        }
+        Memory->DirtyPAL = false;
+
         // leftover mode/layer changes
         ScanlineAccumLayerFlags[BufferFrame][CurrentVRAMScanlineBatch] = Memory->IO->ScanlineAccumLayerFlags;
+    }
+    else if (Memory->DirtyPAL) {
+        // copy over actual new data
+        // note: scanline > 0
+        u32 PALBufferIndex = PALBufferIndexBuffer[BufferFrame][scanline - 1] + 1;
+        PALBufferIndexBuffer[BufferFrame][scanline] = PALBufferIndex;
+        memcpy(
+                PALBuffer[BufferFrame][PALBufferIndex],
+                Memory->PAL,
+                sizeof(PALMEM)
+        );
+        Memory->DirtyPAL = false;
+    }
+    else {
+        // use same palette buffer
+        PALBufferIndexBuffer[BufferFrame][scanline] = PALBufferIndexBuffer[BufferFrame][scanline - 1];
     }
 
     // copy over range data
     VRAMRanges[BufferFrame][scanline] = Memory->VRAMUpdate;
 
-    // copy over actual new data
-    memcpy(
-        PALBuffer[BufferFrame][scanline],
-        Memory->PAL,
-        sizeof(PALMEM)
-    );
 #ifndef FULL_VRAM_BUFFER
     s_UpdateRange range = Memory->VRAMUpdate;
     if (range.min <= range.max) {
@@ -158,7 +185,7 @@ void GBAPPU::BufferScanline(u32 scanline) {
         // next time: update whatever was new last frame, plus what gets drawn next
         if (DrawMutex.try_lock()) {
             // we are not drawing, get updated range from last frame
-            Memory->VRAMUpdate = VRAMRanges[BufferFrame ^ 1][scanline];
+            Memory->VRAMUpdate = VRAMRanges[DrawFrame][scanline];
             DrawMutex.unlock();
         }
         else {
@@ -448,6 +475,7 @@ void GBAPPU::InitBGBuffers() {
 
     ReferenceLine2Location = glGetUniformLocation(BGProgram, "ReferenceLine2");
     ReferenceLine3Location = glGetUniformLocation(BGProgram, "ReferenceLine3");
+    BGPALBufferIndexLocation = glGetUniformLocation(BGProgram, "PALBufferIndex");
     BGLocation             = glGetUniformLocation(BGProgram, "BG");
 
     glUseProgram(BGProgram);
@@ -512,10 +540,11 @@ void GBAPPU::InitObjBuffers() {
     glUniform1i(ObjIOLocation, static_cast<u32>(BufferBindings::LCDIO));
     glUniform1i(ObjOAMLocation, static_cast<u32>(BufferBindings::OAM));
 
-    ObjYClipStartLocation = glGetUniformLocation(ObjProgram, "YClipStart");
-    ObjYClipEndLocation   = glGetUniformLocation(ObjProgram, "YClipEnd");
-    ObjAffLocation        = glGetUniformLocation(ObjProgram, "Affine");
-    ObjWindowLocation     = glGetUniformLocation(ObjProgram, "Window");
+    ObjYClipStartLocation     = glGetUniformLocation(ObjProgram, "YClipStart");
+    ObjYClipEndLocation       = glGetUniformLocation(ObjProgram, "YClipEnd");
+    ObjAffLocation            = glGetUniformLocation(ObjProgram, "Affine");
+    ObjWindowLocation         = glGetUniformLocation(ObjProgram, "Window");
+    ObjPALBufferIndexLocation = glGetUniformLocation(ObjProgram, "PALBufferIndex");
     glUniform1i(ObjWindowLocation, static_cast<u32>(BufferBindings::Window));
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
@@ -855,12 +884,6 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     glUseProgram(BGProgram);
     glBindVertexArray(BGVAO);
 
-    if (scanline == 0) {
-        // buffer reference points for affine backgrounds
-        glUniform1uiv(ReferenceLine2Location, VISIBLE_SCREEN_HEIGHT, ReferenceLine2Buffer[BufferFrame ^ 1]);
-        glUniform1uiv(ReferenceLine3Location, VISIBLE_SCREEN_HEIGHT, ReferenceLine3Buffer[BufferFrame ^ 1]);
-    }
-
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glBindTexture(GL_TEXTURE_2D, PALTexture);
 
@@ -946,18 +969,21 @@ struct s_framebuffer GBAPPU::Render() {
         DrawMutex.lock();
     }
 
+    u32 DrawFrame = BufferFrame ^ 1;
+
     // buffer PAL texture
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::PAL));
     glBindTexture(GL_TEXTURE_2D, PALTexture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeof(PALMEM) >> 1, VISIBLE_SCREEN_HEIGHT,
-                    GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, PALBuffer[BufferFrame ^ 1]);
+    log_ppu("Buffer %d PAL scanlines", PALBufferIndexBuffer[DrawFrame][VISIBLE_SCREEN_HEIGHT - 1] + 1);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeof(PALMEM) >> 1, PALBufferIndexBuffer[DrawFrame][VISIBLE_SCREEN_HEIGHT - 1] + 1,
+                    GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, PALBuffer[DrawFrame]);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     // buffer IO texture
     glActiveTexture(GL_TEXTURE0 + static_cast<u32>(BufferBindings::LCDIO));
     glBindTexture(GL_TEXTURE_2D, IOTexture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeof(LCDIO) >> 1, VISIBLE_SCREEN_HEIGHT,
-                    GL_RED_INTEGER, GL_UNSIGNED_SHORT, LCDIOBuffer[BufferFrame ^ 1]);
+                    GL_RED_INTEGER, GL_UNSIGNED_SHORT, LCDIOBuffer[DrawFrame]);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     DrawWindows();
@@ -969,16 +995,27 @@ struct s_framebuffer GBAPPU::Render() {
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // set uniforms for entire frame
+    glUseProgram(ObjProgram);
+    glBindVertexArray(ObjVAO);
+    glUniform1iv(ObjPALBufferIndexLocation, VISIBLE_SCREEN_HEIGHT, PALBufferIndexBuffer[DrawFrame]);
+
+    glUseProgram(BGProgram);
+    glBindVertexArray(BGVAO);
+    glUniform1uiv(ReferenceLine2Location, VISIBLE_SCREEN_HEIGHT, ReferenceLine2Buffer[DrawFrame]);
+    glUniform1uiv(ReferenceLine3Location, VISIBLE_SCREEN_HEIGHT, ReferenceLine3Buffer[DrawFrame]);
+    glUniform1iv(BGPALBufferIndexLocation, VISIBLE_SCREEN_HEIGHT, PALBufferIndexBuffer[DrawFrame]);
+
     size_t VRAM_scanline = 0, OAM_scanline = 0;
     do {
         if (VRAM_scanline <= OAM_scanline) {
-            u32 batch_size = ScanlineVRAMBatchSizes[BufferFrame ^ 1][VRAM_scanline];
+            u32 batch_size = ScanlineVRAMBatchSizes[DrawFrame][VRAM_scanline];
             DrawScanlines(VRAM_scanline, batch_size);
             VRAM_scanline += batch_size;
             log_ppu("%d VRAM scanlines batched (accum %d)", batch_size, VRAM_scanline);
         }
         else {
-            u32 batch_size = ScanlineOAMBatchSizes[BufferFrame ^ 1][OAM_scanline];
+            u32 batch_size = ScanlineOAMBatchSizes[DrawFrame][OAM_scanline];
             DrawObjects(OAM_scanline, batch_size);
             OAM_scanline += batch_size;
 
@@ -1005,7 +1042,7 @@ struct s_framebuffer GBAPPU::Render() {
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    u16 backdrop = ReadArray<u16>(PALBuffer[BufferFrame ^ 1][0], 0);
+    u16 backdrop = ReadArray<u16>(PALBuffer[DrawFrame][0], 0);
     float r = (float)(backdrop & 0x1fu) / 31.0;
     float g = (float)((backdrop >> 5) & 0x1fu) / 31.0;
     float b = (float)((backdrop >> 10) & 0x1fu) / 31.0;

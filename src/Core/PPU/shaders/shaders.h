@@ -293,7 +293,7 @@ const char* FragmentShaderSource =
 ;
 
 
-// FragmentHelperSource (from fragment_helpers.glsl, lines 2 to 71)
+// FragmentHelperSource (from fragment_helpers.glsl, lines 2 to 73)
 const char* FragmentHelperSource = 
 "#version 330 core\n                                                                                "    // l:1
 "\n                                                                                                 "    // l:2
@@ -306,64 +306,66 @@ const char* FragmentHelperSource =
 "uniform isampler1D OAM;\n                                                                          "    // l:9
 "uniform usampler2D Window;\n                                                                       "    // l:10
 "\n                                                                                                 "    // l:11
-"// algorithm from https://byuu.net/video/color-emulation/\n                                        "    // l:12
-"const float lcdGamma = 4.0;\n                                                                      "    // l:13
-"const float outGamma = 2.2;\n                                                                      "    // l:14
-"const mat3x3 CorrectionMatrix = mat3x3(\n                                                          "    // l:15
-"        255.0,  10.0,  50.0,\n                                                                     "    // l:16
-"         50.0, 230.0,  10.0,\n                                                                     "    // l:17
-"          0.0,  30.0, 220.0\n                                                                      "    // l:18
-") / 255.0;\n                                                                                       "    // l:19
-"\n                                                                                                 "    // l:20
-"vec4 ColorCorrect(vec4 color) {\n                                                                  "    // l:21
-"    vec3 lrgb = pow(color.rgb, vec3(lcdGamma));\n                                                  "    // l:22
-"    vec3 rgb = pow(CorrectionMatrix * lrgb, vec3(1.0 / outGamma)) * (255.0 / 280.0);\n             "    // l:23
-"    return vec4(rgb, color.a);\n                                                                   "    // l:24
-"}\n                                                                                                "    // l:25
-"\n                                                                                                 "    // l:26
-"uint readVRAM8(uint address) {\n                                                                   "    // l:27
-"    return texelFetch(\n                                                                           "    // l:28
-"        VRAM, ivec2(address & 0x7fu, address >> 7u), 0\n                                           "    // l:29
-"    ).x;\n                                                                                         "    // l:30
-"}\n                                                                                                "    // l:31
-"\n                                                                                                 "    // l:32
-"uint readVRAM16(uint address) {\n                                                                  "    // l:33
-"    address &= ~1u;\n                                                                              "    // l:34
-"    uint lsb = readVRAM8(address);\n                                                               "    // l:35
-"    return lsb | (readVRAM8(address + 1u) << 8u);\n                                                "    // l:36
-"}\n                                                                                                "    // l:37
-"\n                                                                                                 "    // l:38
-"uint readVRAM32(uint address) {\n                                                                  "    // l:39
-"    address &= ~3u;\n                                                                              "    // l:40
-"    uint lsh = readVRAM16(address);\n                                                              "    // l:41
-"    return lsh | (readVRAM16(address + 2u) << 16u);\n                                              "    // l:42
-"}\n                                                                                                "    // l:43
-"\n                                                                                                 "    // l:44
-"uint readIOreg(uint address) {\n                                                                   "    // l:45
-"    return texelFetch(\n                                                                           "    // l:46
-"        IO, ivec2(address >> 1u, uint(OnScreenPos.y)), 0\n                                         "    // l:47
-"    ).x;\n                                                                                         "    // l:48
-"}\n                                                                                                "    // l:49
-"\n                                                                                                 "    // l:50
-"ivec4 readOAMentry(uint index) {\n                                                                 "    // l:51
-"    return texelFetch(\n                                                                           "    // l:52
-"        OAM, int(index), 0\n                                                                       "    // l:53
-"    );\n                                                                                           "    // l:54
-"}\n                                                                                                "    // l:55
-"\n                                                                                                 "    // l:56
-"vec4 readPALentry(uint index) {\n                                                                  "    // l:57
-"    // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:\n"    // l:58
-"    return texelFetch(\n                                                                           "    // l:59
-"        PAL, ivec2(index, uint(OnScreenPos.y)), 0\n                                                "    // l:60
-"    );\n                                                                                           "    // l:61
-"}\n                                                                                                "    // l:62
-"\n                                                                                                 "    // l:63
-"uint getWindow(uint x, uint y) {\n                                                                 "    // l:64
-"    return texelFetch(\n                                                                           "    // l:65
-"        Window, ivec2(x, 160u - y), 0\n                                                            "    // l:66
-"    ).r;\n                                                                                         "    // l:67
-"}\n                                                                                                "    // l:68
-"\n                                                                                                 "    // l:69
+"uniform int PALBufferIndex[160u];\n                                                                "    // l:12
+"\n                                                                                                 "    // l:13
+"// algorithm from https://byuu.net/video/color-emulation/\n                                        "    // l:14
+"const float lcdGamma = 4.0;\n                                                                      "    // l:15
+"const float outGamma = 2.2;\n                                                                      "    // l:16
+"const mat3x3 CorrectionMatrix = mat3x3(\n                                                          "    // l:17
+"        255.0,  10.0,  50.0,\n                                                                     "    // l:18
+"         50.0, 230.0,  10.0,\n                                                                     "    // l:19
+"          0.0,  30.0, 220.0\n                                                                      "    // l:20
+") / 255.0;\n                                                                                       "    // l:21
+"\n                                                                                                 "    // l:22
+"vec4 ColorCorrect(vec4 color) {\n                                                                  "    // l:23
+"    vec3 lrgb = pow(color.rgb, vec3(lcdGamma));\n                                                  "    // l:24
+"    vec3 rgb = pow(CorrectionMatrix * lrgb, vec3(1.0 / outGamma)) * (255.0 / 280.0);\n             "    // l:25
+"    return vec4(rgb, color.a);\n                                                                   "    // l:26
+"}\n                                                                                                "    // l:27
+"\n                                                                                                 "    // l:28
+"uint readVRAM8(uint address) {\n                                                                   "    // l:29
+"    return texelFetch(\n                                                                           "    // l:30
+"        VRAM, ivec2(address & 0x7fu, address >> 7u), 0\n                                           "    // l:31
+"    ).x;\n                                                                                         "    // l:32
+"}\n                                                                                                "    // l:33
+"\n                                                                                                 "    // l:34
+"uint readVRAM16(uint address) {\n                                                                  "    // l:35
+"    address &= ~1u;\n                                                                              "    // l:36
+"    uint lsb = readVRAM8(address);\n                                                               "    // l:37
+"    return lsb | (readVRAM8(address + 1u) << 8u);\n                                                "    // l:38
+"}\n                                                                                                "    // l:39
+"\n                                                                                                 "    // l:40
+"uint readVRAM32(uint address) {\n                                                                  "    // l:41
+"    address &= ~3u;\n                                                                              "    // l:42
+"    uint lsh = readVRAM16(address);\n                                                              "    // l:43
+"    return lsh | (readVRAM16(address + 2u) << 16u);\n                                              "    // l:44
+"}\n                                                                                                "    // l:45
+"\n                                                                                                 "    // l:46
+"uint readIOreg(uint address) {\n                                                                   "    // l:47
+"    return texelFetch(\n                                                                           "    // l:48
+"        IO, ivec2(address >> 1u, uint(OnScreenPos.y)), 0\n                                         "    // l:49
+"    ).x;\n                                                                                         "    // l:50
+"}\n                                                                                                "    // l:51
+"\n                                                                                                 "    // l:52
+"ivec4 readOAMentry(uint index) {\n                                                                 "    // l:53
+"    return texelFetch(\n                                                                           "    // l:54
+"        OAM, int(index), 0\n                                                                       "    // l:55
+"    );\n                                                                                           "    // l:56
+"}\n                                                                                                "    // l:57
+"\n                                                                                                 "    // l:58
+"vec4 readPALentry(uint index) {\n                                                                  "    // l:59
+"    // Conveniently, since PAL stores the converted colors already, getting a color from an index is as simple as this:\n"    // l:60
+"    return texelFetch(\n                                                                           "    // l:61
+"        PAL, ivec2(index, PALBufferIndex[uint(OnScreenPos.y)]), 0\n                                "    // l:62
+"    );\n                                                                                           "    // l:63
+"}\n                                                                                                "    // l:64
+"\n                                                                                                 "    // l:65
+"uint getWindow(uint x, uint y) {\n                                                                 "    // l:66
+"    return texelFetch(\n                                                                           "    // l:67
+"        Window, ivec2(x, 160u - y), 0\n                                                            "    // l:68
+"    ).r;\n                                                                                         "    // l:69
+"}\n                                                                                                "    // l:70
+"\n                                                                                                 "    // l:71
 ;
 
 

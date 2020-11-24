@@ -119,6 +119,7 @@ private:
     s_UpdateRange VRAMUpdate = { .min=sizeof(VRAMMEM), .max=0 };
     bool DirtyOAM     = false;
     bool PrevDirtyOAM = false;  // OAM update delay
+    bool DirtyPAL     = false;
 
     u8 BIOS  [0x4000]        = {};
     u8 eWRAM [0x4'0000]      = {};

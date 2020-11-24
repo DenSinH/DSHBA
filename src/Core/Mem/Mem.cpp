@@ -65,6 +65,7 @@ void Mem::Reset() {
 
     CurrentBIOSReadState = BIOSReadState::StartUp;
     DirtyOAM = true;
+    DirtyPAL = true;
     VRAMUpdate = { .min=0, .max=sizeof(VRAMMEM) };
 }
 

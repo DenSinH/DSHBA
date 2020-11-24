@@ -126,6 +126,7 @@ void Mem::Write(u32 address, T value) {
             }
             return;
         case MemoryRegion::PAL:
+            DirtyPAL |= ReadArray<T>(PAL, (address & 0x3ff) != value);
             if constexpr(std::is_same_v<T, u8>) {
                 // mirrored byte writes
                 WriteArray<u16>(PAL, address & 0x3ff, (u16)value | ((u16)value << 8));

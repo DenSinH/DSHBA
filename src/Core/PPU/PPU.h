@@ -45,22 +45,32 @@ private:
     Mem *Memory;
     u32 BufferFrame = 0;
 
+    // actual data
     PALMEM PALBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
     VRAMMEM VRAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
-    s_UpdateRange VRAMRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
     OAMMEM OAMBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
     LCDIO LCDIOBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
 
+    // used for affine backgrounds for the correct origin on reference IO reg writes
     u32 ReferenceLine2Buffer[2][VISIBLE_SCREEN_HEIGHT] = {};
     u32 ReferenceLine3Buffer[2][VISIBLE_SCREEN_HEIGHT] = {};
 
+    // used for dirty PAL to prevent a lot of buffering
+    // signed because it is also signed in the shader
+    i32 PALBufferIndexBuffer[2][VISIBLE_SCREEN_HEIGHT] = {};
+
+    // batches of scanlines where VRAM was not dirty
     u32 ScanlineVRAMBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
     u32 CurrentVRAMScanlineBatch = 0;
+    // holds ranges that were updated in VRAM
+    s_UpdateRange VRAMRanges[2][VISIBLE_SCREEN_HEIGHT] = {};
+
+    // some accumulated LCDIO register flags to omit some rendering calls
     AccumLayerFlags ScanlineAccumLayerFlags[2][VISIBLE_SCREEN_HEIGHT] = {};
 
+    // same idea as for VRAM
     u32 ScanlineOAMBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
     u32 CurrentOAMScanlineBatch = 0;
-
 
     s_scheduler* Scheduler;
 
@@ -88,6 +98,7 @@ private:
     GLuint ReferenceLine2Location, ReferenceLine3Location;
     GLuint PALTexture, BGPALLocation;
     GLuint VRAMTexture, BGVRAMLocation;
+    GLuint BGPALBufferIndexLocation;
 
     GLuint BGVAO;
     GLuint BGVBO;  // for drawing a batch of scanlines
@@ -123,6 +134,7 @@ private:
     GLuint ObjVRAMLocation;
     GLuint ObjYClipStartLocation, ObjYClipEndLocation;
     GLuint ObjAffLocation;
+    GLuint ObjPALBufferIndexLocation;
 
     GLuint ObjVAO;
     GLuint ObjVBO;
