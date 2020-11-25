@@ -34,6 +34,7 @@ public:
     void VideoDestroy();
     struct s_framebuffer Render();
     struct s_framebuffer RenderUntil(size_t ticks);
+    void Blit(const float* data);
 
     bool ExternalBGEnable[4] = { true, true, true, true };
     bool ExternalObjEnable = true;
@@ -76,6 +77,13 @@ private:
 
     std::mutex DrawMutex = std::mutex();
 
+    GLuint BlitProgram, BlitVAO;
+    GLuint BlitVBO;
+
+    GLuint TopTexture, BottomTexture;
+    GLuint TopTextureLocation, BottomTextureLocation;
+    GLuint TopFramebuffer, BottomFramebuffer;
+
     // programs for each draw program
     GLuint WinBGProgram, WinObjProgram;
     GLuint WinBGVAO, WinObjVAO;
@@ -90,10 +98,9 @@ private:
     GLuint WinObjAffLocation;
 
     GLuint BGProgram;
-    GLuint Framebuffer;
-
     GLuint BGLocation;
     GLuint BGWindowLocation;
+    GLuint BGBottomLocation;
     GLuint IOTexture, BGIOLocation;
     GLuint ReferenceLine2Location, ReferenceLine3Location;
     GLuint PALTexture, BGPALLocation;
@@ -130,6 +137,7 @@ private:
     GLuint ObjIOLocation;
     GLuint ObjPALLocation;
     GLuint ObjWindowLocation;
+    GLuint ObjBottomLocation;
     GLuint OAMTexture, ObjOAMLocation;
     GLuint ObjVRAMLocation;
     GLuint ObjYClipStartLocation, ObjYClipEndLocation;
@@ -155,10 +163,13 @@ private:
     void BufferScanline(u32 scanline);
 
     void InitFramebuffers();
+    void InitBlitProgram();
     void InitBGProgram();
     void InitObjProgram();
     void InitWinBGProgram();
     void InitWinObjProgram();
+
+    void InitBlitBuffers();
     void InitBGBuffers();
     void InitObjBuffers();
     void InitWinBGBuffers();

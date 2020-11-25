@@ -11,6 +11,7 @@
 #include "log.h"
 #include "const.h"
 
+#include <map>
 #include <SDL.h>
 
 const char* glsl_version = "#version 330 core\n";
@@ -200,15 +201,15 @@ void GBAPPU::BufferScanline(u32 scanline) {
 
 void GBAPPU::InitFramebuffers() {
     // we render to this separately and blit it over the actual picture like an overlay
-    glGenFramebuffers(1, &Framebuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
+    glGenFramebuffers(1, &TopFramebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, TopFramebuffer);
 
-    GLuint rendered_texture, depth_buffer;
+    GLuint depth_buffer;
     // create a texture to render to and fill it with 0 (also set filtering to low)
-    glGenTextures(1, &rendered_texture);
-    glBindTexture(GL_TEXTURE_2D, rendered_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT,
-                 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glGenTextures(1, &TopTexture);
+    glBindTexture(GL_TEXTURE_2D, TopTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8_SNORM, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT,
+                 0, GL_RGBA, GL_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
@@ -218,11 +219,34 @@ void GBAPPU::InitFramebuffers() {
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_buffer);
 
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, rendered_texture, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, TopTexture, 0);
+    glColorMask(1, 1, 1, 1);
     GLenum draw_buffers[1] = { GL_COLOR_ATTACHMENT0 };
     glDrawBuffers(1, draw_buffers);
 
-    CheckFramebufferInit("general");
+    CheckFramebufferInit("general top");
+
+    glGenFramebuffers(1, &BottomFramebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, BottomFramebuffer);
+
+    // create a texture to render to and fill it with 0 (also set filtering to low)
+    glGenTextures(1, &BottomTexture);
+    glBindTexture(GL_TEXTURE_2D, BottomTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8_SNORM, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT,
+                 0, GL_RGBA, GL_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    // add depth buffer
+    glGenRenderbuffers(1, &depth_buffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, depth_buffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_buffer);
+
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, BottomTexture, 0);
+    glDrawBuffers(1, draw_buffers);
+
+    CheckFramebufferInit("general top");
 
     glGenFramebuffers(1, &WinFramebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, WinFramebuffer);
@@ -245,8 +269,34 @@ void GBAPPU::InitFramebuffers() {
     glDrawBuffers(1, tex_draw_buffers);
 
     CheckFramebufferInit("window");
-    glClearColor(1, 1, 1, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void GBAPPU::InitBlitProgram() {
+    GLuint vertexShader;
+    GLuint fragmentShader;
+
+    // create shader
+    vertexShader = glCreateShader(GL_VERTEX_SHADER);
+
+    // compile it
+    glShaderSource(vertexShader, 1, &BlitVertexShaderSource, nullptr);
+    glCompileShader(vertexShader);
+    CompileShader(vertexShader, "BlitVertexShader");
+
+    // create and compile fragmentshaders
+    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &BlitFragmentShaderSource, nullptr);
+    CompileShader(fragmentShader, "BlitFragmentShader");
+
+    // create program object
+    BlitProgram = glCreateProgram();
+    glAttachShader(BlitProgram, vertexShader);
+    glAttachShader(BlitProgram, fragmentShader);
+    LinkProgram(BlitProgram, "Blit Program");
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
 }
 
 void GBAPPU::InitBGProgram() {
@@ -415,6 +465,45 @@ void GBAPPU::InitWinObjProgram() {
     glDeleteShader(fragmentHelpers);
 }
 
+void GBAPPU::InitBlitBuffers() {
+    // Setup VAO to bind the buffers to
+    glGenVertexArrays(1, &BlitVAO);
+    glBindVertexArray(BlitVAO);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, TopTexture);
+
+    TopTextureLocation = glGetUniformLocation(BlitProgram, "TopLayer");
+
+    glActiveTexture(GL_TEXTURE0 + 1);
+    glBindTexture(GL_TEXTURE_2D, BottomTexture);
+
+    BottomTextureLocation = glGetUniformLocation(BlitProgram, "BottomLayer");
+
+    glGenBuffers(1, &BlitVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, BlitVBO);
+    glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(float), nullptr, GL_STATIC_DRAW);
+
+    // position attribute
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // tex coord attribute
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glUseProgram(BlitProgram);
+
+    glUniform1i(TopTextureLocation, 0);
+    glUniform1i(BottomTextureLocation, 1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindVertexArray(0);
+
+    log_debug("OpenGL error after Blit initialization: %x", glGetError());
+}
+
 void GBAPPU::InitBGBuffers() {
 
     // Setup VAO to bind the buffers to
@@ -473,10 +562,11 @@ void GBAPPU::InitBGBuffers() {
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    ReferenceLine2Location = glGetUniformLocation(BGProgram, "ReferenceLine2");
-    ReferenceLine3Location = glGetUniformLocation(BGProgram, "ReferenceLine3");
+    ReferenceLine2Location   = glGetUniformLocation(BGProgram, "ReferenceLine2");
+    ReferenceLine3Location   = glGetUniformLocation(BGProgram, "ReferenceLine3");
     BGPALBufferIndexLocation = glGetUniformLocation(BGProgram, "PALBufferIndex");
-    BGLocation             = glGetUniformLocation(BGProgram, "BG");
+    BGLocation               = glGetUniformLocation(BGProgram, "BG");
+    BGBottomLocation         = glGetUniformLocation(BGProgram, "Bottom");
 
     glUseProgram(BGProgram);
     glUniform1i(BGPALLocation, static_cast<u32>(BufferBindings::PAL));
@@ -484,7 +574,6 @@ void GBAPPU::InitBGBuffers() {
     glUniform1i(BGIOLocation, static_cast<u32>(BufferBindings::LCDIO));
     glUniform1i(BGWindowLocation, static_cast<u32>(BufferBindings::Window));
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glActiveTexture(GL_TEXTURE0);
@@ -545,9 +634,9 @@ void GBAPPU::InitObjBuffers() {
     ObjAffLocation            = glGetUniformLocation(ObjProgram, "Affine");
     ObjWindowLocation         = glGetUniformLocation(ObjProgram, "Window");
     ObjPALBufferIndexLocation = glGetUniformLocation(ObjProgram, "PALBufferIndex");
+    ObjBottomLocation         = glGetUniformLocation(ObjProgram, "Bottom");
     glUniform1i(ObjWindowLocation, static_cast<u32>(BufferBindings::Window));
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glActiveTexture(GL_TEXTURE0);
@@ -579,7 +668,6 @@ void GBAPPU::InitWinBGBuffers() {
     glUniform1i(WinBGIOLocation, static_cast<u32>(BufferBindings::LCDIO));
     glUniform1i(WinBGVRAMLocation, static_cast<u32>(BufferBindings::VRAM));
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -628,7 +716,6 @@ void GBAPPU::InitWinObjBuffers() {
     WinObjYClipEndLocation   = glGetUniformLocation(WinObjProgram, "YClipEnd");
     WinObjAffLocation        = glGetUniformLocation(WinObjProgram, "Affine");
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glActiveTexture(GL_TEXTURE0);
@@ -641,12 +728,14 @@ void GBAPPU::VideoInit() {
     InitFramebuffers();
     log_debug("OpenGL error after framebuffer initialization: %x", glGetError());
 
+    InitBlitProgram();
     InitBGProgram();
     InitObjProgram();
     InitWinBGProgram();
     InitWinObjProgram();
     log_debug("OpenGL error after program initialization: %x", glGetError());
 
+    InitBlitBuffers();
     InitBGBuffers();
     InitObjBuffers();
     InitWinBGBuffers();
@@ -671,7 +760,7 @@ void GBAPPU::DrawBGWindow(int win_start, int win_end) const {
             -1.0, (float)win_end,    // bottom left
     };
     glBufferSubData(GL_ARRAY_BUFFER, 0, 8 * sizeof(float), quad);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -807,6 +896,14 @@ void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
         return;
     }
 
+    if (LCDIOBuffer[BufferFrame ^ 1][scanline][static_cast<u32>(IORegister::BLDCNT) + 1] & 0x10) {
+        // object bottom layer
+        glBindFramebuffer(GL_FRAMEBUFFER, BottomFramebuffer);
+    }
+    else {
+        glBindFramebuffer(GL_FRAMEBUFFER, TopFramebuffer);
+    }
+
     glUseProgram(ObjProgram);
     glBindVertexArray(ObjVAO);
 
@@ -926,29 +1023,45 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
 
     AccumLayerFlags layer_flags = ScanlineAccumLayerFlags[BufferFrame ^ 1][scanline];
     u16 mode = layer_flags.DISPCNT & 7;  // if mode has not changed, this is the accumulate, but also the mode for the entire scanline
-    for (u32 BG = 0; BG <= 3; BG++) {
-        if (!(layer_flags.DISPCNT & (0x100 << BG))) {
-            // layer disabled for entire batch
-            continue;
-        }
 
-        if (!(LayerEnabled[mode][BG])) {
-            // layer disabled through mode for the entire batch
-            continue;
-        }
-
-        if (unlikely(!ExternalBGEnable[BG])) {
-            continue;
-        }
-
-        // draw each of the backgrounds separately
-        glUniform1ui(BGLocation, BG);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
-    }
-
-    // always draw backdrop
     glUniform1ui(BGLocation, 4);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
+    glUniform1ui(BGBottomLocation, true);
+    glBindFramebuffer(GL_FRAMEBUFFER, BottomFramebuffer);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    glUniform1ui(BGBottomLocation, false);
+    glBindFramebuffer(GL_FRAMEBUFFER, TopFramebuffer);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    for (bool bottom : {false, true}) {
+        if (bottom) {
+            glBindFramebuffer(GL_FRAMEBUFFER, BottomFramebuffer);
+            glUniform1ui(BGBottomLocation, true);
+        }
+        else {
+            glBindFramebuffer(GL_FRAMEBUFFER, TopFramebuffer);
+            glUniform1ui(BGBottomLocation, false);
+        }
+
+        for (u32 BG = 0; BG <= 3; BG++) {
+            if (!(layer_flags.DISPCNT & (0x100 << BG))) {
+                // layer disabled for entire batch
+                continue;
+            }
+
+            if (!(LayerEnabled[mode][BG])) {
+                // layer disabled through mode for the entire batch
+                continue;
+            }
+
+            if (unlikely(!ExternalBGEnable[BG])) {
+                continue;
+            }
+
+            glUniform1ui(BGLocation, BG);
+            glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+        }
+    }
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glActiveTexture(GL_TEXTURE0);
@@ -962,7 +1075,7 @@ struct s_framebuffer GBAPPU::Render() {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_ONE, GL_ZERO);
     glDisable(GL_SCISSOR_TEST);
 
     if (FrameSkip) {
@@ -989,10 +1102,13 @@ struct s_framebuffer GBAPPU::Render() {
     DrawWindows();
 
     // use normal framebuffer again
-    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, TopFramebuffer);
     glViewport(0, 0, INTERNAL_FRAMEBUFFER_WIDTH, INTERNAL_FRAMEBUFFER_HEIGHT);
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glClearColor(0, 0, 0, 1);
+    glBindFramebuffer(GL_FRAMEBUFFER, BottomFramebuffer);
+    glClearColor(0, 0, 0, -1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // set uniforms for entire frame
@@ -1061,7 +1177,7 @@ struct s_framebuffer GBAPPU::Render() {
     b = std::pow((220 * lb +  10 * lg +  50 * lr) / 255.0, 1.0 / outGamma) * (255.0 / 280.0);
 
     return (s_framebuffer) {
-            .id = Framebuffer,
+            .id = TopFramebuffer,
             .src_width = INTERNAL_FRAMEBUFFER_WIDTH,
             .src_height = INTERNAL_FRAMEBUFFER_HEIGHT,
             .dest_width = VISIBLE_SCREEN_WIDTH,
@@ -1102,12 +1218,36 @@ struct s_framebuffer GBAPPU::RenderUntil(size_t ticks) {
     }
 }
 
+void GBAPPU::Blit(const float* data) {
+    // first render window, then actual backgrounds
+    glUseProgram(BlitProgram);
+    glBindVertexArray(BlitVAO);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, TopTexture);
+
+    glActiveTexture(GL_TEXTURE0 + 1);
+    glBindTexture(GL_TEXTURE_2D, BottomTexture);
+
+    glBindBuffer(GL_ARRAY_BUFFER, BlitVBO);
+
+    glBufferSubData(GL_ARRAY_BUFFER, 0, 16 * sizeof(float), data);
+
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+    glUseProgram(0);
+}
+
 void GBAPPU::VideoDestroy() {
     glDeleteTextures(1, &VRAMTexture);
     glDeleteTextures(1, &OAMTexture);
     glDeleteTextures(1, &PALTexture);
     glDeleteTextures(1, &IOTexture);
-    glDeleteFramebuffers(1, &Framebuffer);
+    glDeleteFramebuffers(1, &TopFramebuffer);
     glDeleteFramebuffers(1, &WinFramebuffer);
     glDeleteTextures(1, &WinTexture);
     glDeleteProgram(BGProgram);

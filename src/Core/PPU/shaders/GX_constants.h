@@ -13,7 +13,6 @@ enum class VMEMSizes : unsigned int {
     PALSize = 0x400u,
     OAMSize = 0x400u,
     VRAMSize = 0x18000u,
-    // todo: only display MMIO
     IOSize = 0x60u
 };
 
@@ -51,6 +50,10 @@ enum class LCDIORegs : unsigned int {
     WINOUT = 0x4au,
 
     MOSAIC = 0x4cu,
+
+    BLDCNT   = 0x50u,
+    BLDALPHA = 0x52u,
+    BLDY     = 0x54u,
 };
 
 enum class DPSCNTBits : unsigned int {

@@ -12,6 +12,8 @@ uniform uint ReferenceLine3[++VISIBLE_SCREEN_HEIGHT++];
 uniform uint BG;
 
 vec4 ColorCorrect(vec4 color);
+void CheckBottom(uint layer, uint window);
+vec4 AlphaCorrect(vec4 color, uint layer, uint window);
 
 uint readVRAM8(uint address);
 uint readVRAM16(uint address);
@@ -245,18 +247,27 @@ vec4 mode3(uint, uint);
 vec4 mode4(uint, uint);
 
 void main() {
-    if (BG >= 4u) {
-        // backdrop, highest frag depth
-        gl_FragDepth = 1;
-        FragColor = ColorCorrect(vec4(readPALentry(0u).rgb, 1.0));
-        return;
-    }
-
     uint x = uint(screenCoord.x);
     uint y = uint(screenCoord.y);
 
+    uint window = getWindow(x, y);
+    uint BLDCNT = readIOreg(++BLDCNT++);
+
+    if (BG >= 4u) {
+        CheckBottom(5u, window);
+
+        // backdrop, highest frag depth
+        gl_FragDepth = 1;
+        FragColor = ColorCorrect(vec4(readPALentry(0u).rgb, 1.0));
+        FragColor = AlphaCorrect(FragColor, 5u, window);
+        return;
+    }
+
+    // check if we are rendering on the bottom layer, and if we even need to render this fragment
+    CheckBottom(BG, window);
+
     // disabled by window
-    if ((getWindow(x, y) & (1u << BG)) == 0u) {
+    if ((window & (1u << BG)) == 0u) {
         discard;
     }
 
@@ -285,6 +296,7 @@ void main() {
     }
 
     FragColor = ColorCorrect(outColor);
+    FragColor = AlphaCorrect(FragColor, BG, window);
 }
 
 // END FragmentShaderSource

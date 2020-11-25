@@ -28,6 +28,7 @@ static struct s_frontend {
     void (*video_init)();
     void (*video_destroy)();
     s_framebuffer (*render)(size_t render_until);
+    void (*blit)(const float* data);
 
     void (*audio_init)();
     void (*audio_destroy)();
@@ -64,6 +65,10 @@ void bind_video_init(void (*initializer)()) {
 
 void bind_video_render(s_framebuffer (*render)(size_t)) {
     Frontend.render = render;
+}
+
+void bind_video_blit(void (*blit)(const float* data)) {
+    Frontend.blit = blit;
 }
 
 void bind_video_destroy(void (*destroy)()) {
@@ -261,8 +266,7 @@ int ui_run() {
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClearColor(emu_framebuffer.r, emu_framebuffer.g, emu_framebuffer.b, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
         float scale = (float) WINDOW_WIDTH / emu_framebuffer.dest_width;
@@ -270,17 +274,19 @@ int ui_run() {
             scale = (float) WINDOW_HEIGHT / emu_framebuffer.dest_height;
         }
 
-        auto offsx = (unsigned)((WINDOW_WIDTH - scale * emu_framebuffer.dest_width) / 2);
-        auto offsy = (unsigned)((WINDOW_HEIGHT - scale * emu_framebuffer.dest_height) / 2);
+        float offsx = ((WINDOW_WIDTH - scale * emu_framebuffer.dest_width) / WINDOW_WIDTH);
+        float offsy = ((WINDOW_HEIGHT - scale * emu_framebuffer.dest_height) / WINDOW_WIDTH);
 
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, emu_framebuffer.id);
-        glBlitFramebuffer(0, 0,
-                          emu_framebuffer.src_width, emu_framebuffer.src_height,
-                          offsx, offsy,
-                          offsx + scale * emu_framebuffer.dest_width, offsy + scale * emu_framebuffer.dest_height,
-                          GL_COLOR_BUFFER_BIT, GL_NEAREST
-        );
+        const float render_data[] = {
+                -1 + offsx, -1 + offsy, 0, 0,
+                 1 - offsx, -1 + offsy, 1, 0,
+                 1 - offsx,  1 - offsy, 1, 1,
+                -1 + offsx,  1 - offsy, 0, 1,
+        };
+
+        if (Frontend.blit) {
+            Frontend.blit(render_data);
+        }
 
         // then draw the imGui stuff over it
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

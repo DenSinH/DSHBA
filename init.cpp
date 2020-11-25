@@ -239,6 +239,10 @@ s_framebuffer Initializer::frontend_render(size_t t) {
     return gba->PPU.RenderUntil(t);
 }
 
+void Initializer::frontend_blit(const float* data) {
+    gba->PPU.Blit(data);
+}
+
 void Initializer::frontend_video_destroy() {
     gba->PPU.VideoDestroy();
 }
@@ -256,6 +260,7 @@ GBA* Initializer::init() {
 
     bind_video_init(frontend_video_init);
     bind_video_render(frontend_render);
+    bind_video_blit(frontend_blit);
     bind_video_destroy(frontend_video_destroy);
 
     bind_audio_init(frontend_audio_init);

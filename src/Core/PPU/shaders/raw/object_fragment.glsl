@@ -25,6 +25,7 @@ uniform uint YClipEnd;
 #endif
 
 vec4 ColorCorrect(vec4 color);
+vec4 AlphaCorrect(vec4 color, uint layer, uint window);
 
 uint readVRAM8(uint address);
 uint readVRAM16(uint address);
@@ -244,7 +245,8 @@ void main() {
         // objects disabled in this scanline
         discard;
     }
-    if ((getWindow(uint(OnScreenPos.x), uint(OnScreenPos.y)) & 0x10u) == 0u) {
+    uint window = getWindow(uint(OnScreenPos.x), uint(OnScreenPos.y));
+    if ((window & 0x10u) == 0u) {
         // disabled by window
         discard;
     }
@@ -267,6 +269,7 @@ void main() {
 
 #ifndef OBJ_WINDOW
     FragColor = ColorCorrect(Color);
+    FragColor = AlphaCorrect(FragColor, 4u, window);
 #else
     // RegularObject/AffineObject will only return if it is nontransparent
     uint WINOBJ = (readIOreg(++WINOUT++) >> 8) & 0x3fu;

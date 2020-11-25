@@ -57,6 +57,7 @@ extern "C" {
 
     void bind_video_init(void (*initializer)());
     void bind_video_render(s_framebuffer (*render)(size_t));
+    void bind_video_blit(void (*blit)(const float* data));
     void bind_video_destroy(void (*destroy)());
 
     void bind_audio_init(void (*initializer)());
