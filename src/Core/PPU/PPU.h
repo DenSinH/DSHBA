@@ -20,6 +20,8 @@ struct AccumLayerFlags {
     // accumulate certain flags for LCD stuff to save resources
     u16 DISPCNT = 0;
     bool ModeChange = false;
+    u16 BLDCNT = 0;
+    bool BlendChange = false;
 };
 
 class GBAPPU {
@@ -83,6 +85,7 @@ private:
     GLuint TopTexture, BottomTexture;
     GLuint TopTextureLocation, BottomTextureLocation;
     GLuint TopFramebuffer, BottomFramebuffer;
+    bool DoBlend = false;
 
     // programs for each draw program
     GLuint WinBGProgram, WinObjProgram;

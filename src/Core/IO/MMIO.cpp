@@ -356,6 +356,14 @@ READ_PRECALL(MMIO::ReadVCount) {
     return VCount;
 }
 
+WRITE_CALLBACK(MMIO::WriteBLDCNT) {
+    BLDCNT = value;
+    if (ScanlineAccumLayerFlags.BLDCNT != value) {
+        ScanlineAccumLayerFlags.BlendChange = true;
+    }
+    ScanlineAccumLayerFlags.BLDCNT |= value;
+}
+
 WRITE_CALLBACK(MMIO::WriteSIOCNT) {
     if (value & 0x80) {
         // started, clear start bit:

@@ -90,6 +90,8 @@ public:
     void ResetAccumLayerFlags() {
         ScanlineAccumLayerFlags.DISPCNT = DISPCNT;
         ScanlineAccumLayerFlags.ModeChange = false;
+        ScanlineAccumLayerFlags.BLDCNT = BLDCNT;
+        ScanlineAccumLayerFlags.BlendChange = false;
     }
 
 private:
@@ -104,6 +106,7 @@ private:
     u16 DISPCNT  = 0;
     u16 DISPSTAT = 0;
     u16 VCount   = 0;
+    u16 BLDCNT   = 0;
 
     static SCHEDULER_EVENT(HBlankEvent);
     s_event HBlank = {};
@@ -120,6 +123,7 @@ private:
     READ_PRECALL(ReadDISPSTAT);
     WRITE_CALLBACK(WriteDISPSTAT);
     READ_PRECALL(ReadVCount);
+    WRITE_CALLBACK(WriteBLDCNT);
 
     /*============== DMA ==============*/
     u8 DMAsActive            = 0;  // if a DMA is active, another DMA won't have delay
@@ -214,6 +218,7 @@ private:
 
         table[static_cast<u32>(IORegister::DISPCNT) >> 1]  = &MMIO::WriteDISPCNT;
         table[static_cast<u32>(IORegister::DISPSTAT) >> 1]  = &MMIO::WriteDISPSTAT;
+        table[static_cast<u32>(IORegister::BLDCNT) >> 1]  = &MMIO::WriteBLDCNT;
 
         table[static_cast<u32>(IORegister::BG2X) >> 1] = &MMIO::WriteReferencePoint<true>;
         table[(static_cast<u32>(IORegister::BG2X) >> 1) + 1] = &MMIO::WriteReferencePoint<true>;  // upper part

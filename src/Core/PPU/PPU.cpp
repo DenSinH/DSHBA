@@ -896,7 +896,7 @@ void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
         return;
     }
 
-    if (LCDIOBuffer[BufferFrame ^ 1][scanline][static_cast<u32>(IORegister::BLDCNT) + 1] & 0x10) {
+    if (DoBlend && LCDIOBuffer[BufferFrame ^ 1][scanline][static_cast<u32>(IORegister::BLDCNT) + 1] & 0x10) {
         // object bottom layer
         glBindFramebuffer(GL_FRAMEBUFFER, BottomFramebuffer);
     }
@@ -1024,10 +1024,14 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     AccumLayerFlags layer_flags = ScanlineAccumLayerFlags[BufferFrame ^ 1][scanline];
     u16 mode = layer_flags.DISPCNT & 7;  // if mode has not changed, this is the accumulate, but also the mode for the entire scanline
 
+    DoBlend = ((layer_flags.BLDCNT & 0x00c0) == 0x0040) || ((layer_flags.BLDCNT & 0x0040) & layer_flags.BlendChange);
+
     glUniform1ui(BGLocation, 4);
-    glUniform1ui(BGBottomLocation, true);
-    glBindFramebuffer(GL_FRAMEBUFFER, BottomFramebuffer);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    if (DoBlend) {
+        glUniform1ui(BGBottomLocation, true);
+        glBindFramebuffer(GL_FRAMEBUFFER, BottomFramebuffer);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    }
 
     glUniform1ui(BGBottomLocation, false);
     glBindFramebuffer(GL_FRAMEBUFFER, TopFramebuffer);
@@ -1060,6 +1064,10 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
 
             glUniform1ui(BGLocation, BG);
             glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+        }
+
+        if (!DoBlend) {
+            break;
         }
     }
 
