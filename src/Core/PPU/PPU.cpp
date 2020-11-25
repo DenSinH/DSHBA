@@ -868,13 +868,10 @@ void GBAPPU::DrawWindows() {
     glBindFramebuffer(GL_FRAMEBUFFER, WinFramebuffer);
     glViewport(0, 0, VISIBLE_SCREEN_WIDTH, VISIBLE_SCREEN_HEIGHT);
 
-    // window is never enabled
-    if (win_start < 0) {
-        log_ppu("Window not enabled in frame");
-        glClearColor(1, 1, 1, 1);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    }
-    else {
+    glClearColor(1, 1, 1, 1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // check if window is ever enabled
+    if (win_start >= 0) {
         int win_end = -1;
         for (int line = VISIBLE_SCREEN_HEIGHT - 1; line >= win_start; line--) {
             if (LCDIOBuffer[BufferFrame ^ 1][line][1] & 0xe0) {

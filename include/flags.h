@@ -30,7 +30,6 @@
 #define TRACE_LOG
 #undef ALWAYS_TRACE_LOG
 #undef FULL_VRAM_BUFFER
-#undef DUMP_MEM // VRAM
 
 // checks
 #define DO_DEBUGGER
