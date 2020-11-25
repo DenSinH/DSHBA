@@ -994,7 +994,7 @@ const char* ObjectVertexShaderSource =
 "    gl_Position = vec4(\n                                                                          "    // l:104
 "        -1.0 + 2.0 * OnScreenPos.x / float(240u),\n                                                "    // l:105
 "        1 - 2.0 * OnScreenPos.y / float(160u),\n                                                   "    // l:106
-"        -1 + float(Priority) / 4.0,\n                                                              "    // l:107
+"        -1 + float(Priority) / 2.0,  // /2.0 because openGL clips between -1 and 1 (-1 is in front)\n"    // l:107
 "        1\n                                                                                        "    // l:108
 "    );\n                                                                                           "    // l:109
 "#else\n                                                                                            "    // l:110

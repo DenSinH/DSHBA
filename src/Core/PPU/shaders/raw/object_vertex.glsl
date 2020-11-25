@@ -109,7 +109,7 @@ void main() {
     gl_Position = vec4(
         -1.0 + 2.0 * OnScreenPos.x / float(++VISIBLE_SCREEN_WIDTH++),
         1 - 2.0 * OnScreenPos.y / float(++VISIBLE_SCREEN_HEIGHT++),
-        -1 + float(Priority) / 4.0,
+        -1 + float(Priority) / 2.0,  // /2.0 because openGL clips between -1 and 1 (-1 is in front)
         1
     );
 #else
