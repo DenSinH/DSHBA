@@ -269,7 +269,12 @@ void main() {
 
 #ifndef OBJ_WINDOW
     FragColor = ColorCorrect(Color);
-    FragColor = AlphaCorrect(FragColor, 4u, window);
+    if ((OBJ.attr0 & ++ATTR0_GM++) == ++ATTR0_BLEND++) {
+        FragColor = AlphaCorrect(FragColor, 4u, window);
+    }
+    else {
+        FragColor = vec4(FragColor.rgb, -1);
+    }
 #else
     // RegularObject/AffineObject will only return if it is nontransparent
     uint WINOBJ = (readIOreg(++WINOUT++) >> 8) & 0x3fu;

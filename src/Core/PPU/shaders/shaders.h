@@ -762,7 +762,7 @@ const char* FragmentShaderMode4Source =
 ;
 
 
-// ObjectFragmentShaderSource (from object_fragment.glsl, lines 5 to 280)
+// ObjectFragmentShaderSource (from object_fragment.glsl, lines 5 to 285)
 const char* ObjectFragmentShaderSource = 
 "#define attr0 x\n                                                                                  "    // l:1
 "#define attr1 y\n                                                                                  "    // l:2
@@ -1030,15 +1030,20 @@ const char* ObjectFragmentShaderSource =
 "\n                                                                                                 "    // l:264
 "#ifndef OBJ_WINDOW\n                                                                               "    // l:265
 "    FragColor = ColorCorrect(Color);\n                                                             "    // l:266
-"    FragColor = AlphaCorrect(FragColor, 4u, window);\n                                             "    // l:267
-"#else\n                                                                                            "    // l:268
-"    // RegularObject/AffineObject will only return if it is nontransparent\n                       "    // l:269
-"    uint WINOBJ = (readIOreg(0x4au) >> 8) & 0x3fu;\n                                               "    // l:270
-"\n                                                                                                 "    // l:271
-"    FragColor.r = WINOBJ;\n                                                                        "    // l:272
-"#endif\n                                                                                           "    // l:273
-"}\n                                                                                                "    // l:274
-"\n                                                                                                 "    // l:275
+"    if ((OBJ.attr0 & 0x0c00u) == 0x0400u) {\n                                                      "    // l:267
+"        FragColor = AlphaCorrect(FragColor, 4u, window);\n                                         "    // l:268
+"    }\n                                                                                            "    // l:269
+"    else {\n                                                                                       "    // l:270
+"        FragColor = vec4(FragColor.rgb, -1);\n                                                     "    // l:271
+"    }\n                                                                                            "    // l:272
+"#else\n                                                                                            "    // l:273
+"    // RegularObject/AffineObject will only return if it is nontransparent\n                       "    // l:274
+"    uint WINOBJ = (readIOreg(0x4au) >> 8) & 0x3fu;\n                                               "    // l:275
+"\n                                                                                                 "    // l:276
+"    FragColor.r = WINOBJ;\n                                                                        "    // l:277
+"#endif\n                                                                                           "    // l:278
+"}\n                                                                                                "    // l:279
+"\n                                                                                                 "    // l:280
 ;
 
 

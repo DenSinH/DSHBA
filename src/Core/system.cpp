@@ -35,7 +35,7 @@ void GBA::Reset() {
 }
 
 void GBA::Run() {
-    CPU.SkipBIOS();
+    // CPU.SkipBIOS();
 
     while (!Shutdown) {
 

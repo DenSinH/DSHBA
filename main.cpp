@@ -62,7 +62,7 @@ int main() {
 
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/RotationScaling/OBJAffineSet/BIOSOBJAFFINESET.gba");
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Arithmetic/ARCTAN/BIOSARCTAN.gba");
-    gba->LoadROM("D:/Data/CProjects/DSHBA/files/tonc/bld_demo.gba");
+    // gba->LoadROM("D:/Data/CProjects/DSHBA/files/tonc/win_demo.gba");
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/suite.gba");
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/ags.gba");
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/main.gba");

@@ -896,14 +896,6 @@ void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
         return;
     }
 
-    if (DoBlend && LCDIOBuffer[BufferFrame ^ 1][scanline][static_cast<u32>(IORegister::BLDCNT) + 1] & 0x10) {
-        // object bottom layer
-        glBindFramebuffer(GL_FRAMEBUFFER, BottomFramebuffer);
-    }
-    else {
-        glBindFramebuffer(GL_FRAMEBUFFER, TopFramebuffer);
-    }
-
     glUseProgram(ObjProgram);
     glBindVertexArray(ObjVAO);
 
@@ -937,20 +929,47 @@ void GBAPPU::DrawObjects(u32 scanline, u32 amount) {
     // draw regular objects
     u32 NumberOfObjVerts = BufferObjects<false, false>(BufferFrame ^ 1, scanline, amount);
     if (NumberOfObjVerts) {
-        glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttrBuffer, GL_STATIC_DRAW);
-        // * 5 for the restartindex
-        glUniform1ui(ObjAffLocation, false);
-        glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
+        for (bool bottom : {false, true}) {
+            if (bottom) {
+                glBindFramebuffer(GL_FRAMEBUFFER, BottomFramebuffer);
+                glUniform1ui(ObjBottomLocation, true);
+            } else {
+                glBindFramebuffer(GL_FRAMEBUFFER, TopFramebuffer);
+                glUniform1ui(ObjBottomLocation, false);
+            }
+            glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttrBuffer, GL_STATIC_DRAW);
+            // * 5 for the restartindex
+            glUniform1ui(ObjAffLocation, false);
+            glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
+
+            if (!(DoBlend && LCDIOBuffer[BufferFrame ^ 1][scanline][static_cast<u32>(IORegister::BLDCNT) + 1] & 0x10)) {
+                break;
+            }
+        }
         log_ppu("%d regular objects enabled in lines %d - %d", NumberOfObjVerts >> 2, scanline, scanline + amount);
     }
 
     // draw affine objects
     NumberOfObjVerts = BufferObjects<false, true>(BufferFrame ^ 1, scanline, amount);
     if (NumberOfObjVerts) {
-        glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttrBuffer, GL_STATIC_DRAW);
-        // * 5 for the restartindex
-        glUniform1ui(ObjAffLocation, true);
-        glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
+        for (bool bottom : {false, true}) {
+            if (bottom) {
+                glBindFramebuffer(GL_FRAMEBUFFER, BottomFramebuffer);
+                glUniform1ui(ObjBottomLocation, true);
+            } else {
+                glBindFramebuffer(GL_FRAMEBUFFER, TopFramebuffer);
+                glUniform1ui(ObjBottomLocation, false);
+            }
+            glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfObjVerts, ObjAttrBuffer, GL_STATIC_DRAW);
+            // * 5 for the restartindex
+            glUniform1ui(ObjAffLocation, true);
+            glDrawElements(GL_TRIANGLE_FAN, (NumberOfObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
+
+            if (!(DoBlend && LCDIOBuffer[BufferFrame ^ 1][scanline][static_cast<u32>(IORegister::BLDCNT) + 1] & 0x10)) {
+                // not selected as bottom or no blending
+                break;
+            }
+        }
         log_ppu("%d affine objects enabled in lines %d - %d", NumberOfObjVerts >> 2, scanline, scanline + amount);
     }
 
@@ -1024,7 +1043,7 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
     AccumLayerFlags layer_flags = ScanlineAccumLayerFlags[BufferFrame ^ 1][scanline];
     u16 mode = layer_flags.DISPCNT & 7;  // if mode has not changed, this is the accumulate, but also the mode for the entire scanline
 
-    DoBlend = ((layer_flags.BLDCNT & 0x00c0) == 0x0040) || ((layer_flags.BLDCNT & 0x0040) & layer_flags.BlendChange);
+    DoBlend = ((layer_flags.BLDCNT & 0x00c0) == 0x0040) || ((layer_flags.BLDCNT & 0x0040) && layer_flags.BlendChange);
 
     glUniform1ui(BGLocation, 4);
     if (DoBlend) {
