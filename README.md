@@ -1,6 +1,6 @@
 # DSHBA
 
-After writing my GBA emulator (GBAC-, found [here](https://github.com/DenSinH/GBAC-)), I wanted to write a new one, but faster.
+After writing [my GBA emulator (GBAC-, found here)](https://github.com/DenSinH/GBAC-), I wanted to write a new one, but faster.
 One extra challenge I wanted to add was writing a hardware renderer.
 
 ### Requirements
