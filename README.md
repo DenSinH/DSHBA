@@ -1,6 +1,6 @@
 # DSHBA
 
-After writing [my GBA emulator (GBAC-, found here)](https://github.com/DenSinH/GBAC-), I wanted to write a new one, but faster.
+After writing [my GBA emulator, GBAC-, found here](https://github.com/DenSinH/GBAC-), I wanted to write a new one, but faster.
 One extra challenge I wanted to add was writing a hardware renderer.
 
 ### Requirements
@@ -90,3 +90,7 @@ In the hardware renderer I also added a lot of optimizations:
  ![Zelda menu screen](https://github.com/DenSinH/DSHBA/blob/master/files/DSHBA_unlocked.png)
  
  In the above screenshot, you can see the emulator in its full potential, with alphablending and everything.
+ 
+ ### Debugger
+ 
+The UI and the debugger are written in ImGui. I tried to keep them as generic as possible, that way I could re-use them for other emulator projects I might do. On release builds, not all the console commands work, the memory viewer still should, and so should the overlay and the register viewer. The decompiler needs `capstone.dll`, If you build without capstone installed in your package manager, it won't try to link it, and should just say `"Decompiling unavailable"` in the window.
