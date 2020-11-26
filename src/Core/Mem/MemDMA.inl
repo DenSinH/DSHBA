@@ -16,7 +16,7 @@ void Mem::FastDMA(s_DMAData* DMA) {
 
     if constexpr(!intermittent_events) {
         // direct memcpy
-        log_dma("Fast DMA, no intermissions");
+        log_dma("Fast DMA (%x bytes, first value: %x), no intermissions", length * sizeof(T), *(T*)src);
         memcpy(
                 dest,
                 src,

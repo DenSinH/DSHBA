@@ -153,12 +153,16 @@ private:
         }
 
         table[static_cast<u8>(MemoryRegion::eWRAM)]  = 3;
+
         table[static_cast<u8>(MemoryRegion::ROM_L)]  = 2;
-        table[static_cast<u8>(MemoryRegion::ROM_L1)] = 5;
-        table[static_cast<u8>(MemoryRegion::ROM_L2)] = 9;
         table[static_cast<u8>(MemoryRegion::ROM_H)]  = 2;
+
+        table[static_cast<u8>(MemoryRegion::ROM_L1)] = 5;
         table[static_cast<u8>(MemoryRegion::ROM_H1)] = 5;
+
+        table[static_cast<u8>(MemoryRegion::ROM_L2)] = 9;
         table[static_cast<u8>(MemoryRegion::ROM_H2)] = 9;
+        
         table[static_cast<u8>(MemoryRegion::SRAM)]   = 5;
 
         return table;
@@ -175,12 +179,16 @@ private:
         table[static_cast<u8>(MemoryRegion::eWRAM)]  = 6;
         table[static_cast<u8>(MemoryRegion::PAL)]    = 2;
         table[static_cast<u8>(MemoryRegion::VRAM)]   = 2;
+
         table[static_cast<u8>(MemoryRegion::ROM_L)]  = 6;
-        table[static_cast<u8>(MemoryRegion::ROM_L1)] = 10;
-        table[static_cast<u8>(MemoryRegion::ROM_L2)] = 18;
         table[static_cast<u8>(MemoryRegion::ROM_H)]  = 6;
-        table[static_cast<u8>(MemoryRegion::ROM_H1)] = 10;
-        table[static_cast<u8>(MemoryRegion::ROM_H2)] = 18;
+
+        table[static_cast<u8>(MemoryRegion::ROM_L1)] = 8;
+        table[static_cast<u8>(MemoryRegion::ROM_H1)] = 8;
+
+        table[static_cast<u8>(MemoryRegion::ROM_L2)] = 12;
+        table[static_cast<u8>(MemoryRegion::ROM_H2)] = 12;
+
         table[static_cast<u8>(MemoryRegion::SRAM)]   = 5;
 
         return table;

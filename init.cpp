@@ -202,7 +202,11 @@ MENU_ITEM_CALLBACK(load_ROM) {
 }
 
 u8 Initializer::ReadByte(u64 offset) {
-    return gba->Memory.Read<u8, false>(offset);
+    u8* ptr = gba->Memory.GetPtr(offset);
+    if (ptr) {
+        return *ptr;
+    }
+    return 0;
 }
 
 u8* Initializer::ValidAddressMask(u32 address) {

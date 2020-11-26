@@ -139,7 +139,7 @@ private:
         }
         else {
             // account for startup delay todo: ROM extra cycles
-            Scheduler->AddEventAfter(&DMAStart[x], 2);
+            Scheduler->AddEventAfter(&DMAStart[x], 0);
         }
     };
     void TriggerDMATiming(DMACNT_HFlags start_timing);
