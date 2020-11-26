@@ -162,7 +162,7 @@ private:
 
         table[static_cast<u8>(MemoryRegion::ROM_L2)] = 9;
         table[static_cast<u8>(MemoryRegion::ROM_H2)] = 9;
-        
+
         table[static_cast<u8>(MemoryRegion::SRAM)]   = 5;
 
         return table;
