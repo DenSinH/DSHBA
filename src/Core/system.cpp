@@ -13,7 +13,7 @@ GBA::GBA() {
     Breakpoints = {};
     Paused      = false;
 
-    // add_breakpoint(&Breakpoints, 0x0800'f1aa);
+    add_breakpoint(&Breakpoints, 0x0800'261e);
     // add_breakpoint(&Breakpoints, 0x0800'c89e);
 //    add_breakpoint(&Breakpoints, 0x0800'a5d2);
 //    add_breakpoint(&Breakpoints, 0x0800'a5a6);
@@ -35,7 +35,7 @@ void GBA::Reset() {
 }
 
 void GBA::Run() {
-    // CPU.SkipBIOS();
+    CPU.SkipBIOS();
 
     while (!Shutdown) {
 

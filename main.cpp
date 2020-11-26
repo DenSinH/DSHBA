@@ -64,7 +64,7 @@ int main() {
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Arithmetic/ARCTAN/BIOSARCTAN.gba");
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/tonc/win_demo.gba");
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/suite.gba");
-    // gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/ags.gba");
+    gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/ags.gba");
     // gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/main.gba");
     // gba->LoadROM("D:/User/Downloads/Kirby - Nightmare in Dream Land (USA).gba");
     // gba->LoadROM("D:/User/Downloads/Mega Man Battle Network 6 - Cybeast Falzar (USA).gba");

@@ -173,6 +173,8 @@ private:
         }
 
         table[static_cast<u8>(MemoryRegion::eWRAM)]  = 6;
+        table[static_cast<u8>(MemoryRegion::PAL)]    = 2;
+        table[static_cast<u8>(MemoryRegion::VRAM)]   = 2;
         table[static_cast<u8>(MemoryRegion::ROM_L)]  = 6;
         table[static_cast<u8>(MemoryRegion::ROM_L1)] = 10;
         table[static_cast<u8>(MemoryRegion::ROM_L2)] = 18;
