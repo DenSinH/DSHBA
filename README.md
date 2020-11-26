@@ -94,3 +94,7 @@ In the hardware renderer I also added a lot of optimizations:
  ### Debugger
  
 The UI and the debugger are written in ImGui. I tried to keep them as generic as possible, that way I could re-use them for other emulator projects I might do. On release builds, not all the console commands work, the memory viewer still should, and so should the overlay and the register viewer. The decompiler needs `capstone.dll`, If you build without capstone installed in your package manager, it won't try to link it, and should just say `"Decompiling unavailable"` in the window.
+
+### BIOS
+
+In my project, I included Normmatt's replacement BIOS. If you want to use a different file, you will have to build the project yourself, changing the `BIOS_FILE` macro to whatever path the BIOS file you want to use is at.
