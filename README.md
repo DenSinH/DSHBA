@@ -66,18 +66,18 @@ In the hardware renderer I also added a lot of optimizations:
  
  Default controls are:
  
- GBA | Keyboard | Gamepad
- ------------------------
- A   |   Z/C    | A / X
- B   |   X/V    | B / Y
- Up  |    Up    | Dpad Up
- Down |   Down  | Dpad Down
- Left |   Left  | Dpad Left
- Right | Right  | Dpad Right
- Start | A      | Start
- Select | S     | Select
- L     | Q      | L
- R     | R      | R
+ GBA    | Keyboard | Gamepad
+ -------|----------|---------
+ A      |   Z/C    | A / X
+ B      |   X/V    | B / Y
+ Up     |    Up    | Dpad Up
+ Down   |   Down   | Dpad Down
+ Left   |   Left   | Dpad Left
+ Right  | Right    | Dpad Right
+ Start  | A        | Start
+ Select | S        | Select
+ L      | Q        | L
+ R      | R        | R
  
  If you don't like the controls/want to change them, you can edit the `input.map` file.
  
