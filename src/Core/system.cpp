@@ -7,8 +7,6 @@
 #include "flags.h"
 
 GBA::GBA() {
-    Memory.LoadBIOS(BIOS_FILE);
-
 #ifdef DO_BREAKPOINTS
     Breakpoints = {};
     Paused      = false;

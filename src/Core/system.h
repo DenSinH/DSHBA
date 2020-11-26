@@ -34,7 +34,7 @@ public:
         Memory.ReloadROM();
     }
 
-    void LoadBIOS(std::string& file_path) {
+    void LoadBIOS(std::string file_path) {
         Memory.LoadBIOS(file_path);
     }
 

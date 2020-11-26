@@ -47,6 +47,8 @@ void benchmark() {
 int main() {
     gba = Initializer::init();
 
+    gba->LoadBIOS(std::string(BIOS_FILE));
+
 #ifdef BENCHMARKING
     benchmark();
     return 0;
