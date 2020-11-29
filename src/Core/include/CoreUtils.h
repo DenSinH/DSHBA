@@ -2,9 +2,7 @@
 
 #include "default.h"
 
-#include <string>
-
-size_t LoadFileTo(char* buffer, const std::string& file_name, size_t max_length);
+#include <utility>
 
 template <typename T, T Begin, class Func, T ...Is>
 static constexpr void static_for_impl(Func&& f, std::integer_sequence<T, Is...>) {

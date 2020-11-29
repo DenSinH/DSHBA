@@ -136,8 +136,6 @@ static ALWAYS_INLINE u32 cttz(u32 x)
 #define ASSUME_ALIGNED(ptr, alignment)
 #endif
 
-#define str(s) #s  // stringize a macro
-
 //#if defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN || \
 //    defined(__BIG_ENDIAN__) || \
 //    defined(__ARMEB__) || \

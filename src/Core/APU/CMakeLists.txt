@@ -18,4 +18,8 @@ set_target_properties(APU PROPERTIES LINKER_LANGUAGE CXX)
 
 target_include_directories(APU PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(APU PRIVATE SDL2::SDL2 SDL2::SDL2main)
+if (WIN32)
+    target_link_libraries(APU PRIVATE SDL2::SDL2 SDL2::SDL2main)
+else()
+    target_link_libraries(APU PRIVATE ${SDL2_LIBRARIES})
+endif()

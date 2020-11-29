@@ -5,10 +5,35 @@
 #include "NormmattBIOS.h"
 
 #include <filesystem>
+#include <string>
+#include <fstream>
+
+#include "log.h"
 
 #ifdef DUMP_MEM
 #include <fstream>
 #endif
+
+
+size_t LoadFileTo(char* buffer, const std::string& file_name, size_t max_length) {
+    std::ifstream infile(file_name, std::ios::binary);
+
+    if (infile.fail()) {
+        log_fatal("Failed to open file %s", file_name.c_str());
+    }
+
+    infile.seekg(0, std::ios::end);
+    size_t length = infile.tellg();
+    infile.seekg(0, std::ios::beg);
+
+    if (length > max_length) {
+        log_fatal("Failed loading file %s, buffer overflow: %x > %x", file_name.c_str(), length, max_length);
+    }
+
+    infile.read(buffer, length);
+    log_info("Loaded %x bytes from file %s", length, file_name.c_str());
+    return length;
+}
 
 /*
  * Reads/writes are always aligned, we handle this in the read handlers
@@ -195,7 +220,11 @@ void Mem::LoadBIOS(const std::string& file_path) {
         if ((*(u32*)BIOS) == 0) {
             // check if something has been loaded into the BIOS already (reset vector should not be 0)
             log_warn("BIOS file %s does not exist, loading default...", file_path.c_str());
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
             memcpy_s(BIOS, sizeof(BIOS), NormattsBIOS, sizeof(NormattsBIOS));
+#else
+            memcpy(BIOS, NormattsBIOS, std::min(sizeof(BIOS), sizeof(NormattsBIOS)));
+#endif
         }
     }
 }

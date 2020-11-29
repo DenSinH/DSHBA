@@ -14,6 +14,17 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set(CMAKE_CXX_FLAGS_RELEASE "-Ofast") # -march=native
 set(CMAKE_C_FLAGS_RELEASE "-Ofast")
 
+if (NOT WIN32)
+    # we need to specify this
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+endif()
+
+if (CMAKE_COMPILER_IS_GNUCC)
+    message(STATUS "GCC compiler detected")
+    # for some reason, GCC complained about this
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mbmi")
+endif()
+
 # add_compile_options($<$<CONFIG:DEBUG>:-Wall>)
 add_compile_definitions(
         $<$<CONFIG:RELEASE>:NDEBUG>
@@ -54,7 +65,6 @@ add_subdirectory(modules/imgui)
 add_subdirectory(src/Core)
 add_subdirectory(src/Frontend)
 
-
 include_directories(
         include
         modules
@@ -62,9 +72,11 @@ include_directories(
         $<TARGET_PROPERTY:Frontend,INCLUDE_DIRECTORIES>
 )
 
-target_link_libraries(DSHBA PRIVATE Core)
-target_link_libraries(DSHBA PRIVATE Frontend)
-target_link_libraries(DSHBA PRIVATE imgui)
+if (WIN32)
+    target_link_libraries(DSHBA PRIVATE Core Frontend imgui)
+else()
+    target_link_libraries(DSHBA PRIVATE Core Frontend imgui ${CMAKE_DL_LIBS})
+endif()
 
 # copy over files with settings
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/imgui.ini

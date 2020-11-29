@@ -64,7 +64,11 @@ set_target_properties(Frontend PROPERTIES
                       CXX_STANDARD_REQUIRED YES
                       CXX_EXTENSIONS ON)
 
-target_link_libraries(Frontend PRIVATE SDL2::SDL2 SDL2::SDL2main)
+if (WIN32)
+    target_link_libraries(Frontend PRIVATE SDL2::SDL2 SDL2::SDL2main)
+else()
+    target_link_libraries(Frontend PRIVATE ${SDL2_LIBRARIES})
+endif()
 
 if (FOUND_CAPSTONE)
     if (WIN32)

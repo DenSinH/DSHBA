@@ -79,6 +79,9 @@ enum class ExceptionVector : u32 {
 typedef ARM_INSTRUCTION((ARM7TDMI::*ARMInstructionPtr));
 typedef THUMB_INSTRUCTION((ARM7TDMI::*THUMBInstructionPtr));
 
+template<u16 instruction> static constexpr THUMBInstructionPtr GetTHUMBInstruction();
+template<u32 instruction> static constexpr ARMInstructionPtr GetARMInstruction();
+
 class ARM7TDMI {
 public:
     i32* timer;

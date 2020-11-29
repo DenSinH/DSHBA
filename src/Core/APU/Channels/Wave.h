@@ -5,6 +5,7 @@
 #include "log.h"
 
 #include <assert.h>
+#include "string.h"
 
 class Wave : public Channel {
 
