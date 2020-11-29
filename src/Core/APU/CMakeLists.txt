@@ -1,4 +1,4 @@
-find_package(SDL2 CONFIG REQUIRED)
+find_package(SDL2 REQUIRED)
 
 add_library(APU STATIC
         APU.cpp
@@ -17,9 +17,4 @@ include_directories(
 set_target_properties(APU PROPERTIES LINKER_LANGUAGE CXX)
 
 target_include_directories(APU PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-if (WIN32)
-    target_link_libraries(APU PRIVATE SDL2::SDL2 SDL2::SDL2main)
-else()
-    target_link_libraries(APU PRIVATE ${SDL2_LIBRARIES})
-endif()
+target_link_libraries(APU PRIVATE ${SDL2_LIBRARY})

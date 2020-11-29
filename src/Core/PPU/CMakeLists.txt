@@ -1,7 +1,4 @@
-find_package(SDL2 CONFIG REQUIRED)
-
-# compatibility for linux
-include_directories(${SDL2_INCLUDE_DIR})
+find_package(SDL2 REQUIRED)
 
 file(GLOB GLSL_FILES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/raw/*.glsl)
 
@@ -42,13 +39,11 @@ include_directories(
         ${PROJECT_SOURCE_DIR}/modules
         #         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ../include
+
+        ${SDL2_INCLUDE_DIR}
 )
 
 set_target_properties(PPU PROPERTIES LINKER_LANGUAGE CXX)
-if (WIN32)
-    target_link_libraries(PPU PRIVATE SDL2::SDL2 SDL2::SDL2main)
-else()
-    target_link_libraries(PPU PRIVATE ${SDL2_LIBRARIES})
-endif()
+target_link_libraries(PPU PRIVATE ${SDL2_LIBRARY})
 
 target_include_directories(PPU PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

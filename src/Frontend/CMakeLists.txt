@@ -1,7 +1,4 @@
-find_package(SDL2 CONFIG REQUIRED)
-
-# compatibility for linux
-include_directories(${SDL2_INCLUDE_DIR})
+find_package(SDL2 REQUIRED)
 
 set(FOUND_CAPSTONE 0)
 if (WIN32)
@@ -24,8 +21,10 @@ else()
     endif()
 endif()
 
-find_path(Capstone_INCLUDE_DIR capstone.h PATH_SUFFIXES capstone)
-set(Capstone_INCLUDE_DIR ${Capstone_INCLUDE_DIR}/../)
+if (FOUND_CAPSTONE)
+    find_path(Capstone_INCLUDE_DIR capstone.h PATH_SUFFIXES capstone)
+    set(Capstone_INCLUDE_DIR ${Capstone_INCLUDE_DIR}/../)
+endif()
 
 set(FRONTEND_SRCS
         imgui/imgui_impl_opengl3.cpp
@@ -64,23 +63,24 @@ set_target_properties(Frontend PROPERTIES
                       CXX_STANDARD_REQUIRED YES
                       CXX_EXTENSIONS ON)
 
-if (WIN32)
-    target_link_libraries(Frontend PRIVATE SDL2::SDL2 SDL2::SDL2main)
-else()
-    target_link_libraries(Frontend PRIVATE ${SDL2_LIBRARIES})
-endif()
+target_link_libraries(Frontend PRIVATE ${SDL2_LIBRARY})
 
 if (FOUND_CAPSTONE)
     if (WIN32)
         target_link_libraries(Frontend PRIVATE ${Capstone})
     else()
         target_link_libraries(Frontend PRIVATE Capstone::Capstone)
-        target_link_libraries(DSHBA PRIVATE -ldl -lpthread)
     endif()
+endif()
+
+if (NOT WIN32)
+    target_link_libraries(Frontend PRIVATE -ldl -lpthread)
 endif()
 
 target_include_directories(Frontend PRIVATE
         imgui
         ../../include
         ../../modules
+        ${SDL2_INCLUDE_DIR}
+        ${Capstone_INCLUDE_DIR}
 )
