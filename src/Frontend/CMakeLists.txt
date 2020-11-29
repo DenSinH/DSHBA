@@ -1,7 +1,7 @@
 find_package(SDL2 CONFIG REQUIRED)
 
 # compatibility for linux
-include_directories(${SDL2_INCLUDE_DIRS})
+include_directories(${SDL2_INCLUDE_DIR})
 
 set(FOUND_CAPSTONE 0)
 if (WIN32)

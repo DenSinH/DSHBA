@@ -11,7 +11,7 @@ include_directories(
         ${PROJECT_SOURCE_DIR}/modules
         ../include
         # compatibility for linux
-        ${SDL2_INCLUDE_DIRS}
+        ${SDL2_INCLUDE_DIR}
 )
 
 set_target_properties(APU PROPERTIES LINKER_LANGUAGE CXX)

@@ -1,7 +1,7 @@
 find_package(SDL2 CONFIG REQUIRED)
 
 # compatibility for linux
-include_directories(${SDL2_INCLUDE_DIRS})
+include_directories(${SDL2_INCLUDE_DIR})
 
 file(GLOB GLSL_FILES ${CMAKE_CURRENT_SOURCE_DIR}/shaders/raw/*.glsl)
 
