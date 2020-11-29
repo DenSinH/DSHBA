@@ -1,6 +1,8 @@
 #ifndef GC__INTERFACE_H
 #define GC__INTERFACE_H
 
+#include "default.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 

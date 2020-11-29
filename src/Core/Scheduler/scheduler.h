@@ -111,7 +111,11 @@ struct s_scheduler {
         if (likely(!event->active)) {
             event->active = true;
             queue.push(event);
+#ifdef min
             top = min(top, event->time);
+#else
+            top = std::min(top, event->time);
+#endif
         }
     }
 
@@ -120,7 +124,11 @@ struct s_scheduler {
             event->time = *timer + dt;
             event->active = true;
             queue.push(event);
+#ifdef min
             top = min(top, event->time);
+#else
+            top = std::min(top, event->time);
+#endif
         }
         else {
             RemoveEvent(event);

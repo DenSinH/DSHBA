@@ -13,7 +13,7 @@ class ARM7TDMI_INL : ARM7TDMI {
 #endif
 
 template<bool L, u8 Offs5>
-void __fastcall LoadStoreHalfword(u16 instruction) {
+THUMB_INSTRUCTION(LoadStoreHalfword) {
     log_cpu_verbose("L/SH L=%d, Offs5=%x", L, Offs5);
     u8 rd = (instruction & 0x7);
     u8 rb = (instruction & 0x38) >> 3;
@@ -71,7 +71,8 @@ ALWAYS_INLINE void DoLoadStoreBL(u8 rd, u32 address) {
 }
 
 template<bool L, bool B, u8 ro>
-void __fastcall LoadStoreRegOffs(u16 instruction) {
+
+THUMB_INSTRUCTION(LoadStoreRegOffs) {
     u8 rd = (instruction & 0x7);
     u8 rb = (instruction & 0x38) >> 3;
     log_cpu_verbose("L/SH [r%d, r%d] L=%d, B=%d", rb, ro, L, B);
@@ -82,7 +83,7 @@ void __fastcall LoadStoreRegOffs(u16 instruction) {
 }
 
 template<bool B, bool L, u8 Offs5>
-void __fastcall LoadStoreImmOffs(u16 instruction) {
+THUMB_INSTRUCTION(LoadStoreImmOffs) {
     u8 rd = (instruction & 0x7);
     u8 rb = (instruction & 0x38) >> 3;
     log_cpu_verbose("L/S [r%d, #%x] B=%d, L=%d", rb, Offs5, B, L);
@@ -99,7 +100,7 @@ void __fastcall LoadStoreImmOffs(u16 instruction) {
 }
 
 template<bool H, bool S, u8 ro>
-void __fastcall LoadStoreSEBH(u16 instruction) {
+THUMB_INSTRUCTION(LoadStoreSEBH) {
     u8 rd = (instruction & 0x7);
     u8 rb = (instruction & 0x38) >> 3;
     log_cpu_verbose("L/SSB/H ro=%d H=%d, S=%d", ro, H, S);
@@ -147,7 +148,7 @@ void __fastcall LoadStoreSEBH(u16 instruction) {
 }
 
 template<bool L, bool R>
-void __fastcall PushPop(u16 instruction) {
+THUMB_INSTRUCTION(PushPop) {
     u16 rlist = instruction & 0xff;
     log_cpu_verbose("Push/Pop L=%d, R=%d pc=%x", L, R, pc);
 
@@ -198,7 +199,7 @@ void __fastcall PushPop(u16 instruction) {
 }
 
 template<bool L, u8 rb>
-void __fastcall MultipleLoadStore(u16 instruction) {
+THUMB_INSTRUCTION(MultipleLoadStore) {
     u8 rlist = (u8)instruction;
     u32 address = Registers[rb];
     log_cpu_verbose("LDM L=%d, rb=%d", L, rb);
@@ -273,7 +274,7 @@ void __fastcall MultipleLoadStore(u16 instruction) {
 }
 
 template<u8 rd>
-void __fastcall PCRelativeLoad(u16 instruction) {
+THUMB_INSTRUCTION(PCRelativeLoad) {
     log_cpu_verbose("PCREL rd=%d", rd);
     u32 address = (pc & ~3) + ((instruction & 0xff) << 2);
 
@@ -285,7 +286,7 @@ void __fastcall PCRelativeLoad(u16 instruction) {
 }
 
 template<bool L, u8 rd>
-void __fastcall SPRelativeLoadStore(u16 instruction) {
+THUMB_INSTRUCTION(SPRelativeLoadStore) {
     u16 word8 = (instruction & 0xff) << 2;
 
     if constexpr(L) {

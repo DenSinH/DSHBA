@@ -56,7 +56,7 @@ static ALWAYS_INLINE uint8_t flip_byte(uint8_t b) {
 static ALWAYS_INLINE u32 popcount(u32 x)
 
 {
-#if __has_builtin(__builtin_popcount)
+#if __has_builtin(__builtin_popcount) || defined(__GNUC__)
 #define HAS_POPCOUNT
     return __builtin_popcount(x);
 #elif defined(__x86_64__) || defined(__i386__)
@@ -72,7 +72,7 @@ static ALWAYS_INLINE u32 popcount(u32 x)
 
 static ALWAYS_INLINE u32 ctlz(u32 x)
 {
-#if __has_builtin(__builtin_clz)
+#if __has_builtin(__builtin_clz) || defined(__GNUC__)
 #define HAS_CTLZ
     return x ? __builtin_clz(x) : 32;
 #elif defined(__x86_64__) || defined(__i386__)
@@ -95,7 +95,7 @@ static ALWAYS_INLINE u32 cttz(u32 x)
 #if defined(__x86_64__) || defined(__i386__)
 #define HAS_CTTZ
     return _tzcnt_u32(x);  // one less check (argument is defined for a 0 argument)
-#elif __has_builtin(__builtin_ctz)
+#elif __has_builtin(__builtin_ctz) || defined(__GNUC__)
 #define HAS_CTTZ
     return x ? __builtin_ctz(x) : 32;
 #else
@@ -110,7 +110,7 @@ static ALWAYS_INLINE u32 cttz(u32 x)
 #endif
 }
 
-#if __is_identifier(__builtin_expect) || __has_builtin(__builtin_expect)
+#if defined(__GNUC__) || __is_identifier(__builtin_expect) || __has_builtin(__builtin_expect)
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 #else
@@ -138,22 +138,22 @@ static ALWAYS_INLINE u32 cttz(u32 x)
 
 #define str(s) #s  // stringize a macro
 
-#if defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN || \
-    defined(__BIG_ENDIAN__) || \
-    defined(__ARMEB__) || \
-    defined(__THUMBEB__) || \
-    defined(__AARCH64EB__) || \
-    defined(_MIBSEB) || defined(__MIBSEB) || defined(__MIBSEB__)
-#define BIG_ENDIAN
-#elif defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN || \
-    defined(__LITTLE_ENDIAN__) || \
-    defined(__ARMEL__) || \
-    defined(__THUMBEL__) || \
-    defined(__AARCH64EL__) || \
-    defined(_MIPSEL) || defined(__MIPSEL) || defined(__MIPSEL__)
-#define LITTLE_ENDIAN
-#else
-#error "I don't know what architecture this is!"
-#endif
+//#if defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN || \
+//    defined(__BIG_ENDIAN__) || \
+//    defined(__ARMEB__) || \
+//    defined(__THUMBEB__) || \
+//    defined(__AARCH64EB__) || \
+//    defined(_MIBSEB) || defined(__MIBSEB) || defined(__MIBSEB__)
+//#define BIG_ENDIAN
+//#elif defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN || \
+//    defined(__LITTLE_ENDIAN__) || \
+//    defined(__ARMEL__) || \
+//    defined(__THUMBEL__) || \
+//    defined(__AARCH64EL__) || \
+//    defined(_MIPSEL) || defined(__MIPSEL) || defined(__MIPSEL__)
+//#define LITTLE_ENDIAN
+//#else
+//#error "I don't know what architecture this is!"
+//#endif
 
 #endif //GC__HELPERS_H

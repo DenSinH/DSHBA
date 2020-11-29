@@ -47,6 +47,7 @@ void benchmark() {
 int main() {
     gba = Initializer::init();
 
+    // gba->LoadBIOS(std::string("D:\\Data\\GBA\\BIOS\\bios.bin"));
     gba->LoadBIOS(std::string(BIOS_FILE));
 
 #ifdef BENCHMARKING
@@ -62,6 +63,22 @@ int main() {
 
     std::thread ui_thread(ui_run);
 
+    // gba->LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/RotationScaling/OBJAffineSet/BIOSOBJAFFINESET.gba");
+    // gba->LoadROM("D:/Data/CProjects/DSHBA/files/krom/BIOS/Arithmetic/ARCTAN/BIOSARCTAN.gba");
+    // gba->LoadROM("D:/Data/CProjects/DSHBA/files/tonc/win_demo.gba");
+    // gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/suite.gba");
+    // gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/ags.gba");
+    // gba->LoadROM("D:/Data/CProjects/DSHBA/files/roms/main.gba");
+    // gba->LoadROM("D:/User/Downloads/Kirby - Nightmare in Dream Land (USA).gba");
+    // gba->LoadROM("D:/User/Downloads/Mega Man Battle Network 6 - Cybeast Falzar (USA).gba");
+    // gba->LoadROM("D:/User/Downloads/Pokemon - Emerald Version (USA, Europe).gba");
+    // gba->LoadROM("D:/User/Downloads/Legend of Zelda, The - The Minish Cap (USA).gba");
+    // gba->LoadROM("D:/User/Downloads/Pokemon - Ruby Version (USA, Europe) (Rev 2).gba");
+    // gba->LoadROM("D:/User/Downloads/WarioWare, Inc. - Mega Microgame$! (USA).gba");
+    // gba->LoadROM("D:/User/Downloads/Mario & Luigi - Superstar Saga (USA, Australia).gba");
+    // gba->LoadROM("D:/User/Downloads/Pokemon Mystery Dungeon - Red Rescue Team (USA, Australia).gba");
+    // gba->LoadROM("D:/User/Downloads/openbuster.gba");
+    // gba->LoadROM("D:\\Data\\GBA\\GBARoms\\swi_tests_random\\main.gba");
     gba->Run();
 
     ui_thread.join();

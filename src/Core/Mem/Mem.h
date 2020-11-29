@@ -144,8 +144,8 @@ private:
 
     u32 DMALatch = 0;
 
-    std::array<u8, 255> SubWordAccessTime = [] {
-        std::array<u8, 255> table = {};
+    std::array<u8, 256> SubWordAccessTime = [] {
+        std::array<u8, 256> table = {};
 
         // fill with 1s
         for (u8 & i : table) {
@@ -168,8 +168,8 @@ private:
         return table;
     }();
 
-    std::array<u8, 255> WordAccessTime = [] {
-        std::array<u8, 255> table = {};
+    std::array<u8, 256> WordAccessTime = [] {
+        std::array<u8, 256> table = {};
 
         // fill with 1s
         for (u8 & i : table) {

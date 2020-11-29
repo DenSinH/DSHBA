@@ -13,7 +13,7 @@ class ARM7TDMI_INL : ARM7TDMI {
 #endif
 
 template<typename T>
-void __fastcall SWI(T instruction) {
+BLANK_INSTRUCTION(SWI, T) {
     log_cpu_verbose("SWI %x", instruction);
 
     if constexpr(std::is_same_v<T, u16>) {

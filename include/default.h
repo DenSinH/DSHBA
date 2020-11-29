@@ -39,4 +39,16 @@ typedef int16_t i16;
 typedef int32_t i32;
 typedef int64_t i64;
 
+#ifndef __has_builtin
+#ifdef __is_identifier
+#define __has_builtin(x) __is_identifier(x)
+#else
+#define __has_builtin(x) 0
+#endif
+#endif
+
+#ifndef __is_identifier
+#define __is_identifier(x) 0
+#endif
+
 #endif //GC__DEFAULT_H

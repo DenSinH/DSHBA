@@ -13,7 +13,7 @@ class ARM7TDMI_INL : ARM7TDMI {
 #endif
 
 template<bool A, bool S>
-void __fastcall Multiply(u32 instruction) {
+ARM_INSTRUCTION(Multiply) {
     u8 rd = (instruction & 0x000f'0000) >> 16;
     u32 Rn = Registers[(instruction & 0xf000) >> 12];
     u32 Rs = Registers[(instruction & 0x0f00) >> 8];
@@ -36,7 +36,7 @@ void __fastcall Multiply(u32 instruction) {
 }
 
 template<bool U, bool A, bool S>
-void __fastcall MultiplyLong(u32 instruction) {
+ARM_INSTRUCTION(MultiplyLong) {
     u8 rdhi = ((instruction & 0x000f'0000) >> 16);
     u8 rdlo = ((instruction & 0x0000'f000) >> 12);
     u32 Rs  = Registers[(instruction & 0x0000'0f00) >> 8];

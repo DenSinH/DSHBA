@@ -56,8 +56,28 @@ enum class ExceptionVector : u32 {
     IRQ   = 0x0000'0018,
 };
 
-typedef void __fastcall (ARM7TDMI::*ARMInstructionPtr)(u32 instruction);
-typedef void __fastcall (ARM7TDMI::*THUMBInstructionPtr)(u16 instruction);
+#ifdef _WIN32
+
+#define ARM_INSTRUCTION(_name) void __fastcall (_name)(u32 instruction)
+#define THUMB_INSTRUCTION(_name) void __fastcall (_name)(u16 instruction)
+#define BLANK_INSTRUCTION(_name, argtype) void __fastcall (_name)(argtype instruction)
+
+#elif defined(__GNUC__) && __GNUC_MINOR__ > 3
+
+#define ARM_INSTRUCTION(_name) void __attribute__((fastcall)) (_name)(u32 instruction)
+#define THUMB_INSTRUCTION(_name) void __attribute__((fastcall)) (_name)(u16 instruction)
+#define BLANK_INSTRUCTION(_name, argtype) void __attribute__((fastcall)) (_name)(argtype instruction)
+
+#else
+
+#define ARM_INSTRUCTION(_name) void (_name)(u32 instruction)
+#define THUMB_INSTRUCTION(_name) void (_name)(u16 instruction)
+#define BLANK_INSTRUCTION(_name, argtype) void (_name)(argtype instruction)
+
+#endif
+
+typedef ARM_INSTRUCTION((ARM7TDMI::*ARMInstructionPtr));
+typedef THUMB_INSTRUCTION((ARM7TDMI::*THUMBInstructionPtr));
 
 class ARM7TDMI {
 public:
@@ -278,11 +298,11 @@ private:
             ScheduleInterruptPoll();
         }
 
-    void __fastcall ARMUnimplemented(u32 instruction) {
+    ARM_INSTRUCTION(ARMUnimplemented) {
         log_fatal("Unimplemented ARM instruction: %08x at PC = %08x", instruction, this->pc - 8);
     };
 
-    void __fastcall THUMBUnimplemented(u16 instruction) {
+    THUMB_INSTRUCTION(THUMBUnimplemented) {
         log_fatal("Unimplemented THUMB instruction: %04x at PC = %08x", instruction, this->pc - 4);
     }
 #define INLINED_INCLUDES

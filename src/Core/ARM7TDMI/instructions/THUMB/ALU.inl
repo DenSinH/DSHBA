@@ -32,7 +32,7 @@ enum class ALUOperationsOpcode : u8 {
 };
 
 template<u8 op>
-void __fastcall ALUOperations(u16 instruction) {
+THUMB_INSTRUCTION(ALUOperations) {
     log_cpu_verbose("ALU ops %x", instruction);
     u8 rd = instruction & 7;
     u32 op1 = Registers[rd];
@@ -148,7 +148,7 @@ void __fastcall ALUOperations(u16 instruction) {
 }
 
 template<bool I, bool Op, u8 RnOff3>
-void __fastcall AddSubtract(u16 instruction) {
+THUMB_INSTRUCTION(AddSubtract) {
     log_cpu_verbose("AddSubtract %x", instruction);
     u32 operand;
 
@@ -187,7 +187,7 @@ enum class HiRegOp : u8{
 };
 
 template<u8 op, bool H1, bool H2>
-void __fastcall HiRegOps_BX(u16 instruction) {
+THUMB_INSTRUCTION(HiRegOps_BX) {
     log_cpu_verbose("HiRegOps %x", instruction);
     u8 rd = (instruction & 0x0007);
     u8 rs = ((instruction & 0x0038) >> 3);
@@ -239,7 +239,7 @@ void __fastcall HiRegOps_BX(u16 instruction) {
 }
 
 template<u8 Op, u8 Offs5>
-void __fastcall MoveShifted(u16 instruction) {
+THUMB_INSTRUCTION(MoveShifted) {
     log_cpu_verbose("MOV SHFT Op=%d, Offs5=%x", Op, Offs5);
     u8 rd = (instruction & 7);
     u32 Rs = Registers[(instruction & 0x0038) >> 3];
@@ -253,7 +253,7 @@ void __fastcall MoveShifted(u16 instruction) {
 }
 
 template<u8 Op, u8 rd>
-void __fastcall ALUImmediate(u16 instruction) {
+THUMB_INSTRUCTION(ALUImmediate) {
     log_cpu_verbose("ALU IMM Op=%d, rd=%d", Op, rd);
     u8 offs8 = (u8)instruction;
     u32 result;
@@ -281,7 +281,7 @@ void __fastcall ALUImmediate(u16 instruction) {
 }
 
 template<bool SP, u8 rd>
-void __fastcall LoadAddress(u16 instruction) {
+THUMB_INSTRUCTION(LoadAddress) {
     u32 word8 = (u8)instruction;
 
     if constexpr(SP) {
@@ -293,7 +293,7 @@ void __fastcall LoadAddress(u16 instruction) {
 }
 
 template<bool S>
-void __fastcall AddOffsToSP(u16 instruction) {
+THUMB_INSTRUCTION(AddOffsToSP) {
     if constexpr(!S) {
         sp += (instruction & 0x007f) << 2;
     }

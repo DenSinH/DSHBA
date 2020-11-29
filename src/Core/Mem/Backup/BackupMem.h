@@ -3,6 +3,7 @@
 #include "default.h"
 
 #include <string>
+#include <string.h>
 
 class BackupMem {
 public:
