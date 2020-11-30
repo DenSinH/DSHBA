@@ -21,7 +21,7 @@ public:
             EnvelopeTime--;
             Volume += EnvelopeUp ? 1 : -1;
 
-            Volume = std::clamp(Volume, 0u, 16u);
+            Volume = std::clamp((i32)Volume, 0, 16);
         }
     }
 };

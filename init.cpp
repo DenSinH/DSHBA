@@ -357,6 +357,9 @@ GBA* Initializer::init() {
     add_register_data("WAVSmpl", &gba->APU.wav.CurrentSample, 2, APU_tab);
     add_register_data("", nullptr, 4, APU_tab);
 
+    add_register_data("SOUNDCNT_H", &gba->APU.SOUNDCNT_H, 2, APU_tab);
+    add_register_data("SOUNDCNT_X", &gba->APU.SOUNDCNT_X, 2, APU_tab);
+
     int general_tab = add_register_tab("General");
 
     add_register_data("Top event", &gba->Scheduler.top, 8, general_tab);

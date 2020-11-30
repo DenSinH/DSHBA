@@ -62,17 +62,13 @@ enum class ExceptionVector : u32 {
 #define THUMB_INSTRUCTION(_name) void __fastcall (_name)(u16 instruction)
 #define BLANK_INSTRUCTION(_name, argtype) void __fastcall (_name)(argtype instruction)
 
-#elif defined(__GNUC__) && __GNUC_MINOR__ > 3
+// #elif defined(__GNUC__) && __GNUC_MINOR__ > 3
+
+#else
 
 #define ARM_INSTRUCTION(_name) void __attribute__((fastcall)) (_name)(u32 instruction)
 #define THUMB_INSTRUCTION(_name) void __attribute__((fastcall)) (_name)(u16 instruction)
 #define BLANK_INSTRUCTION(_name, argtype) void __attribute__((fastcall)) (_name)(argtype instruction)
-
-#else
-
-#define ARM_INSTRUCTION(_name) void (_name)(u32 instruction)
-#define THUMB_INSTRUCTION(_name) void (_name)(u16 instruction)
-#define BLANK_INSTRUCTION(_name, argtype) void (_name)(argtype instruction)
 
 #endif
 
