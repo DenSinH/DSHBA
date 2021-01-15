@@ -5,8 +5,12 @@
 #include "Interrupts.h"
 
 #include "../Mem/MemoryHelpers.h"
+#ifdef ADD_PPU
 #include "../PPU/PPU.h"
+#endif
+#ifdef ADD_APU
 #include "../APU/APU.h"
+#endif
 
 #include "../Scheduler/scheduler.h"
 
@@ -53,9 +57,10 @@ struct s_TimerData {
     u8 PrescalerShift;   // shift amount
     u32 Counter;         // used in count-up mode
     i32 TriggerTime;     // used in direct mode
-
+#ifdef ADD_APU
     FIFOChannel* FIFOA = nullptr;
     FIFOChannel* FIFOB = nullptr;
+#endif
 
     s_event Overflow;
 
@@ -74,7 +79,14 @@ class MMIO {
 
 public:
 
-    MMIO(GBAPPU* ppu, GBAAPU* apu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler);
+    MMIO(
+#ifdef ADD_PPU
+            GBAPPU* ppu,
+#endif
+#ifdef ADD_APU
+         GBAAPU* apu,
+#endif
+         ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler);
     ~MMIO() {};
 
     void Reset();
@@ -155,7 +167,7 @@ private:
     template<u8 x> READ_PRECALL(ReadTMxCNT_L);
 
     /*============== Audio ==============*/
-
+#ifdef ADD_APU
     WRITE_CALLBACK(WriteSquare0Sweep);
     template<u8 x> WRITE_CALLBACK(WriteSquareCNT_L);
     template<u8 x> WRITE_CALLBACK(WriteSquareCNT_H);
@@ -172,7 +184,7 @@ private:
     WRITE_CALLBACK(WriteSOUNDCNT_L);
     WRITE_CALLBACK(WriteSOUNDCNT_H);
     WRITE_CALLBACK(WriteSOUNDCNT_X);
-
+#endif
     /*=============== COM ===============*/
     WRITE_CALLBACK(WriteSIOCNT);  // mostly used to just generate an IRQ whenever necessary
     READ_PRECALL(ReadKEYINPUT);
@@ -194,8 +206,12 @@ private:
     u16 KEYINPUT = 0xffff;  // flipped
 
     ARM7TDMI* CPU;
+#ifdef ADD_PPU
     GBAPPU* PPU;
+#endif
+#ifdef ADD_APU
     GBAAPU* APU;
+#endif
     Mem* Memory;
     s_scheduler* Scheduler;
 
@@ -229,7 +245,7 @@ private:
         table[(static_cast<u32>(IORegister::BG3X) >> 1) + 1] = &MMIO::WriteReferencePoint<false>;  // upper part
         table[static_cast<u32>(IORegister::BG3Y) >> 1] = &MMIO::WriteReferencePoint<false>;
         table[(static_cast<u32>(IORegister::BG3Y) >> 1) + 1] = &MMIO::WriteReferencePoint<false>;  // upper part
-
+#ifdef ADD_APU
         table[static_cast<u32>(IORegister::SOUND1CNT_L) >> 1] = &MMIO::WriteSquare0Sweep;
         table[static_cast<u32>(IORegister::SOUND1CNT_H) >> 1] = &MMIO::WriteSquareCNT_L<0>;
         table[static_cast<u32>(IORegister::SOUND1CNT_X) >> 1] = &MMIO::WriteSquareCNT_H<0>;
@@ -252,6 +268,7 @@ private:
         table[(static_cast<u32>(IORegister::FIFO_A) >> 1) + 1] = &MMIO::WriteFIFO<0>;  // upper part
         table[static_cast<u32>(IORegister::FIFO_B) >> 1]       = &MMIO::WriteFIFO<1>;
         table[(static_cast<u32>(IORegister::FIFO_B) >> 1) + 1] = &MMIO::WriteFIFO<1>;  // upper part
+#endif
 
         table[static_cast<u32>(IORegister::TM0CNT_L) >> 1] = &MMIO::WriteTMxCNT_L<0>;
         table[static_cast<u32>(IORegister::TM1CNT_L) >> 1] = &MMIO::WriteTMxCNT_L<1>;
@@ -362,4 +379,6 @@ WRITE_CALLBACK(MMIO::WriteReferencePoint) {
 #include "IOReadWrite.inl"  // Read/Write templated functions
 #include "IODMA.inl"        // DMA related inlined functions
 #include "IOTimers.inl"
+#ifdef ADD_APU
 #include "IOAudio.inl"
+#endif

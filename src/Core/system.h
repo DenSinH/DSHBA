@@ -6,7 +6,9 @@
 #ifdef ADD_PPU
 #include "PPU/PPU.h"
 #endif
+#ifdef ADD_APU
 #include "APU/APU.h"
+#endif
 #include "IO/MMIO.h"
 
 #include "default.h"
@@ -58,10 +60,10 @@ private:
     MMIO IO = MMIO(
 #ifdef ADD_PPU
             &PPU,
-#else
-            nullptr,
 #endif
+#ifdef ADD_APU
             &APU,
+#endif
             &CPU,
             &Memory,
             &Scheduler
@@ -78,11 +80,13 @@ private:
             }
     );
 
+#ifdef ADD_APU
     GBAAPU APU = GBAAPU(
             &Scheduler,
             IO.GetWaveRAM_ptr(),
             std::function<void(u32)> ([this](u32 addr){ IO.TriggerAudioDMA(addr); })
     );
+#endif
 
     ARM7TDMI CPU = ARM7TDMI(
             &Scheduler,

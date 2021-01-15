@@ -11,6 +11,7 @@ void MMIO::OverflowTimer() {
     Timers[x].Counter = Timers[x].Register.CNT_L;  // reload counter
     Timers[x].TriggerTime = (*Scheduler->timer) & s_scheduler::TimeMask;     // reset triggertime (no startup delay now)
 
+#ifdef ADD_APU
     if constexpr(x < 2) {
         // trigger bound FIFO channels
         if (Timers[x].FIFOA) {
@@ -21,6 +22,7 @@ void MMIO::OverflowTimer() {
             Timers[x].FIFOB->TimerOverflow();
         }
     }
+#endif
 
     if constexpr(x < 3) {
         // tick next timer if in count-up mode

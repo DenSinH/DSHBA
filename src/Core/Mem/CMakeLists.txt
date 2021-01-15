@@ -17,9 +17,14 @@ add_library(Mem STATIC
 include_directories(
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/modules
-        $<TARGET_PROPERTY:APU,INCLUDE_DIRECTORIES>  # need SDL stuff
         ../include
 )
+
+if (ADD_APU)
+    include_directories(
+            $<TARGET_PROPERTY:APU,INCLUDE_DIRECTORIES>  # need SDL stuff
+    )
+endif()
 
 set_target_properties(Mem PROPERTIES LINKER_LANGUAGE CXX)
 

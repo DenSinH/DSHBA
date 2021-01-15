@@ -5,9 +5,20 @@
 #include "../ARM7TDMI/ARM7TDMI.h"
 #include "../Mem/Mem.h"
 
-MMIO::MMIO(GBAPPU* ppu, GBAAPU* apu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
+MMIO::MMIO(
+#ifdef ADD_PPU
+        GBAPPU* ppu,
+#endif
+#ifdef ADD_APU
+        GBAAPU* apu,
+#endif
+        ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
+#ifdef ADD_PPU
     PPU = ppu;
+#endif
+#ifdef ADD_APU
     APU = apu;
+#endif
     CPU = cpu;
     Memory = memory;
     Scheduler = scheduler;
@@ -77,8 +88,10 @@ MMIO::MMIO(GBAPPU* ppu, GBAAPU* apu, ARM7TDMI* cpu, Mem* memory, s_scheduler* sc
         .caller   = this,
     };
 
+#ifdef ADD_APU
     Timers[0].FIFOA = &APU->fifo[0];
     Timers[0].FIFOB = &APU->fifo[1];
+#endif
 
     Scheduler->AddEvent(&HBlank);
     Scheduler->AddEvent(&VBlank);
@@ -394,6 +407,7 @@ void MMIO::CheckKEYINPUTIRQ() {
     }
 }
 
+#ifdef ADD_APU
 WRITE_CALLBACK(MMIO::WriteNoiseCNT_L) {
     APU->ns.LengthCounter = (64 - value & 0x001f);
     APU->ns.EnvelopeTime = (value >> 8) & 7;
@@ -499,6 +513,7 @@ WRITE_CALLBACK(MMIO::WriteSOUNDCNT_H) {
 WRITE_CALLBACK(MMIO::WriteSOUNDCNT_X) {
     APU->SOUNDCNT_X = value;
 }
+#endif
 
 READ_PRECALL(MMIO::ReadKEYINPUT) {
     CheckKEYINPUTIRQ();

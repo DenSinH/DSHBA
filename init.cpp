@@ -161,6 +161,7 @@ OVERLAY_INFO(Initializer::scheduler_time_until) {
 }
 
 OVERLAY_INFO(Initializer::audio_samples) {
+#ifdef ADD_APU
     if (gba->APU.Stream) {
         SPRINTF(
                 output,
@@ -176,6 +177,9 @@ OVERLAY_INFO(Initializer::audio_samples) {
                 "NO STREAM AVAILABLE"
         );
     }
+#else
+    SPRINTF(output, output_length, "APU unlinked");
+#endif
 }
 
 MENU_ITEM_CALLBACK(Initializer::toggle_frameskip) {
@@ -273,13 +277,13 @@ void Initializer::frontend_video_destroy() {
 }
 
 void Initializer::frontend_audio_init() {
-#ifdef ADD_PPU
+#ifdef ADD_APU
     gba->APU.AudioInit();
 #endif
 }
 
 void Initializer::frontend_audio_destroy() {
-#ifdef ADD_PPU
+#ifdef ADD_APU
     gba->APU.AudioDestroy();
 #endif
 }
@@ -356,6 +360,7 @@ GBA* Initializer::init() {
     add_register_data("TM3CNT_L", &gba->IO.Timers[3].Register.CNT_L, 2, IO_tab);
     add_register_data("TM3CNT_H", &gba->IO.Timers[3].Register.CNT_H, 2, IO_tab);
 
+#ifdef ADD_APU
     int APU_tab = add_register_tab("APU");
 
     add_register_data("SQ1Vol", &gba->APU.sq[0].Volume, 4, APU_tab);
@@ -385,6 +390,7 @@ GBA* Initializer::init() {
 
     add_register_data("SOUNDCNT_H", &gba->APU.SOUNDCNT_H, 2, APU_tab);
     add_register_data("SOUNDCNT_X", &gba->APU.SOUNDCNT_X, 2, APU_tab);
+#endif
 
     int general_tab = add_register_tab("General");
 
@@ -424,6 +430,7 @@ GBA* Initializer::init() {
     add_menu_item(video_tab, "OBJ", &gba->PPU.ExternalObjEnable, nullptr);
 #endif
 
+#ifdef ADD_APU
     int audio_tab = add_menu_tab((char*)"Audio");
     const float max_volume = 2.0;
 
@@ -453,6 +460,7 @@ GBA* Initializer::init() {
         add_submenu_item(audio_tab, channel_menu, "Enable", &gba->APU.ExternalChannelEnable[i], nullptr);
         add_submenu_sliderf(audio_tab, channel_menu, "Volume", &gba->APU.ExternalChannelVolume[i], 0.0, max_volume);
     }
+#endif  // ADD_APU
 #endif
     return gba;
 }

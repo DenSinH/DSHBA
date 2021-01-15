@@ -9,9 +9,13 @@ add_library(ARM7TDMI STATIC
 include_directories(
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/modules
-        $<TARGET_PROPERTY:APU,INCLUDE_DIRECTORIES>  # need SDL stuff for Mem > IO > APU
         ../include
 )
+if (ADD_APU)
+    include_directories(
+            $<TARGET_PROPERTY:APU,INCLUDE_DIRECTORIES>  # need SDL stuff for Mem > IO > APU
+    )
+endif()
 
 set_target_properties(ARM7TDMI PROPERTIES LINKER_LANGUAGE CXX)
 

@@ -10,8 +10,12 @@ add_library(IO STATIC
 include_directories(
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/modules
-        $<TARGET_PROPERTY:APU,INCLUDE_DIRECTORIES>  # need SDL stuff
         ../include
 )
+
+if (ADD_APU)
+    # need some SDL stuff
+    include_directories($<TARGET_PROPERTY:APU,INCLUDE_DIRECTORIES>)
+endif()
 
 target_include_directories(IO PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

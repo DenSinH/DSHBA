@@ -5,6 +5,7 @@ project(DSHBA LANGUAGES C CXX)
 
 set(ADD_PPU 0)
 set(ADD_FRONTEND 0)
+set(ADD_APU 0)
 
 # check of LTO
 include(CheckIPOSupported)
@@ -18,6 +19,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "-Ofast") # -march=native
 set(CMAKE_C_FLAGS_RELEASE "-Ofast")
 if (ADD_PPU)
     add_compile_definitions(ADD_PPU=${ADD_PPU})
+endif()
+if (ADD_APU)
+    add_compile_definitions(ADD_APU=${ADD_APU})
 endif()
 if (ADD_FRONTEND)
     add_compile_definitions(ADD_FRONTEND=${ADD_FRONTEND})
