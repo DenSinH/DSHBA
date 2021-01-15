@@ -63,6 +63,7 @@ int main() {
 
     std::thread ui_thread(ui_run);
 
+    gba->LoadROM("D:\\Data\\CProjects\\AGS\\AGS.gba");
     gba->Run();
 
     ui_thread.join();

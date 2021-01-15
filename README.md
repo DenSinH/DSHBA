@@ -5,6 +5,11 @@ One extra challenge I wanted to add was writing a hardware renderer.
 
 <img src="https://github.com/DenSinH/DSHBA/blob/0.1/files/DSHBA_Ruby.png" alt="Pokemon Ruby" width=640>
 
+# What is this branch?
+
+This branch is only meant to write a very memory efficient backend, to be able to be ported
+to different platforms with less memory.
+
 ### Requirements
 
 To build, you need `SDL`, and optionally `capstone[arm]`. `ImGui` and `glad` are included in the project. You need a GPU that supports at least OpenGL 3.3 to run this project.
