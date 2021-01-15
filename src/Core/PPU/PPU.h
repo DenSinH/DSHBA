@@ -151,8 +151,14 @@ private:
     GLuint ObjVBO;
     GLuint ObjEBO;
 
+#ifdef ADD_FRONTEND
     bool SyncToVideo = true;
     bool FrameSkip = false;
+#else
+    bool SyncToVideo = false;
+    bool FrameSkip = true;
+#endif
+
 
     /* utils for non-synced non-frameskipped video */
     bool FrameReady = false;

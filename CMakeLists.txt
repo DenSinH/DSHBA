@@ -3,6 +3,9 @@ project(DSHBA LANGUAGES C CXX)
 
 # set(CMAKE_VERBOSE_MAKEFILE ON)
 
+set(ADD_PPU 0)
+set(ADD_FRONTEND 0)
+
 # check of LTO
 include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
@@ -13,6 +16,12 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-Ofast") # -march=native
 set(CMAKE_C_FLAGS_RELEASE "-Ofast")
+if (ADD_PPU)
+    add_compile_definitions(ADD_PPU=${ADD_PPU})
+endif()
+if (ADD_FRONTEND)
+    add_compile_definitions(ADD_FRONTEND=${ADD_FRONTEND})
+endif()
 
 if (NOT WIN32)
     # we need to specify this
@@ -60,22 +69,33 @@ else()
     message(STATUS "IPO / LTO not supported: <${ipo_error}>")
 endif()
 
-add_subdirectory(modules/imgui)
-
 add_subdirectory(src/Core)
-add_subdirectory(src/Frontend)
+
+if (ADD_FRONTEND)
+    add_subdirectory(modules/imgui)
+    add_subdirectory(src/Frontend)
+endif()
 
 include_directories(
         include
         modules
         $<TARGET_PROPERTY:Core,INCLUDE_DIRECTORIES>
-        $<TARGET_PROPERTY:Frontend,INCLUDE_DIRECTORIES>
 )
 
-if (WIN32)
-    target_link_libraries(DSHBA PRIVATE Core Frontend imgui)
+if (ADD_FRONTEND)
+    include_directories($<TARGET_PROPERTY:Frontend,INCLUDE_DIRECTORIES>)
+
+    if (WIN32)
+        target_link_libraries(DSHBA PRIVATE Core Frontend imgui)
+    else()
+        target_link_libraries(DSHBA PRIVATE Core Frontend imgui ${CMAKE_DL_LIBS})
+    endif()
 else()
-    target_link_libraries(DSHBA PRIVATE Core Frontend imgui ${CMAKE_DL_LIBS})
+    if (WIN32)
+        target_link_libraries(DSHBA PRIVATE Core)
+    else()
+        target_link_libraries(DSHBA PRIVATE Core ${CMAKE_DL_LIBS})
+    endif()
 endif()
 
 # copy over files with settings

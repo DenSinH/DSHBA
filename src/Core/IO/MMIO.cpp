@@ -222,7 +222,9 @@ SCHEDULER_EVENT(MMIO::HBlankEvent) {
 
         // buffer scanline & HBlank DMAs
         if (IO->VCount < VISIBLE_SCREEN_HEIGHT) {
+#ifdef ADD_PPU
             IO->PPU->BufferScanline(IO->VCount);
+#endif
             IO->TriggerDMATiming(DMACNT_HFlags::StartHBlank);
         }
 

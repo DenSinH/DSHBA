@@ -8,10 +8,12 @@
 static GBA* gba;
 
 void exception_handler() {
+#ifdef ADD_FRONTEND
     // keep open the screen to still be able to check the register/memory contents (unstable)
     while (!gba->Shutdown) {
         sleep_ms(16);
     }
+#endif
 }
 
 #undef BENCHMARKING
@@ -59,14 +61,18 @@ int main() {
     gba->Paused = false;
 #endif
 
+#ifdef ADD_FRONTEND
     atexit(exception_handler);
 
     std::thread ui_thread(ui_run);
+#endif
 
-    gba->LoadROM("D:\\Data\\CProjects\\AGS\\AGS.gba");
+    gba->LoadROM("D:\\User\\Downloads\\Pokemon - Emerald Version (USA, Europe).gba");
     gba->Run();
 
+#ifdef ADD_FRONTEND
     ui_thread.join();
+#endif
 
     return 0;
 }

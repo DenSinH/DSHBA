@@ -106,8 +106,10 @@ CONSOLE_COMMAND(Initializer::trace_system) {
 }
 
 CONSOLE_COMMAND(Initializer::tester) {
+#ifdef ADD_PPU
     gba->PPU.SyncToVideo ^= true;
     toggle_sync_to_video(gba->PPU.SyncToVideo);
+#endif
 }
 
 static u64 ticks, prev_ticks;
@@ -121,6 +123,7 @@ static float accum_time;
 static size_t prev_frame;
 OVERLAY_INFO(Initializer::fps_counter) {
     accum_time += delta_time;
+#ifdef ADD_PPU
     SPRINTF(
             output,
             output_length,
@@ -134,6 +137,9 @@ OVERLAY_INFO(Initializer::fps_counter) {
         accum_time = 0;
     }
     prev_frame = gba->PPU.Frame;
+#else
+    SPRINTF(output, output_length, "PPU not linked");
+#endif
 }
 
 OVERLAY_INFO(Initializer::scheduler_events) {
@@ -174,20 +180,24 @@ OVERLAY_INFO(Initializer::audio_samples) {
 
 MENU_ITEM_CALLBACK(Initializer::toggle_frameskip) {
     // selected is PPU.FrameSkip
+#ifdef ADD_PPU
     if (selected) {
         // just need to make sure we don't get stuck waiting for this
         gba->PPU.FrameDrawn = true;
         gba->PPU.FrameDrawnVariable.notify_all();
     }
+#endif
 }
 
 MENU_ITEM_CALLBACK(Initializer::toggle_sync_to_video) {
     // selected is PPU.SyncToVideo
+#ifdef ADD_PPU
     if (!selected) {
         // just need to make sure we don't get stuck waiting for this
         gba->PPU.FrameReady = true;
         gba->PPU.FrameReadyVariable.notify_all();
     }
+#endif
 }
 
 static std::string file;
@@ -198,7 +208,9 @@ FILE_SELECT_CALLBACK(load_ROM_callback) {
 
 MENU_ITEM_CALLBACK(load_ROM) {
     const char* filters[2] = {".gba", ""};
+#ifdef ADD_FRONTEND
     open_file_explorer("Select ROM file", const_cast<char **>(filters), 2, load_ROM_callback);
+#endif
 }
 
 u8 Initializer::ReadByte(u64 offset) {
@@ -236,32 +248,46 @@ bool Initializer::ARMMode() {
 }
 
 void Initializer::frontend_video_init() {
+#ifdef ADD_PPU
     gba->PPU.VideoInit();
+#endif
 }
 
 s_framebuffer Initializer::frontend_render(size_t t) {
+#ifdef ADD_PPU
     return gba->PPU.RenderUntil(t);
+#endif
+    return {};
 }
 
 void Initializer::frontend_blit(const float* data) {
+#ifdef ADD_PPU
     gba->PPU.Blit(data);
+#endif
 }
 
 void Initializer::frontend_video_destroy() {
+#ifdef ADD_PPU
     gba->PPU.VideoDestroy();
+#endif
 }
 
 void Initializer::frontend_audio_init() {
+#ifdef ADD_PPU
     gba->APU.AudioInit();
+#endif
 }
 
 void Initializer::frontend_audio_destroy() {
+#ifdef ADD_PPU
     gba->APU.AudioDestroy();
+#endif
 }
 
 GBA* Initializer::init() {
     gba = new GBA;
 
+#ifdef ADD_FRONTEND
     bind_video_init(frontend_video_init);
     bind_video_render(frontend_render);
     bind_video_blit(frontend_blit);
@@ -384,6 +410,7 @@ GBA* Initializer::init() {
     int game_tab = add_menu_tab((char*)"Game");
     add_menu_item(game_tab, "Load ROM", nullptr, load_ROM);
 
+#ifdef ADD_PPU
     int video_tab = add_menu_tab((char*)"Video");
     add_menu_item(video_tab, "Sync to video", &gba->PPU.SyncToVideo, Initializer::toggle_sync_to_video);
     add_menu_item(video_tab, "Frameskip", &gba->PPU.FrameSkip, Initializer::toggle_frameskip);
@@ -395,6 +422,7 @@ GBA* Initializer::init() {
     add_menu_item(video_tab, "BG2", &gba->PPU.ExternalBGEnable[2], nullptr);
     add_menu_item(video_tab, "BG3", &gba->PPU.ExternalBGEnable[3], nullptr);
     add_menu_item(video_tab, "OBJ", &gba->PPU.ExternalObjEnable, nullptr);
+#endif
 
     int audio_tab = add_menu_tab((char*)"Audio");
     const float max_volume = 2.0;
@@ -425,6 +453,6 @@ GBA* Initializer::init() {
         add_submenu_item(audio_tab, channel_menu, "Enable", &gba->APU.ExternalChannelEnable[i], nullptr);
         add_submenu_sliderf(audio_tab, channel_menu, "Volume", &gba->APU.ExternalChannelVolume[i], 0.0, max_volume);
     }
-
+#endif
     return gba;
 }

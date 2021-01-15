@@ -3,7 +3,9 @@
 
 #include "Mem/Mem.h"
 #include "ARM7TDMI/ARM7TDMI.h"
+#ifdef ADD_PPU
 #include "PPU/PPU.h"
+#endif
 #include "APU/APU.h"
 #include "IO/MMIO.h"
 
@@ -54,7 +56,11 @@ private:
     s_scheduler Scheduler = s_scheduler(&timer);
 
     MMIO IO = MMIO(
+#ifdef ADD_PPU
             &PPU,
+#else
+            nullptr,
+#endif
             &APU,
             &CPU,
             &Memory,
@@ -83,10 +89,12 @@ private:
             &Memory
     );
 
+#ifdef ADD_PPU
     GBAPPU PPU = GBAPPU(
             &Scheduler,
             &Memory
     );
+#endif
 };
 
 #endif //GC__SYSTEM_H

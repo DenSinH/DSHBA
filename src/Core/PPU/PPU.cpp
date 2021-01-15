@@ -43,6 +43,7 @@ GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
 }
 
 void GBAPPU::BufferScanline(u32 scanline) {
+#ifdef ADD_FRONTEND
     u32 DrawFrame = BufferFrame ^ 1;
 
     if (unlikely(scanline == 0)) {
@@ -197,6 +198,7 @@ void GBAPPU::BufferScanline(u32 scanline) {
     else {
         Memory->VRAMUpdate = { .min = sizeof(VRAMMEM), .max = 0 };
     }
+#endif
 }
 
 void GBAPPU::InitFramebuffers() {
