@@ -5,9 +5,7 @@
 #include "Interrupts.h"
 
 #include "../Mem/MemoryHelpers.h"
-#ifdef ADD_PPU
 #include "../PPU/PPU.h"
-#endif
 #ifdef ADD_APU
 #include "../APU/APU.h"
 #endif
