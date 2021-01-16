@@ -51,7 +51,10 @@ int main() {
 
     // gba->LoadBIOS(std::string("D:\\Data\\GBA\\BIOS\\bios.bin"));
     gba->LoadBIOS(std::string(BIOS_FILE));
-    printf("GBA system size (bytes): %x", sizeof(GBA));
+    printf("GBA system size (bytes): %d\n", sizeof(GBA));
+    printf("  ARM7TDMI size (bytes): %d\n", sizeof(ARM7TDMI));
+    printf("  MMIO     size (bytes): %d\n", sizeof(MMIO));
+    printf("  Memory   size (bytes): %d\n", sizeof(Mem));
 
 #ifdef BENCHMARKING
     benchmark();
