@@ -209,7 +209,10 @@ private:
 
 #define INLINED_INCLUDES
 #include "MemDMAUtil.inl"
+
+#ifndef MEM_EFFICIENCY
 #include "MemPageTables.inl"
+#endif
 #undef INLINED_INCLUDES
 
 #ifdef FAST_DMA

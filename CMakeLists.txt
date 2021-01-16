@@ -27,6 +27,10 @@ if (ADD_FRONTEND)
     add_compile_definitions(ADD_FRONTEND=${ADD_FRONTEND})
 endif()
 
+if (CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+    add_compile_definitions(MEM_EFFICIENCY)
+endif()
+
 if (NOT WIN32)
     # we need to specify this
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")

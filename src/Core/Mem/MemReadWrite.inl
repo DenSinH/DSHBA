@@ -6,10 +6,12 @@ ALWAYS_INLINE T Mem::Read(u32 address) {
         (*timer) += GetAccessTime<T>(region);
     }
 
+#ifndef MEM_EFFICIENCY
     u8* page = ReadPageTable[address >> 10];
     if (likely(page)) {
         return ReadArray<T>(page, address & 0x3ff);
     }
+#endif
 
     return RawReadSlow<T, in_dma>(address);
 }

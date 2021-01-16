@@ -196,12 +196,14 @@ void Mem::LoadROM(const std::string file_path) {
             log_fatal("Unspecified save type");
     }
 
+#ifndef MEM_EFFICIENCY
     if (static_cast<u8>(Type) & static_cast<u8>(BackupType::EEPROM_bit)) {
         SetPageTableEEPROM();
     }
     else {
         SetPageTableNoEEPROM();
     }
+#endif
 
     Backup->Load(SaveFile);
 
