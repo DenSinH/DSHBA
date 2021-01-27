@@ -20,10 +20,11 @@ const char* glsl_version = "#version 330 core\n";
 #define INTERNAL_FRAMEBUFFER_HEIGHT 320
 
 
-GBAPPU::GBAPPU(s_scheduler* scheduler, Mem *memory) {
-    Scheduler = scheduler;
-    Memory = memory;
-
+GBAPPU::GBAPPU(const bool* const paused, s_scheduler* const scheduler, Mem* const memory) :
+        Memory(memory),
+        Scheduler(scheduler),
+        Paused(paused)
+        {
     /* prevent possible race condition:
      *
      * (In theory, if the frontend started up really quickly, the first frame could be drawn when ScanlineBatchSizes
@@ -1229,7 +1230,7 @@ struct s_framebuffer GBAPPU::RenderUntil(size_t ticks) {
             if ((current_ticks < ticks) && FrameReadyVariable.wait_for(
                     lock,
                     std::chrono::milliseconds(current_ticks - ticks),
-                    [this]{ return FrameReady; }
+                    [this]{ return FrameReady || *Paused; }
             )) {
                 FrameReady = false;
             }
@@ -1237,7 +1238,7 @@ struct s_framebuffer GBAPPU::RenderUntil(size_t ticks) {
                 // timeout expired
                 break;
             }
-        } while (true);
+        } while (!*Paused);
         return framebuffer;
     }
 }
