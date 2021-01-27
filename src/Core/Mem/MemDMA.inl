@@ -240,6 +240,21 @@ void Mem::DoDMA(s_DMAData* DMA) {
         case DMAAction::Medium:
             // Invalidate VRAM, we do this before the transfer because the transfer updates DMA*
             switch (static_cast<MemoryRegion>(DMA->DAD >> 24)) {
+                case MemoryRegion::iWRAM: {
+                    u32 low  = MaskVRAMAddress(DMA->DAD);
+                    u32 high = MaskVRAMAddress(DMA->DAD + length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)));
+
+                    if (unlikely(high < low)) {
+                        // decrementing DMA
+                        std::swap(high, low);
+                    }
+
+                    // todo: move this
+                    constexpr size_t InstructionCacheSize = 64;
+                    for (u32 addr = low & ~((InstructionCacheSize << 1) - 1); addr < high; addr += InstructionCacheSize << 1) {
+                        iWRAMWrite(addr);
+                    }
+                }
                 case MemoryRegion::VRAM:
                 {
                     u32 low  = MaskVRAMAddress(DMA->DAD);
@@ -271,6 +286,16 @@ void Mem::DoDMA(s_DMAData* DMA) {
             // invalidate VRAM and OAM, we do this before the transfer because the transfer updates DMA*
             // for fast DMAs, we know both address controls are increasing
             switch (static_cast<MemoryRegion>(DMA->DAD >> 24)) {
+                case MemoryRegion::iWRAM: {
+                    u32 low  = MaskVRAMAddress(DMA->DAD);
+                    u32 high = MaskVRAMAddress(DMA->DAD + length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)));
+
+                    // todo: move this
+                    constexpr size_t InstructionCacheSize = 64;
+                    for (u32 addr = low & ~((InstructionCacheSize << 1) - 1); addr < high; addr += InstructionCacheSize << 1) {
+                        iWRAMWrite(addr);
+                    }
+                }
                 case MemoryRegion::VRAM:
                 {
                     u32 low  = MaskVRAMAddress(DMA->DAD);

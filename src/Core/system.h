@@ -11,12 +11,10 @@
 #include "flags.h"
 
 #include "Scheduler/scheduler.h"
-#include "Breakpoints/breakpoints.h"
 
 class GBA {
 
 public:
-    bool Paused = false;
     bool Shutdown = false;
     void (*Interaction)() = nullptr;
 
@@ -41,14 +39,8 @@ public:
 private:
     friend class Initializer;
 
-#ifdef DO_DEBUGGER
-    u32 Stepcount = 0;
-
-# ifdef DO_BREAKPOINTS
-    s_breakpoints Breakpoints = {};
-# endif
-
-#endif
+#undef main
+    friend int main();
 
     i32 timer = 0;
     s_scheduler Scheduler = s_scheduler(&timer);
@@ -69,7 +61,8 @@ private:
             &timer,
             [&cpu = CPU]() -> void {
                     cpu.PipelineReflush();
-            }
+            },
+            std::function<void(u32)> ([this](u32 addr){ CPU.iWRAMWrite(addr); })
     );
 
     GBAAPU APU = GBAAPU(

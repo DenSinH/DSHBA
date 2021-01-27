@@ -32,7 +32,7 @@ enum class ALUOperationsOpcode : u8 {
 };
 
 template<u8 op>
-THUMB_INSTRUCTION(ALUOperations) {
+INSTRUCTION(ALUOperations) {
     log_cpu_verbose("ALU ops %x", instruction);
     u8 rd = instruction & 7;
     u32 op1 = Registers[rd];
@@ -148,7 +148,7 @@ THUMB_INSTRUCTION(ALUOperations) {
 }
 
 template<bool I, bool Op, u8 RnOff3>
-THUMB_INSTRUCTION(AddSubtract) {
+INSTRUCTION(AddSubtract) {
     log_cpu_verbose("AddSubtract %x", instruction);
     u32 operand;
 
@@ -187,7 +187,7 @@ enum class HiRegOp : u8{
 };
 
 template<u8 op, bool H1, bool H2>
-THUMB_INSTRUCTION(HiRegOps_BX) {
+INSTRUCTION(HiRegOps_BX) {
     log_cpu_verbose("HiRegOps %x", instruction);
     u8 rd = (instruction & 0x0007);
     u8 rs = ((instruction & 0x0038) >> 3);
@@ -239,7 +239,7 @@ THUMB_INSTRUCTION(HiRegOps_BX) {
 }
 
 template<u8 Op, u8 Offs5>
-THUMB_INSTRUCTION(MoveShifted) {
+INSTRUCTION(MoveShifted) {
     log_cpu_verbose("MOV SHFT Op=%d, Offs5=%x", Op, Offs5);
     u8 rd = (instruction & 7);
     u32 Rs = Registers[(instruction & 0x0038) >> 3];
@@ -253,7 +253,7 @@ THUMB_INSTRUCTION(MoveShifted) {
 }
 
 template<u8 Op, u8 rd>
-THUMB_INSTRUCTION(ALUImmediate) {
+INSTRUCTION(ALUImmediate) {
     log_cpu_verbose("ALU IMM Op=%d, rd=%d", Op, rd);
     u8 offs8 = (u8)instruction;
     u32 result;
@@ -281,7 +281,7 @@ THUMB_INSTRUCTION(ALUImmediate) {
 }
 
 template<bool SP, u8 rd>
-THUMB_INSTRUCTION(LoadAddress) {
+INSTRUCTION(LoadAddress) {
     u32 word8 = (u8)instruction;
 
     if constexpr(SP) {
@@ -293,7 +293,7 @@ THUMB_INSTRUCTION(LoadAddress) {
 }
 
 template<bool S>
-THUMB_INSTRUCTION(AddOffsToSP) {
+INSTRUCTION(AddOffsToSP) {
     if constexpr(!S) {
         sp += (instruction & 0x007f) << 2;
     }

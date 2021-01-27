@@ -1,4 +1,5 @@
 #include "ARM7TDMI.h"
+#include "sleeping.h"
 
 #ifdef TRACE_LOG
 #include <iomanip>
@@ -24,6 +25,22 @@ ARM7TDMI::ARM7TDMI(s_scheduler *scheduler, Mem *memory)  {
 
     // if BIOS is not skipped, we need to start pc at 8 to start fetching instructions properly
     pc += 8;
+
+#ifdef DO_BREAKPOINTS
+    Breakpoints = {};
+    Paused      = false;
+
+    // add_breakpoint(&Breakpoints, 0x0800'01c0);
+    // add_breakpoint(&Breakpoints, 0x0000'190e);
+    // add_breakpoint(&Breakpoints, 0x0000'18d8);
+    // add_breakpoint(&Breakpoints, 0x0800'c89e);
+//    add_breakpoint(&Breakpoints, 0x0800'a5d2);
+//    add_breakpoint(&Breakpoints, 0x0800'a5a6);
+//    add_breakpoint(&Breakpoints, 0x0800'9702);
+    // add_breakpoint(&Breakpoints, 0x00000f60);
+    // add_breakpoint(&Breakpoints, 0x000000128);
+    // add_breakpoint(&Breakpoints, 0x08000134);
+#endif
 }
 
 void ARM7TDMI::Reset() {
@@ -41,6 +58,14 @@ void ARM7TDMI::Reset() {
     Halted = false;
     Pipeline.Clear();
     SkipBIOS();
+
+    // reset instruction caches
+    for (auto & i : ROMCache) {
+        i = nullptr;
+    }
+    for (auto & i : iWRAMCache) {
+        i = nullptr;
+    }
     // pc += 8;
 }
 
@@ -124,6 +149,158 @@ void ARM7TDMI::ScheduleInterruptPoll() {
     if (!InterruptPoll.active) {
         // schedule immediately
         Scheduler->AddEventAfter(&InterruptPoll, 0);
+    }
+}
+
+void ARM7TDMI::iWRAMWrite(u32 address) {
+    // clear all instruction caches in a CacheBlockSizeBytes sized region
+    const u32 base = (((address & 0x7fff) >> 1) & ~(CacheBlockSizeBytes - 1));
+    for (u32 offs = 0; offs < CacheBlockSizeBytes >> 1; offs++) {
+        iWRAMCache[base + offs] = nullptr;
+    }
+
+    if ((pc & ~(CacheBlockSizeBytes - 1)) == (address & ~(CacheBlockSizeBytes - 1))) {
+        // current block destroyed
+        *CurrentCache = nullptr;
+        CurrentCache = nullptr;
+    }
+}
+
+#ifdef DO_DEBUGGER
+void ARM7TDMI::DebugChecks(void** const interaction) {
+#ifdef DO_BREAKPOINTS
+    if (check_breakpoints(&Breakpoints, pc - ((CPSR & static_cast<u32>(CPSRFlags::T)) ? 4 : 8))) {
+        log_debug("Hit breakpoint %08x", pc - ((CPSR & static_cast<u32>(CPSRFlags::T)) ? 4 : 8));
+        Paused = true;
+    }
+#endif
+
+    while (Paused && (Stepcount == 0) && !(*interaction)) {
+        // sleep for a bit to not have a busy wait. This is for debugging anyway, and we are frozen
+        // so it's okay if it's not instant
+        sleep_ms(16);
+    }
+
+    if (Stepcount > 0) {
+        Stepcount--;
+    }
+}
+#endif
+
+#ifdef DO_DEBUGGER
+void ARM7TDMI::RunMakeCache(void** const until) {
+#else
+void ARM7TDMI::RunMakeCache() {
+#endif
+    while (true) {
+#ifdef DO_DEBUGGER
+        DebugChecks(until);
+#endif
+        if (Step<true>()) {
+            break;
+        }
+
+        if (unlikely(Scheduler->ShouldDoEvents())) {
+            Scheduler->DoEvents();
+            return;
+        }
+    }
+}
+
+#ifdef DO_DEBUGGER
+void ARM7TDMI::RunCache(void** const until) {
+#else
+void ARM7TDMI::RunCache() {
+#endif
+    const i32 cycles = (*CurrentCache)->AccessTime;
+    if ((*CurrentCache)->ARM) {
+        // ARM mode, we need to check the condition now too
+        for (auto& instr : (*CurrentCache)->Instructions) {
+            if (CheckCondition(instr.Instruction >> 28)) {
+                (this->*instr.Pointer)(instr.Instruction);
+            }
+
+            *timer += cycles;
+            pc += 4;
+#ifdef DO_DEBUGGER
+            DebugChecks(until);
+#endif
+            if (unlikely(Scheduler->ShouldDoEvents())) {
+                Scheduler->DoEvents();
+                return;
+            }
+
+            // block was destroyed (very unlikely)
+            if (unlikely(!CurrentCache)) {
+                return;
+            }
+        }
+    }
+    else {
+        // THUMB mode, no need to check instructions
+        for (auto& instr : (*CurrentCache)->Instructions) {
+            (this->*instr.Pointer)(instr.Instruction);
+
+            *timer += cycles;
+            pc += 2;
+#ifdef DO_DEBUGGER
+            DebugChecks(until);
+#endif
+            if (unlikely(Scheduler->ShouldDoEvents())) {
+                Scheduler->DoEvents();
+                return;
+            }
+
+            // block was destroyed (very unlikely)
+            if (unlikely(!CurrentCache)) {
+                return;
+            }
+        }
+    }
+}
+
+void ARM7TDMI::Run(void** const until) {
+    while (!(*until)) {
+        CurrentCache = GetCurrent(pc);
+
+        if (true || unlikely(!CurrentCache)) {
+            // nullptr: no cache (not iWRAM / ROM)
+            while (likely(!Scheduler->ShouldDoEvents())) {
+                if (Step<false>()) {
+                    break;
+                }
+#ifdef DO_DEBUGGER
+                DebugChecks(until);
+#endif
+            }
+
+            Scheduler->DoEvents();
+        }
+        else if (unlikely(!(*CurrentCache))) {
+            // possible cache, but none present
+            // make new one
+            if (ARMMode) {
+                const auto access_time = Memory->GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24)) << 1;
+                *CurrentCache = std::make_unique<InstructionCache>(access_time, true);
+            }
+            else {
+                const auto access_time = Memory->GetAccessTime<u16>(static_cast<MemoryRegion>(pc >> 24)) << 1;
+                *CurrentCache = std::make_unique<InstructionCache>(access_time, false);
+            }
+
+#ifdef DO_DEBUGGER
+            RunMakeCache(until);
+#else
+            RunMakeCache();
+#endif
+        }
+        else {
+#ifdef DO_DEBUGGER
+            RunCache(until);
+#else
+            RunCache();
+#endif
+        }
     }
 }
 

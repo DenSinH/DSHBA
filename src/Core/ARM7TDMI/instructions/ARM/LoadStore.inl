@@ -13,7 +13,7 @@ class ARM7TDMI_INL : ARM7TDMI {
 #endif
 
 template<bool I, bool P, bool U, bool B, bool W, bool L, u8 shift_type>
-ARM_INSTRUCTION(SingleDataTransfer) {
+INSTRUCTION(SingleDataTransfer) {
     u8 rn = ((instruction & 0x000f'0000) >> 16);
     u8 rd = ((instruction & 0x0000'f000) >> 12);
 
@@ -106,7 +106,7 @@ ARM_INSTRUCTION(SingleDataTransfer) {
 
 
 template<bool P, bool U, bool imm_offset, bool W, bool L, bool S, bool H>
-ARM_INSTRUCTION(HalfwordDataTransfer) {
+INSTRUCTION(HalfwordDataTransfer) {
     u32 offset;
     u8 rn = (instruction & 0x000f'0000) >> 16;
     u8 rd = (instruction & 0xf000) >> 12;
@@ -208,7 +208,7 @@ ARM_INSTRUCTION(HalfwordDataTransfer) {
 }
 
 template<bool B>
-ARM_INSTRUCTION(SWP) {
+INSTRUCTION(SWP) {
     u32 address = Registers[(instruction & 0x000f'0000) >> 16];
     u32 rd = (instruction & 0xf000) >> 12;
     u32 rm = (instruction & 0x000f);

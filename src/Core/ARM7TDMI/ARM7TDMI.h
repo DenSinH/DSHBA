@@ -5,11 +5,16 @@
 #include "../Mem/Mem.h"
 
 #include "../Scheduler/scheduler.h"
+#include "../Breakpoints/breakpoints.h"
 
 #include "default.h"
 #include "helpers.h"
 #include "flags.h"
 #include "log.h"
+
+#include <vector>
+#include <array>
+#include <memory>
 
 #ifdef TRACE_LOG
 #include <fstream>
@@ -21,8 +26,8 @@ class ARM7TDMI;
 #define lr Registers[14]
 #define pc Registers[15]
 
-const size_t ARMInstructionTableSize   = 0x1000;
-const size_t THUMBInstructionTableSize = 0x400;
+constexpr size_t ARMInstructionTableSize   = 0x1000;
+constexpr size_t THUMBInstructionTableSize = 0x400;
 
 enum class CPSRFlags : u32 {
     N    = 0x8000'0000,
@@ -58,25 +63,30 @@ enum class ExceptionVector : u32 {
 
 #ifdef _WIN32
 
-#define ARM_INSTRUCTION(_name) void __fastcall (_name)(u32 instruction)
-#define THUMB_INSTRUCTION(_name) void __fastcall (_name)(u16 instruction)
-#define BLANK_INSTRUCTION(_name, argtype) void __fastcall (_name)(argtype instruction)
+#define INSTRUCTION(_name) void __fastcall (_name)(u32 instruction)
 
 // #elif defined(__GNUC__) && __GNUC_MINOR__ > 3
 
 #else
 
-#define ARM_INSTRUCTION(_name) void __attribute__((fastcall)) (_name)(u32 instruction)
-#define THUMB_INSTRUCTION(_name) void __attribute__((fastcall)) (_name)(u16 instruction)
-#define BLANK_INSTRUCTION(_name, argtype) void __attribute__((fastcall)) (_name)(argtype instruction)
+#define INSTRUCTION(_name) void __attribute__((fastcall)) (_name)(u32 instruction)
 
 #endif
 
-typedef ARM_INSTRUCTION((ARM7TDMI::*ARMInstructionPtr));
-typedef THUMB_INSTRUCTION((ARM7TDMI::*THUMBInstructionPtr));
+typedef INSTRUCTION((ARM7TDMI::*ARMInstructionPtr));
+typedef INSTRUCTION((ARM7TDMI::*THUMBInstructionPtr));
+typedef INSTRUCTION((ARM7TDMI::*InstructionPtr));
 
 template<u16 instruction> static constexpr THUMBInstructionPtr GetTHUMBInstruction();
 template<u32 instruction> static constexpr ARMInstructionPtr GetARMInstruction();
+
+static constexpr ALWAYS_INLINE u32 ARMHash(const u32 instruction) {
+    return ((instruction & 0x0ff0'0000) >> 16) | ((instruction & 0x00f0) >> 4);
+}
+
+static constexpr ALWAYS_INLINE u32 THUMBHash(const u16 instruction) {
+    return ((instruction & 0xffc0) >> 6);
+}
 
 class ARM7TDMI {
 public:
@@ -91,8 +101,29 @@ public:
 
     };
 
+    bool Paused = false;
+#ifdef DO_DEBUGGER
+    u32 Stepcount = 0;
+
+# ifdef DO_BREAKPOINTS
+    s_breakpoints Breakpoints = {};
+# endif
+
+    void DebugChecks(void** const interaction);
+#endif
+
     void SkipBIOS();
-    ALWAYS_INLINE void Step();
+
+    template<bool MakeCache>
+    ALWAYS_INLINE bool Step();
+    void Run(void** const until);
+#ifdef DO_DEBUGGER
+    void RunMakeCache(void** const until);
+    void RunCache(void** const until);
+#else
+    void RunMakeCache();
+    void RunCache();
+#endif
     void PipelineReflush();
     void Reset();
 
@@ -125,6 +156,63 @@ private:
     u32 Registers[16]   = {};
 
     bool ARMMode = true;
+
+    // so 64 ARM instructions or 128 THUMB instructions
+    static constexpr size_t CacheBlockSizeBytes = 256;
+    struct CachedInstruction {
+        CachedInstruction(u32 instruction, InstructionPtr ptr) :
+                Instruction(instruction),
+                Pointer(ptr) {
+
+        }
+
+        const u32 Instruction;
+        const InstructionPtr Pointer;
+    };
+
+    struct InstructionCache {
+        InstructionCache(u16 access_time, bool arm) :
+                AccessTime(access_time),
+                ARM(arm) {
+            Instructions.reserve(CacheBlockSizeBytes >> 1);
+        }
+
+        const bool ARM;
+        const u16 AccessTime;
+        std::vector<CachedInstruction> Instructions;
+    };
+
+    // shift by 1 because of instruction alignment
+    std::array<std::unique_ptr<InstructionCache>, (0x8000 >> 1)> iWRAMCache = {};
+    std::array<std::unique_ptr<InstructionCache>, (0x0200'0000 >> 1)> ROMCache = {};
+    
+    std::unique_ptr<InstructionCache>* CurrentCache = nullptr;
+
+    constexpr std::unique_ptr<InstructionCache>* GetCurrent(const u32 address) {
+        switch (static_cast<MemoryRegion>(address >> 24)) {
+            case MemoryRegion::iWRAM:
+                if (iWRAMCache[(address & 0x7fff) >> 1]) {
+                    return &iWRAMCache[(address & 0x7fff) >> 1];
+                }
+                iWRAMCache[(address & 0x7fff) >> 1] = nullptr;
+                return &iWRAMCache[(address & 0x7fff) >> 1];
+            case MemoryRegion::ROM_L:
+            case MemoryRegion::ROM_H:
+            case MemoryRegion::ROM_L1:
+            case MemoryRegion::ROM_H1:
+            case MemoryRegion::ROM_L2:
+            case MemoryRegion::ROM_H2:
+                if (ROMCache[(address & 0x1ff'fff) >> 1]) {
+                    return &ROMCache[(address & 0x1ff'fff) >> 1];
+                }
+                ROMCache[(address & 0x1ff'fff) >> 1] = nullptr;
+                return &ROMCache[(address & 0x1ff'fff) >> 1];
+            default:
+                return nullptr;
+        }
+    }
+    void iWRAMWrite(u32 address);
+
 
     // used to reduce the amount of times we need to set the NZ flags in THUMB mode
     // basically, we only need to update them when transitioning back to ARM or on conditional branches
@@ -203,13 +291,37 @@ private:
     // bits 15-6 for THUMB instructions (less are needed, but this allows for more templating)
     THUMBInstructionPtr THUMBInstructions[THUMBInstructionTableSize] = {};
 
-    static ALWAYS_INLINE constexpr u32 ARMHash(u32 instruction) {
-        return ((instruction & 0x0ff0'0000) >> 16) | ((instruction & 0x00f0) >> 4);
-    }
+    // LUTs to check if instruction was a branch
+    static constexpr auto IsARMBranch = [] {
+        std::array<bool, ARMInstructionTableSize> table = {};
 
-    static ALWAYS_INLINE constexpr u32 THUMBHash(u16 instruction) {
-        return ((instruction & 0xffc0) >> 6);
-    }
+        table[ARMHash(0x012fff10)] = true;  // bx
+        for (u32 b4567 = 0; b4567 < 0x10; b4567++) {
+            for (u32 b20_24 = 0; b20_24 < 0x20; b20_24++) {
+                table[ARMHash((0x0a00'0000) | (b20_24 << 20) | (b4567 << 4))] = true;  // b / bl
+            }
+        }
+
+        return table;
+    }();
+
+    static constexpr auto IsTHUMBBranch = [] {
+        std::array<bool, THUMBInstructionTableSize> table = {};
+
+        for (u32 h1h2 = 0; h1h2 < 4; h1h2++) {
+            table[THUMBHash(0x4700 | (h1h2 << 6))] = true;  // bx
+        }
+
+        for (u32 b6_10 = 0; b6_10 < 0x20; b6_10++) {
+            table[THUMBHash(0xd000 | (b6_10 << 6))] = true;  // conditional branch
+        }
+
+        for (u32 b6_10 = 0; b6_10 < 0x20; b6_10++) {
+            table[THUMBHash(0xe000 | (b6_10 << 6))] = true;  // unconditional branch
+        }
+
+        return table;
+    }();
 
     template<u32>
     friend constexpr ARMInstructionPtr GetARMInstruction();
@@ -297,11 +409,11 @@ private:
             ScheduleInterruptPoll();
         }
 
-    ARM_INSTRUCTION(ARMUnimplemented) {
+    INSTRUCTION(ARMUnimplemented) {
         log_fatal("Unimplemented ARM instruction: %08x at PC = %08x", instruction, this->pc - 8);
     };
 
-    THUMB_INSTRUCTION(THUMBUnimplemented) {
+    INSTRUCTION(THUMBUnimplemented) {
         log_fatal("Unimplemented THUMB instruction: %04x at PC = %08x", instruction, this->pc - 4);
     }
 #define INLINED_INCLUDES
@@ -397,7 +509,8 @@ bool ARM7TDMI::CheckCondition(u8 condition) const {
     return ((Conditions[condition] >> (CPSR >> 28)) & 1) != 0;
 }
 
-void ARM7TDMI::Step() {
+template<bool MakeCache>
+bool ARM7TDMI::Step() {
     u32 instruction;
 
 #ifdef SINGLE_CPI
@@ -425,8 +538,14 @@ void ARM7TDMI::Step() {
         instruction = Memory->Mem::Read<u16, true>(pc - 4);
     }
 
+    bool block_end = false;
     if (ARMMode) {
         // ARM mode
+        if constexpr(MakeCache) {
+            auto instr = CachedInstruction(instruction, ARMInstructions[ARMHash(instruction)]);
+            (*CurrentCache)->Instructions.push_back(instr);
+            block_end = IsARMBranch[ARMHash(instruction)];
+        }
         if (CheckCondition(instruction >> 28)) {
             (this->*ARMInstructions[ARMHash(instruction)])(instruction);
         }
@@ -437,12 +556,28 @@ void ARM7TDMI::Step() {
     }
     else {
         // THUMB mode
-        (this->*THUMBInstructions[THUMBHash((u16)instruction)])((u16)instruction);
+        if constexpr(MakeCache) {
+            auto instr = CachedInstruction(instruction, THUMBInstructions[THUMBHash((u16)instruction)]);
+            (*CurrentCache)->Instructions.push_back(instr);
+            block_end = IsTHUMBBranch[THUMBHash((u16)instruction)];
+        }
+        (this->*THUMBInstructions[THUMBHash((u16)instruction)])(instruction);
         // same here
         pc += 2;
     }
 
-#ifdef SINGLE_CPI
-    timer = old_timer + 1;
-#endif
+    if constexpr (MakeCache) {
+        // return whether the new block is finished
+        if (block_end || !(pc & (CacheBlockSizeBytes - 1))) {
+            // branch or block alignment
+            return true;
+        }
+        return false;
+    }
+    else {
+        // return whether we might have a cache block
+        const bool in_iwram = (static_cast<MemoryRegion>(pc >> 24) == MemoryRegion::iWRAM);
+        const bool in_rom = pc >= (static_cast<u32>(MemoryRegion::ROM_L) << 24);
+        return in_iwram || in_rom;
+    }
 }

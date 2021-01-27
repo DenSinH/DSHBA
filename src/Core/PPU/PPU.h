@@ -41,6 +41,9 @@ public:
     bool ExternalBGEnable[4] = { true, true, true, true };
     bool ExternalObjEnable = true;
 
+    bool SyncToVideo = true;
+    bool FrameSkip = false;
+
 private:
     friend class MMIO;  // IO needs full control over the PPU
     friend class Initializer;
@@ -150,9 +153,6 @@ private:
     GLuint ObjVAO;
     GLuint ObjVBO;
     GLuint ObjEBO;
-
-    bool SyncToVideo = true;
-    bool FrameSkip = false;
 
     /* utils for non-synced non-frameskipped video */
     bool FrameReady = false;

@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <string>
 #include <fstream>
+#include <utility>
 
 #include "log.h"
 
@@ -41,15 +42,22 @@ size_t LoadFileTo(char* buffer, const std::string& file_name, size_t max_length)
  * the `count` bool in the templates it so we can count cycles conditionally
  * */
 
-Mem::Mem(MMIO* IO, s_scheduler* scheduler, u32* registers_ptr, u32* CPSR_ptr, i32* timer, std::function<void(void)> reflush) {
-    this->IO = IO;
-    this->Scheduler = scheduler;
-    this->registers_ptr = registers_ptr;
-    this->pc_ptr = &registers_ptr[15];
-    this->CPSR_ptr = CPSR_ptr;
-    this->Reflush = std::move(reflush);
-    this->timer = timer;
-
+Mem::Mem(
+            MMIO* IO,
+            s_scheduler* scheduler,
+            u32* registers_ptr,
+            u32* CPSR_ptr,
+            i32* timer,
+            std::function<void(void)> reflush,
+            std::function<void(u32)> iwram_write) :
+        timer(timer),
+        IO(IO),
+        Scheduler(scheduler),
+        registers_ptr(registers_ptr),
+        pc_ptr(&registers_ptr[15]),
+        CPSR_ptr(CPSR_ptr),
+        Reflush(std::move(reflush)),
+        iWRAMWrite(std::move(iwram_write)) {
     memset(BIOS, 0, sizeof(BIOS));
     memset(ROM, 0, sizeof(ROM));
     const u8 IdleBranch[5] = "\xfe\xff\xff\xea";

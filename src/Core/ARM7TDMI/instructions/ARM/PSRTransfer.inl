@@ -13,7 +13,7 @@ class ARM7TDMI_INL : ARM7TDMI {
 #endif
 
 template<bool Ps>
-ARM_INSTRUCTION(MRS) {
+INSTRUCTION(MRS) {
     // PSR -> reg
     u8 rd = (instruction & 0xf000) >> 12;
 
@@ -35,7 +35,7 @@ static constexpr u32 mask[16] = {
 };
 
 template<bool I, bool Pd>
-ARM_INSTRUCTION(MSR) {
+INSTRUCTION(MSR) {
     // reg/imm -> PSR
     /*
      * Not described in the manual, but from GBATek:

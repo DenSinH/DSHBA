@@ -15,7 +15,7 @@ CONSOLE_COMMAND(Initializer::reset_system) {
             strcmp(args[1], "break")  == 0
     )
             ) {
-        gba->Paused = true;
+        gba->CPU.Paused = true;
     }
 #endif
 
@@ -27,7 +27,7 @@ CONSOLE_COMMAND(Initializer::reset_system) {
 
 CONSOLE_COMMAND(Initializer::pause_system) {
 #ifdef DO_DEBUGGER
-    gba->Paused = true;
+    gba->CPU.Paused = true;
 
     STRCPY(output, MAX_OUTPUT_LENGTH, "System paused");
 #endif
@@ -35,7 +35,7 @@ CONSOLE_COMMAND(Initializer::pause_system) {
 
 CONSOLE_COMMAND(Initializer::unpause_system) {
 #ifdef DO_DEBUGGER
-    gba->Paused = false;
+    gba->CPU.Paused = false;
 
     STRCPY(output, MAX_OUTPUT_LENGTH, "System unpaused");
 #endif
@@ -50,7 +50,7 @@ CONSOLE_COMMAND(Initializer::break_system) {
 
 #ifdef DO_BREAKPOINTS
     u32 breakpoint = parsehex(args[1]);
-    add_breakpoint(&gba->Breakpoints, breakpoint);
+    add_breakpoint(&gba->CPU.Breakpoints, breakpoint);
     SPRINTF(output, MAX_OUTPUT_LENGTH, "Added breakpoint at %08x", breakpoint);
 #else
     STRCPY(output, MAX_OUTPUT_LENGTH, "Breakpoints disabled");
@@ -66,7 +66,7 @@ CONSOLE_COMMAND(Initializer::unbreak_system) {
     }
 #ifdef DO_BREAKPOINTS
     u32 breakpoint = parsehex(args[1]);
-    remove_breakpoint(&gba->Breakpoints, breakpoint);
+    remove_breakpoint(&gba->CPU.Breakpoints, breakpoint);
     SPRINTF(output, MAX_OUTPUT_LENGTH, "Removed breakpoint at %08x", breakpoint);
 #else
     STRCPY(output, MAX_OUTPUT_LENGTH, "Breakpoints disabled");
@@ -77,13 +77,13 @@ CONSOLE_COMMAND(Initializer::unbreak_system) {
 CONSOLE_COMMAND(Initializer::step_system) {
 #ifdef DO_DEBUGGER
     if (argc < 2) {
-        gba->Paused = true;
-        gba->Stepcount = 1;
+        gba->CPU.Paused = true;
+        gba->CPU.Stepcount = 1;
         STRCPY(output, MAX_OUTPUT_LENGTH, "Stepping system for one step");
     } else {
-        gba->Paused = true;
+        gba->CPU.Paused = true;
         u32 steps = parsedec(args[1]);
-        gba->Stepcount = steps;
+        gba->CPU.Stepcount = steps;
         SPRINTF(output, MAX_OUTPUT_LENGTH, "Stepping system for %d steps", steps);
     }
 #endif

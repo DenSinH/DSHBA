@@ -56,13 +56,17 @@ int main() {
 #endif
 
 #ifdef DO_BREAKPOINTS
-    gba->Paused = false;
+    gba->CPU.Paused = false;
 #endif
 
     atexit(exception_handler);
 
     std::thread ui_thread(ui_run);
 
+    gba->PPU.SyncToVideo = false;
+    gba->APU.ExternalEnable = false;
+    // gba->LoadROM("D:\\Data\\GBA\\Dash\\dash.gba");
+    gba->LoadROM("D:\\User\\Downloads\\Legend of Zelda, The - The Minish Cap (USA).gba");
     gba->Run();
 
     ui_thread.join();

@@ -326,7 +326,7 @@ ALWAYS_INLINE void DoDataProcessing(u32 instruction, u32 op2) {
  * this allows for some pretty intense specialization
  * */
 template<bool I, u8 opcode, bool S, u8 shift_type, bool shift_imm>
-ARM_INSTRUCTION(DataProcessing) {
+INSTRUCTION(DataProcessing) {
     log_cpu_verbose("Data Processing %08x (imm: %d, opcode: %x, S: %d, shift_type: %d, imm_shif_amt: %d)",
                     instruction, I, opcode, S, shift_type, shift_imm);
 

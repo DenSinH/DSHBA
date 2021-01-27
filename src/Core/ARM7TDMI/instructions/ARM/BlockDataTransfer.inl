@@ -13,7 +13,7 @@ class ARM7TDMI_INL : ARM7TDMI {
 #endif
 
 template<bool P, bool U, bool S, bool W, bool L>
-ARM_INSTRUCTION(BlockDataTransfer) {
+INSTRUCTION(BlockDataTransfer) {
     u16 register_list = instruction & 0xffff;
     u8 rn = (instruction & 0x000f'0000) >> 16;
 
