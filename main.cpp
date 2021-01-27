@@ -9,6 +9,8 @@ static GBA* gba;
 
 void exception_handler() {
     // keep open the screen to still be able to check the register/memory contents (unstable)
+    gba->CPU.Paused = true;
+    gba->PPU.SyncToVideo = true;
     while (!gba->Shutdown) {
         sleep_ms(16);
     }
@@ -63,10 +65,11 @@ int main() {
 
     std::thread ui_thread(ui_run);
 
-    gba->PPU.SyncToVideo = false;
+    gba->PPU.SyncToVideo = true;
     gba->APU.ExternalEnable = false;
     // gba->LoadROM("D:\\Data\\GBA\\Dash\\dash.gba");
-    gba->LoadROM("D:\\User\\Downloads\\Legend of Zelda, The - The Minish Cap (USA).gba");
+    // gba->LoadROM("D:\\User\\Downloads\\AGS.gba");
+    gba->LoadROM("D:\\User\\Downloads\\Doom (USA, Europe).gba");
     gba->Run();
 
     ui_thread.join();

@@ -250,7 +250,7 @@ void Mem::DoDMA(s_DMAData* DMA) {
                     }
 
                     // todo: move this
-                    constexpr size_t InstructionCacheSize = 64;
+                    constexpr size_t InstructionCacheSize = 256;
                     for (u32 addr = low & ~((InstructionCacheSize << 1) - 1); addr < high; addr += InstructionCacheSize << 1) {
                         iWRAMWrite(addr);
                     }
@@ -291,7 +291,7 @@ void Mem::DoDMA(s_DMAData* DMA) {
                     u32 high = MaskVRAMAddress(DMA->DAD + length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)));
 
                     // todo: move this
-                    constexpr size_t InstructionCacheSize = 64;
+                    constexpr size_t InstructionCacheSize = 256;
                     for (u32 addr = low & ~((InstructionCacheSize << 1) - 1); addr < high; addr += InstructionCacheSize << 1) {
                         iWRAMWrite(addr);
                     }

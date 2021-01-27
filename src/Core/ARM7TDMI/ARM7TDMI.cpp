@@ -192,16 +192,19 @@ void ARM7TDMI::RunMakeCache(void** const until) {
 #else
 void ARM7TDMI::RunMakeCache() {
 #endif
+    // log_debug("Making cache at %x", pc);
     while (true) {
 #ifdef DO_DEBUGGER
         DebugChecks(until);
 #endif
         if (Step<true>()) {
+            // log_debug("cache line ended");
             break;
         }
 
         if (unlikely(Scheduler->ShouldDoEvents())) {
             Scheduler->DoEvents();
+            // log_debug("scheduler ended cache line");
             return;
         }
     }
@@ -212,6 +215,7 @@ void ARM7TDMI::RunCache(void** const until) {
 #else
 void ARM7TDMI::RunCache() {
 #endif
+    // log_debug("running cache at %x", pc);
     const i32 cycles = (*CurrentCache)->AccessTime;
     if ((*CurrentCache)->ARM) {
         // ARM mode, we need to check the condition now too
@@ -263,9 +267,13 @@ void ARM7TDMI::Run(void** const until) {
     while (!(*until)) {
         CurrentCache = GetCurrent(pc);
 
-        if (true || unlikely(!CurrentCache)) {
+        if (unlikely(!CurrentCache)) {
             // nullptr: no cache (not iWRAM / ROM)
-            while (likely(!Scheduler->ShouldDoEvents())) {
+            while (true) {
+                if (unlikely(Scheduler->ShouldDoEvents())) {
+                    Scheduler->DoEvents();
+                }
+
                 if (Step<false>()) {
                     break;
                 }
@@ -273,8 +281,6 @@ void ARM7TDMI::Run(void** const until) {
                 DebugChecks(until);
 #endif
             }
-
-            Scheduler->DoEvents();
         }
         else if (unlikely(!(*CurrentCache))) {
             // possible cache, but none present

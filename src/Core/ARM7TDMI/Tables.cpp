@@ -26,6 +26,7 @@ static constexpr ARMInstructionPtr GetARMInstruction() {
             }
             else if constexpr(instruction == 0b0001'0010'0001) {
                 // BX
+                static_assert(ARM7TDMI::IsARMBranch[instruction], "ARM bx missed");
                 return &ARM7TDMI::BranchExchange;
             }
             else if constexpr((instruction & ARMHash(0x0e00'0090)) == ARMHash(0x0000'0090)) {
@@ -95,6 +96,7 @@ static constexpr ARMInstructionPtr GetARMInstruction() {
         case 0b10:
             if constexpr((instruction & (ARMHash(0x0e00'0000))) == ARMHash(0x0a00'0000)) {
                 // Branch (with Link)
+                static_assert(ARM7TDMI::IsARMBranch[instruction], "ARM branch missed");
                 return &ARM7TDMI::Branch<(instruction & ARMHash(0x0100'0000)) != 0>;
             }
             else {
@@ -107,8 +109,12 @@ static constexpr ARMInstructionPtr GetARMInstruction() {
                 return &ARM7TDMI::BlockDataTransfer<P, U, S, W, L>;
             }
         case 0b11:
+            if constexpr((instruction & (ARMHash(0x0f00'0000))) == ARMHash(0x0f00'0000)) {
+                static_assert(ARM7TDMI::IsARMBranch[instruction], "ARM swi missed");
+                return &ARM7TDMI::SWI<u32>;
+            }
             // actually should also hold coprocessor stuff, but that doesnt exist anyway
-            return &ARM7TDMI::SWI<u32>;
+            break;
         default:
             break;
     }
@@ -143,6 +149,9 @@ static constexpr THUMBInstructionPtr GetTHUMBInstruction() {
         const u8 opcode = (instruction & 0xc) >> 2;
         const bool H1 = (instruction & THUMBHash(0x0080)) != 0;
         const bool H2 = (instruction & THUMBHash(0x0040)) != 0;
+        if constexpr(opcode == 3) {
+            static_assert(ARM7TDMI::IsTHUMBBranch[instruction], "THUMB bx missed");
+        }
         return &ARM7TDMI::HiRegOps_BX<opcode, H1, H2>;
     }
     else if constexpr((instruction & THUMBHash(0xf000)) == THUMBHash(0x8000)) {
@@ -179,15 +188,18 @@ static constexpr THUMBInstructionPtr GetTHUMBInstruction() {
     else if constexpr((instruction & THUMBHash(0xf000)) == THUMBHash(0xd000)) {
         if constexpr((instruction & THUMBHash(0xff00)) == THUMBHash(0xdf00)) {
             // SWI
+            static_assert(ARM7TDMI::IsTHUMBBranch[instruction], "THUMB swi missed");
             return &ARM7TDMI::SWI<u16>;
         }
         else {
             const u8 cond = (instruction >> 2) & 0xf;
+            static_assert(ARM7TDMI::IsTHUMBBranch[instruction], "THUMB conditional branch missed");
             return &ARM7TDMI::ConditionalBranch<cond>;
         }
     }
     else if constexpr((instruction & THUMBHash(0xf000)) == THUMBHash(0xf000)) {
         const bool H = (instruction & THUMBHash(0x0800)) != 0;
+        static_assert(ARM7TDMI::IsTHUMBBranch[instruction], "THUMB long branch missed");
         return &ARM7TDMI::LongBranchLink<H>;
     }
     else if constexpr((instruction & THUMBHash(0xf000)) == THUMBHash(0xc000)) {
@@ -196,6 +208,7 @@ static constexpr THUMBInstructionPtr GetTHUMBInstruction() {
         return &ARM7TDMI::MultipleLoadStore<L, rb>;
     }
     else if constexpr((instruction & THUMBHash(0xf800)) == THUMBHash(0xe000)) {
+        static_assert(ARM7TDMI::IsTHUMBBranch[instruction], "THUMB unconditional branch missed");
         return &ARM7TDMI::UnconditionalBranch;
     }
     else if constexpr((instruction & THUMBHash(0xf000)) == THUMBHash(0xa000)) {

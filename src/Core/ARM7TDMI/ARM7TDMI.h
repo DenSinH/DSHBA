@@ -298,6 +298,7 @@ private:
         table[ARMHash(0x012fff10)] = true;  // bx
         for (u32 b4567 = 0; b4567 < 0x10; b4567++) {
             for (u32 b20_24 = 0; b20_24 < 0x20; b20_24++) {
+                table[ARMHash((0x0f00'0000) | (b20_24 << 20) | (b4567 << 4))] = true;  // swi
                 table[ARMHash((0x0a00'0000) | (b20_24 << 20) | (b4567 << 4))] = true;  // b / bl
             }
         }
@@ -308,15 +309,17 @@ private:
     static constexpr auto IsTHUMBBranch = [] {
         std::array<bool, THUMBInstructionTableSize> table = {};
 
-        for (u32 h1h2 = 0; h1h2 < 4; h1h2++) {
+        for (u16 h1h2 = 0; h1h2 < 4; h1h2++) {
             table[THUMBHash(0x4700 | (h1h2 << 6))] = true;  // bx
         }
 
-        for (u32 b6_10 = 0; b6_10 < 0x20; b6_10++) {
-            table[THUMBHash(0xd000 | (b6_10 << 6))] = true;  // conditional branch
+        for (u16 b67 = 0; b67 < 4; b67++) {
+            table[THUMBHash(0x4700 | (b67 << 6))] = true;  // swi
         }
 
-        for (u32 b6_10 = 0; b6_10 < 0x20; b6_10++) {
+        for (u16 b6_10 = 0; b6_10 < 0x40; b6_10++) {
+            table[THUMBHash(0xf000 | (b6_10 << 6))] = true;  // long branch with link
+            table[THUMBHash(0xd000 | (b6_10 << 6))] = true;  // conditional branch
             table[THUMBHash(0xe000 | (b6_10 << 6))] = true;  // unconditional branch
         }
 
@@ -568,6 +571,13 @@ bool ARM7TDMI::Step() {
 
     if constexpr (MakeCache) {
         // return whether the new block is finished
+//        if (block_end) {
+//            log_debug("was branch");
+//        }
+//        else {
+//            log_debug("was not branch");
+//        }
+
         if (block_end || !(pc & (CacheBlockSizeBytes - 1))) {
             // branch or block alignment
             return true;

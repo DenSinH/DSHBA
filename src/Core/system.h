@@ -41,6 +41,7 @@ private:
 
 #undef main
     friend int main();
+    friend void exception_handler();
 
     i32 timer = 0;
     s_scheduler Scheduler = s_scheduler(&timer);
@@ -77,7 +78,7 @@ private:
     );
 
     GBAPPU PPU = GBAPPU(
-            &Paused,
+            &CPU.Paused,
             &Scheduler,
             &Memory
     );
