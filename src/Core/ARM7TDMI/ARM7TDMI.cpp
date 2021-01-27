@@ -154,6 +154,7 @@ void ARM7TDMI::ScheduleInterruptPoll() {
 
 void ARM7TDMI::iWRAMWrite(u32 address) {
     // clear all instruction caches in a CacheBlockSizeBytes sized region
+    log_debug("Clear caches at %x", address);
     const u32 base = (((address & 0x7fff) >> 1) & ~(CacheBlockSizeBytes - 1));
     for (u32 offs = 0; offs < CacheBlockSizeBytes >> 1; offs++) {
         iWRAMCache[base + offs] = nullptr;

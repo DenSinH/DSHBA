@@ -65,11 +65,11 @@ int main() {
 
     std::thread ui_thread(ui_run);
 
-    gba->PPU.SyncToVideo = true;
+    gba->PPU.SyncToVideo = false;
     gba->APU.ExternalEnable = false;
     // gba->LoadROM("D:\\Data\\GBA\\Dash\\dash.gba");
     // gba->LoadROM("D:\\User\\Downloads\\AGS.gba");
-    gba->LoadROM("D:\\User\\Downloads\\Doom (USA, Europe).gba");
+    gba->LoadROM("D:\\User\\Downloads\\AGS.gba");
     gba->Run();
 
     ui_thread.join();

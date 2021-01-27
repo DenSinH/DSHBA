@@ -154,6 +154,15 @@ OVERLAY_INFO(Initializer::scheduler_time_until) {
     );
 }
 
+OVERLAY_INFO(Initializer::cpu_cache_block) {
+    SPRINTF(
+            output,
+            output_length,
+            "CPU in block %p",
+            gba->CPU.CurrentCache
+    );
+}
+
 OVERLAY_INFO(Initializer::audio_samples) {
     if (gba->APU.Stream) {
         SPRINTF(
@@ -379,6 +388,7 @@ GBA* Initializer::init() {
     add_overlay_info(fps_counter);
     add_overlay_info(scheduler_events);
     add_overlay_info(scheduler_time_until);
+    add_overlay_info(cpu_cache_block);
     add_overlay_info(audio_samples);
 
     int game_tab = add_menu_tab((char*)"Game");

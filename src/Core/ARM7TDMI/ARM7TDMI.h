@@ -190,12 +190,12 @@ private:
 
     constexpr std::unique_ptr<InstructionCache>* GetCurrent(const u32 address) {
         switch (static_cast<MemoryRegion>(address >> 24)) {
-            case MemoryRegion::iWRAM:
-                if (iWRAMCache[(address & 0x7fff) >> 1]) {
-                    return &iWRAMCache[(address & 0x7fff) >> 1];
-                }
-                iWRAMCache[(address & 0x7fff) >> 1] = nullptr;
-                return &iWRAMCache[(address & 0x7fff) >> 1];
+//            case MemoryRegion::iWRAM:
+//                if (iWRAMCache[(address & 0x7fff) >> 1]) {
+//                    return &iWRAMCache[(address & 0x7fff) >> 1];
+//                }
+//                iWRAMCache[(address & 0x7fff) >> 1] = nullptr;
+//                return &iWRAMCache[(address & 0x7fff) >> 1];
             case MemoryRegion::ROM_L:
             case MemoryRegion::ROM_H:
             case MemoryRegion::ROM_L1:

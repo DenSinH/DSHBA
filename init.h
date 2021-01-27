@@ -26,6 +26,7 @@ private:
     static OVERLAY_INFO(fps_counter);
     static OVERLAY_INFO(scheduler_events);
     static OVERLAY_INFO(scheduler_time_until);
+    static OVERLAY_INFO(cpu_cache_block);
     static OVERLAY_INFO(audio_samples);
 
     static u8 ReadByte(u64 offset);
