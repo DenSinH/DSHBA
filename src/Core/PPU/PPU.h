@@ -29,7 +29,7 @@ class GBAPPU {
 public:
     u32 Frame = 0;
 
-    explicit GBAPPU(s_scheduler* scheduler, Mem* memory);
+    explicit GBAPPU(const bool* const paused, s_scheduler* const scheduler, Mem* const memory);
     ~GBAPPU() { };
 
     void VideoInit();
@@ -45,7 +45,8 @@ private:
     friend class MMIO;  // IO needs full control over the PPU
     friend class Initializer;
 
-    Mem *Memory;
+    const bool* const Paused;
+    Mem * const Memory;
     u32 BufferFrame = 0;
 
     // actual data
@@ -75,7 +76,7 @@ private:
     u32 ScanlineOAMBatchSizes[2][VISIBLE_SCREEN_HEIGHT] = {};
     u32 CurrentOAMScanlineBatch = 0;
 
-    s_scheduler* Scheduler;
+    s_scheduler* const Scheduler;
 
     std::mutex DrawMutex = std::mutex();
 

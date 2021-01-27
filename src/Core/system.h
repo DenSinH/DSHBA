@@ -84,6 +84,7 @@ private:
     );
 
     GBAPPU PPU = GBAPPU(
+            &Paused,
             &Scheduler,
             &Memory
     );
