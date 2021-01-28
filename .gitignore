@@ -10,3 +10,4 @@ files/gba_bios.bin
 files/krom/*
 .vs/
 out/
+*.dshba
