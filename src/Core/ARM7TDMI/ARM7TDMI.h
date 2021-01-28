@@ -186,6 +186,7 @@ private:
     // shift by 1 because of instruction alignment
     std::array<std::unique_ptr<InstructionCache>, (0x4000 >> 1)> BIOSCache = {};
     // we don't want to include the stack so that we don't have to check this all the time
+    std::array<std::vector<u32>, (0x8000 - Mem::StackSize) / CacheBlockSizeBytes> iWRAMCacheFilled = {};
     std::array<std::unique_ptr<InstructionCache>, ((0x8000 - Mem::StackSize) >> 1)> iWRAMCache = {};
     std::array<std::unique_ptr<InstructionCache>, (0x0200'0000 >> 1)> ROMCache = {};
     
@@ -217,6 +218,8 @@ private:
                     if (iWRAMCache[index]) {
                         return &iWRAMCache[index];
                     }
+                    // mark index as filled
+                    iWRAMCacheFilled[(address & 0x7fff) / CacheBlockSizeBytes].push_back(index);
                     iWRAMCache[index] = nullptr;
                     return &iWRAMCache[index];
                 }

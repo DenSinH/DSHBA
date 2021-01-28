@@ -30,8 +30,8 @@ ARM7TDMI::ARM7TDMI(s_scheduler *scheduler, Mem *memory)  {
     Breakpoints = {};
     Paused      = false;
 
-    add_breakpoint(&Breakpoints, 0x08003550);
-    add_breakpoint(&Breakpoints, 0x080034f0);
+//    add_breakpoint(&Breakpoints, 0x08003550);
+//    add_breakpoint(&Breakpoints, 0x080034f0);
     // add_breakpoint(&Breakpoints, 0x080096ac);
 //    add_breakpoint(&Breakpoints, 0x0800'037a);
 //    add_breakpoint(&Breakpoints, 0x0800'0928);
@@ -153,10 +153,12 @@ void ARM7TDMI::ScheduleInterruptPoll() {
 
 void ARM7TDMI::iWRAMWrite(u32 address) {
     // clear all instruction caches in a CacheBlockSizeBytes sized region
-    const u32 base = ((address & 0x7fff) & ~(CacheBlockSizeBytes - 1)) >> 1;
-    for (u32 offs = 0; offs < CacheBlockSizeBytes >> 1; offs++) {
-        iWRAMCache[base + offs] = nullptr;
+    const u32 cache_page_index = (address & 0x7fff) / CacheBlockSizeBytes;
+
+    for (u32 index : iWRAMCacheFilled[cache_page_index]) {
+        iWRAMCache[index] = nullptr;
     }
+    iWRAMCacheFilled[cache_page_index].clear();
 
     if ((corrected_pc & ~(CacheBlockSizeBytes - 1)) == (address & ~(CacheBlockSizeBytes - 1))) {
         // current block destroyed
