@@ -30,8 +30,8 @@ ARM7TDMI::ARM7TDMI(s_scheduler *scheduler, Mem *memory)  {
     Breakpoints = {};
     Paused      = false;
 
-//    add_breakpoint(&Breakpoints, 0x0800a29c);
-//    add_breakpoint(&Breakpoints, 0x0000001c);
+    add_breakpoint(&Breakpoints, 0x08003550);
+    add_breakpoint(&Breakpoints, 0x080034f0);
     // add_breakpoint(&Breakpoints, 0x080096ac);
 //    add_breakpoint(&Breakpoints, 0x0800'037a);
 //    add_breakpoint(&Breakpoints, 0x0800'0928);
@@ -257,11 +257,11 @@ void ARM7TDMI::RunCache() {
 #ifdef DO_DEBUGGER
             DebugChecks(until);
 #endif
+            *timer += cycles;
             if (CheckCondition(instr.Instruction >> 28)) {
                 (this->*instr.Pointer)(instr.Instruction);
             }
 
-            *timer += cycles;
             pc += 4;
 
             // block was destroyed (very unlikely)
@@ -286,9 +286,9 @@ void ARM7TDMI::RunCache() {
 #ifdef DO_DEBUGGER
             DebugChecks(until);
 #endif
+            *timer += cycles;
             (this->*instr.Pointer)(instr.Instruction);
 
-            *timer += cycles;
             pc += 2;
 
             // block was destroyed (very unlikely)
@@ -324,11 +324,11 @@ void ARM7TDMI::Run(void** const until) {
             // possible cache, but none present
             // make new one
             if (ARMMode) {
-                const auto access_time = Memory->GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24)) << 1;
+                const auto access_time = Memory->GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24));
                 *CurrentCache = std::make_unique<InstructionCache>(access_time, true);
             }
             else {
-                const auto access_time = Memory->GetAccessTime<u16>(static_cast<MemoryRegion>(pc >> 24)) << 1;
+                const auto access_time = Memory->GetAccessTime<u16>(static_cast<MemoryRegion>(pc >> 24));
                 *CurrentCache = std::make_unique<InstructionCache>(access_time, false);
             }
 
