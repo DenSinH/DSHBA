@@ -16,7 +16,7 @@
 #include <array>
 #include <memory>
 
-#ifdef TRACE_LOG
+#if defined(TRACE_LOG) || defined(ALWAYS_TRACE_LOG)
 #include <fstream>
 #endif
 
@@ -25,6 +25,7 @@ class ARM7TDMI;
 #define sp Registers[13]
 #define lr Registers[14]
 #define pc Registers[15]
+#define corrected_pc (pc - (!ARMMode ? 4 : 8))
 
 constexpr size_t ARMInstructionTableSize   = 0x1000;
 constexpr size_t THUMBInstructionTableSize = 0x400;
@@ -188,7 +189,7 @@ private:
     
     std::unique_ptr<InstructionCache>* CurrentCache = nullptr;
 
-    constexpr std::unique_ptr<InstructionCache>* GetCurrent(const u32 address) {
+    constexpr std::unique_ptr<InstructionCache>* GetCache(const u32 address) {
         switch (static_cast<MemoryRegion>(address >> 24)) {
 //            case MemoryRegion::iWRAM:
 //                if (iWRAMCache[(address & 0x7fff) >> 1]) {
@@ -202,11 +203,11 @@ private:
             case MemoryRegion::ROM_H1:
             case MemoryRegion::ROM_L2:
             case MemoryRegion::ROM_H2:
-                if (ROMCache[(address & 0x1ff'fff) >> 1]) {
-                    return &ROMCache[(address & 0x1ff'fff) >> 1];
+                if (ROMCache[(address & 0x1ff'ffff) >> 1]) {
+                    return &ROMCache[(address & 0x1ff'ffff) >> 1];
                 }
-                ROMCache[(address & 0x1ff'fff) >> 1] = nullptr;
-                return &ROMCache[(address & 0x1ff'fff) >> 1];
+                ROMCache[(address & 0x1ff'ffff) >> 1] = nullptr;
+                return &ROMCache[(address & 0x1ff'ffff) >> 1];
             default:
                 return nullptr;
         }
@@ -314,6 +315,7 @@ private:
         }
 
         for (u16 b67 = 0; b67 < 4; b67++) {
+            table[THUMBHash(0xbd00 | (b67 << 6))] = true;  // pop PC
             table[THUMBHash(0x4700 | (b67 << 6))] = true;  // swi
         }
 
@@ -516,21 +518,17 @@ template<bool MakeCache>
 bool ARM7TDMI::Step() {
     u32 instruction;
 
-#ifdef SINGLE_CPI
-    u64 old_timer = timer;
-#endif
-
-#ifdef ALWAYS_TRACE_LOG
-    LogState();
-#elif defined(TRACE_LOG)
-    if (TraceSteps > 0) {
-        TraceSteps--;
-        LogState();
-    }
-#endif
+    bool block_end = false;
     if (unlikely(Pipeline.Count)) {
         // we only have stuff in the pipeline if writes near PC happened
         instruction = Pipeline.Dequeue();
+        block_end = true;
+        if (ARMMode) {
+            goto skip_adding_instruction_to_cache_ARM;
+        }
+        else {
+            goto skip_adding_instruction_to_cache_THUMB;
+        }
     }
     else if (ARMMode) {
         // before the instruction gets executed, we are 2 instructions ahead
@@ -541,14 +539,17 @@ bool ARM7TDMI::Step() {
         instruction = Memory->Mem::Read<u16, true>(pc - 4);
     }
 
-    bool block_end = false;
     if (ARMMode) {
         // ARM mode
         if constexpr(MakeCache) {
             auto instr = CachedInstruction(instruction, ARMInstructions[ARMHash(instruction)]);
             (*CurrentCache)->Instructions.push_back(instr);
-            block_end = IsARMBranch[ARMHash(instruction)];
+            // also check if Rd == pc (does not detect multiplies with pc as destination)
+            block_end = IsARMBranch[ARMHash(instruction)]
+                     || ((instruction & 0x0000f000) == 0x0000f000)   // any operation with PC as destination
+                     || ((instruction & 0x0e108000) == 0x08108000);  // ldm r, { .. pc }
         }
+skip_adding_instruction_to_cache_ARM:
         if (CheckCondition(instruction >> 28)) {
             (this->*ARMInstructions[ARMHash(instruction)])(instruction);
         }
@@ -562,23 +563,17 @@ bool ARM7TDMI::Step() {
         if constexpr(MakeCache) {
             auto instr = CachedInstruction(instruction, THUMBInstructions[THUMBHash((u16)instruction)]);
             (*CurrentCache)->Instructions.push_back(instr);
-            block_end = IsTHUMBBranch[THUMBHash((u16)instruction)];
+            // also check for hi-reg-ops with PC as destination
+            block_end = IsTHUMBBranch[THUMBHash((u16)instruction)] || ((instruction & 0xfc87) == 0x4487);
         }
+skip_adding_instruction_to_cache_THUMB:
         (this->*THUMBInstructions[THUMBHash((u16)instruction)])(instruction);
         // same here
         pc += 2;
     }
 
     if constexpr (MakeCache) {
-        // return whether the new block is finished
-//        if (block_end) {
-//            log_debug("was branch");
-//        }
-//        else {
-//            log_debug("was not branch");
-//        }
-
-        if (block_end || !(pc & (CacheBlockSizeBytes - 1))) {
+        if (block_end || !(corrected_pc & (CacheBlockSizeBytes - 1))) {
             // branch or block alignment
             return true;
         }

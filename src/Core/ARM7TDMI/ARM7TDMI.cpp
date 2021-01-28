@@ -1,7 +1,7 @@
 #include "ARM7TDMI.h"
 #include "sleeping.h"
 
-#ifdef TRACE_LOG
+#if defined(TRACE_LOG) || defined(ALWAYS_TRACE_LOG)
 #include <iomanip>
 #endif
 
@@ -19,7 +19,7 @@ ARM7TDMI::ARM7TDMI(s_scheduler *scheduler, Mem *memory)  {
         .active = false,
     };
 
-#ifdef TRACE_LOG
+#if defined(TRACE_LOG) || defined(ALWAYS_TRACE_LOG)
     trace.open("DSHBA.log", std::fstream::out | std::fstream::app);
 #endif
 
@@ -30,16 +30,11 @@ ARM7TDMI::ARM7TDMI(s_scheduler *scheduler, Mem *memory)  {
     Breakpoints = {};
     Paused      = false;
 
-    // add_breakpoint(&Breakpoints, 0x0800'01c0);
-    // add_breakpoint(&Breakpoints, 0x0000'190e);
-    // add_breakpoint(&Breakpoints, 0x0000'18d8);
-    // add_breakpoint(&Breakpoints, 0x0800'c89e);
-//    add_breakpoint(&Breakpoints, 0x0800'a5d2);
-//    add_breakpoint(&Breakpoints, 0x0800'a5a6);
-//    add_breakpoint(&Breakpoints, 0x0800'9702);
-    // add_breakpoint(&Breakpoints, 0x00000f60);
-    // add_breakpoint(&Breakpoints, 0x000000128);
-    // add_breakpoint(&Breakpoints, 0x08000134);
+//    add_breakpoint(&Breakpoints, 0x0800'0370);
+//    add_breakpoint(&Breakpoints, 0x0800'037a);
+//    add_breakpoint(&Breakpoints, 0x0800'0928);
+//    add_breakpoint(&Breakpoints, 0x0800'8e74);
+//    add_breakpoint(&Breakpoints, 0x0800'8e78);
 #endif
 }
 
@@ -154,24 +149,34 @@ void ARM7TDMI::ScheduleInterruptPoll() {
 
 void ARM7TDMI::iWRAMWrite(u32 address) {
     // clear all instruction caches in a CacheBlockSizeBytes sized region
-    log_debug("Clear caches at %x", address);
     const u32 base = (((address & 0x7fff) >> 1) & ~(CacheBlockSizeBytes - 1));
     for (u32 offs = 0; offs < CacheBlockSizeBytes >> 1; offs++) {
         iWRAMCache[base + offs] = nullptr;
     }
 
-    if ((pc & ~(CacheBlockSizeBytes - 1)) == (address & ~(CacheBlockSizeBytes - 1))) {
+    if ((corrected_pc & ~(CacheBlockSizeBytes - 1)) == (address & ~(CacheBlockSizeBytes - 1))) {
         // current block destroyed
-        *CurrentCache = nullptr;
-        CurrentCache = nullptr;
+        if (CurrentCache) {
+            *CurrentCache = nullptr;
+            CurrentCache = nullptr;
+        }
     }
 }
 
 #ifdef DO_DEBUGGER
 void ARM7TDMI::DebugChecks(void** const interaction) {
+#ifdef ALWAYS_TRACE_LOG
+    LogState();
+#elif defined(TRACE_LOG)
+    if (TraceSteps > 0) {
+        TraceSteps--;
+        LogState();
+    }
+#endif
+
 #ifdef DO_BREAKPOINTS
-    if (check_breakpoints(&Breakpoints, pc - ((CPSR & static_cast<u32>(CPSRFlags::T)) ? 4 : 8))) {
-        log_debug("Hit breakpoint %08x", pc - ((CPSR & static_cast<u32>(CPSRFlags::T)) ? 4 : 8));
+    if (check_breakpoints(&Breakpoints, corrected_pc)) {
+        log_debug("Hit breakpoint %08x", corrected_pc);
         Paused = true;
     }
 #endif
@@ -193,19 +198,22 @@ void ARM7TDMI::RunMakeCache(void** const until) {
 #else
 void ARM7TDMI::RunMakeCache() {
 #endif
-    // log_debug("Making cache at %x", pc);
+    // log_debug("Making cache block at %x", pc);
     while (true) {
 #ifdef DO_DEBUGGER
         DebugChecks(until);
 #endif
-        if (Step<true>()) {
-            // log_debug("cache line ended");
-            break;
+        if (unlikely(Step<true>())) {
+            return;
         }
 
         if (unlikely(Scheduler->ShouldDoEvents())) {
             Scheduler->DoEvents();
-            // log_debug("scheduler ended cache line");
+            return;
+        }
+
+        if (unlikely(!CurrentCache)) {
+            // cache destroyed by near write
             return;
         }
     }
@@ -216,20 +224,21 @@ void ARM7TDMI::RunCache(void** const until) {
 #else
 void ARM7TDMI::RunCache() {
 #endif
-    // log_debug("running cache at %x", pc);
+    // log_debug("Running cache block at %x", pc);
     const i32 cycles = (*CurrentCache)->AccessTime;
+
     if ((*CurrentCache)->ARM) {
         // ARM mode, we need to check the condition now too
         for (auto& instr : (*CurrentCache)->Instructions) {
+#ifdef DO_DEBUGGER
+            DebugChecks(until);
+#endif
             if (CheckCondition(instr.Instruction >> 28)) {
                 (this->*instr.Pointer)(instr.Instruction);
             }
 
             *timer += cycles;
             pc += 4;
-#ifdef DO_DEBUGGER
-            DebugChecks(until);
-#endif
             if (unlikely(Scheduler->ShouldDoEvents())) {
                 Scheduler->DoEvents();
                 return;
@@ -244,13 +253,14 @@ void ARM7TDMI::RunCache() {
     else {
         // THUMB mode, no need to check instructions
         for (auto& instr : (*CurrentCache)->Instructions) {
+#ifdef DO_DEBUGGER
+            DebugChecks(until);
+#endif
             (this->*instr.Pointer)(instr.Instruction);
 
             *timer += cycles;
             pc += 2;
-#ifdef DO_DEBUGGER
-            DebugChecks(until);
-#endif
+
             if (unlikely(Scheduler->ShouldDoEvents())) {
                 Scheduler->DoEvents();
                 return;
@@ -266,7 +276,8 @@ void ARM7TDMI::RunCache() {
 
 void ARM7TDMI::Run(void** const until) {
     while (!(*until)) {
-        CurrentCache = GetCurrent(pc);
+        CurrentCache = GetCache(corrected_pc);
+        // log_debug("got cache %p at %x", CurrentCache, corrected_pc);
 
         if (unlikely(!CurrentCache)) {
             // nullptr: no cache (not iWRAM / ROM)
@@ -275,12 +286,12 @@ void ARM7TDMI::Run(void** const until) {
                     Scheduler->DoEvents();
                 }
 
-                if (Step<false>()) {
-                    break;
-                }
 #ifdef DO_DEBUGGER
                 DebugChecks(until);
 #endif
+                if (Step<false>()) {
+                    break;
+                }
             }
         }
         else if (unlikely(!(*CurrentCache))) {
@@ -313,7 +324,7 @@ void ARM7TDMI::Run(void** const until) {
 
 #if defined(TRACE_LOG) || defined(ALWAYS_TRACE_LOG)
 void ARM7TDMI::LogState() {
-    if (static_cast<Mode>(CPSR & static_cast<u32>(CPSRFlags::Mode)) != Mode::Supervisor) {
+    if (pc >= 0x0100'0000 && (static_cast<Mode>(CPSR & static_cast<u32>(CPSRFlags::Mode)) != Mode::Supervisor)) {
         trace << std::setfill('0') << std::setw(8) << std::hex << Registers[0] << " ";
         trace << std::setfill('0') << std::setw(8) << std::hex << Registers[1] << " ";
         trace << std::setfill('0') << std::setw(8) << std::hex << Registers[2] << " ";
