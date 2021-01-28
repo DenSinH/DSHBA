@@ -158,8 +158,6 @@ private:
 
     bool ARMMode = true;
 
-    // so 64 ARM instructions or 128 THUMB instructions
-    static constexpr size_t CacheBlockSizeBytes = 256;
     struct CachedInstruction {
         CachedInstruction(u32 instruction, InstructionPtr ptr) :
                 Instruction(instruction),
@@ -175,7 +173,7 @@ private:
         InstructionCache(u16 access_time, bool arm) :
                 AccessTime(access_time),
                 ARM(arm) {
-            Instructions.reserve(CacheBlockSizeBytes >> 1);
+            Instructions.reserve(Mem::InstructionCacheBlockSizeBytes >> 1);
         }
 
         const bool ARM;
@@ -186,7 +184,7 @@ private:
     // shift by 1 because of instruction alignment
     std::array<std::unique_ptr<InstructionCache>, (0x4000 >> 1)> BIOSCache = {};
     // we don't want to include the stack so that we don't have to check this all the time
-    std::array<std::vector<u32>, (0x8000 - Mem::StackSize) / CacheBlockSizeBytes> iWRAMCacheFilled = {};
+    std::array<std::vector<u32>, (0x8000 - Mem::StackSize) / Mem::InstructionCacheBlockSizeBytes> iWRAMCacheFilled = {};
     std::array<std::unique_ptr<InstructionCache>, ((0x8000 - Mem::StackSize) >> 1)> iWRAMCache = {};
     std::array<std::unique_ptr<InstructionCache>, (0x0200'0000 >> 1)> ROMCache = {};
     
@@ -219,7 +217,7 @@ private:
                         return &iWRAMCache[index];
                     }
                     // mark index as filled
-                    iWRAMCacheFilled[(address & 0x7fff) / CacheBlockSizeBytes].push_back(index);
+                    iWRAMCacheFilled[(address & 0x7fff) / Mem::InstructionCacheBlockSizeBytes].push_back(index);
                     iWRAMCache[index] = nullptr;
                     return &iWRAMCache[index];
                 }
@@ -603,7 +601,7 @@ skip_adding_instruction_to_cache_THUMB:
     }
 
     if constexpr (MakeCache) {
-        if (block_end || !(corrected_pc & (CacheBlockSizeBytes - 1))) {
+        if (block_end || !(corrected_pc & (Mem::InstructionCacheBlockSizeBytes - 1))) {
             // branch or block alignment
             return true;
         }

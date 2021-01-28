@@ -258,9 +258,7 @@ bool Mem::DoDMA(s_DMAData* DMA) {
                         std::swap(high, low);
                     }
 
-                    // todo: move this
-                    constexpr size_t InstructionCacheSize = 256;
-                    for (u32 addr = low & ~((InstructionCacheSize) - 1); addr < high; addr += InstructionCacheSize) {
+                    for (u32 addr = low & ~((InstructionCacheBlockSizeBytes) - 1); addr < high; addr += InstructionCacheBlockSizeBytes) {
                         if ((addr & 0x7fff) < (0x8000 - Mem::StackSize)) {
                             iWRAMWrite(addr);
                         }
@@ -300,9 +298,7 @@ bool Mem::DoDMA(s_DMAData* DMA) {
                     u32 low  = MaskVRAMAddress(DMA->DAD);
                     u32 high = MaskVRAMAddress(DMA->DAD + length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl)));
 
-                    // todo: move this
-                    constexpr size_t InstructionCacheSize = 256;
-                    for (u32 addr = low & ~((InstructionCacheSize) - 1); addr < high; addr += InstructionCacheSize) {
+                    for (u32 addr = low & ~((InstructionCacheBlockSizeBytes) - 1); addr < high; addr += InstructionCacheBlockSizeBytes) {
                         if ((addr & 0x7fff) < (0x8000 - Mem::StackSize)) {
                             iWRAMWrite(addr);
                         }

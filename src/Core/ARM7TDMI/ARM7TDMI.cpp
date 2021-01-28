@@ -153,14 +153,14 @@ void ARM7TDMI::ScheduleInterruptPoll() {
 
 void ARM7TDMI::iWRAMWrite(u32 address) {
     // clear all instruction caches in a CacheBlockSizeBytes sized region
-    const u32 cache_page_index = (address & 0x7fff) / CacheBlockSizeBytes;
+    const u32 cache_page_index = (address & 0x7fff) / Mem::InstructionCacheBlockSizeBytes;
 
     for (u32 index : iWRAMCacheFilled[cache_page_index]) {
         iWRAMCache[index] = nullptr;
     }
     iWRAMCacheFilled[cache_page_index].clear();
 
-    if ((corrected_pc & ~(CacheBlockSizeBytes - 1)) == (address & ~(CacheBlockSizeBytes - 1))) {
+    if ((corrected_pc & ~(Mem::InstructionCacheBlockSizeBytes - 1)) == (address & ~(Mem::InstructionCacheBlockSizeBytes - 1))) {
         // current block destroyed
         if (CurrentCache) {
             *CurrentCache = nullptr;

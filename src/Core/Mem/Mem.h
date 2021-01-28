@@ -59,6 +59,9 @@ public:
     );
     ~Mem();
 
+    // so 64 ARM instructions or 128 THUMB instructions
+    static constexpr size_t InstructionCacheBlockSizeBytes = 256;
+
     u32 OpenBusOverride = 0;
     u32 OpenBusOverrideAt = 0;
 
