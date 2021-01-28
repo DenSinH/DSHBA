@@ -278,6 +278,7 @@ SCHEDULER_EVENT(Mem::DumpSaveEvent) {
     else {
         Memory->Backup->Dump(Memory->SaveFile);
     }
+    return false;
 }
 
 u32 Mem::BusValue() {

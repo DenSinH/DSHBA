@@ -68,9 +68,11 @@ int main() {
     gba->PPU.SyncToVideo = true;
     gba->APU.ExternalEnable = false;
     // gba->LoadROM("D:\\Data\\GBA\\Dash\\dash.gba");
+    // gba->LoadROM("D:\\User\\Downloads\\Doom (USA, Europe).gba");
+    gba->LoadROM("D:\\User\\Downloads\\Legend of Zelda, The - The Minish Cap (USA).gba");
     // gba->LoadROM("D:\\User\\Downloads\\AGS.gba");
     // gba->LoadROM("D:\\User\\Downloads\\gba-niccc.gba");
-    gba->LoadROM("D:\\Data\\CProjects\\DSHBA\\files\\roms\\suite.gba");
+    // gba->LoadROM("D:\\Data\\CProjects\\DSHBA\\files\\roms\\main.gba");
     // gba->LoadROM("D:\\Data\\CProjects\\DSHBA\\files\\tonc\\swi_demo.gba");
     gba->Run();
 

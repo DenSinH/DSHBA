@@ -252,7 +252,9 @@ void Mem::DoDMA(s_DMAData* DMA) {
                     // todo: move this
                     constexpr size_t InstructionCacheSize = 256;
                     for (u32 addr = low & ~((InstructionCacheSize << 1) - 1); addr < high; addr += InstructionCacheSize << 1) {
-                        iWRAMWrite(addr);
+                        if ((addr & 0x7fff) < (0x8000 - Mem::StackSize)) {
+                            iWRAMWrite(addr);
+                        }
                     }
                 }
                 case MemoryRegion::VRAM:
@@ -293,7 +295,9 @@ void Mem::DoDMA(s_DMAData* DMA) {
                     // todo: move this
                     constexpr size_t InstructionCacheSize = 256;
                     for (u32 addr = low & ~((InstructionCacheSize << 1) - 1); addr < high; addr += InstructionCacheSize << 1) {
-                        iWRAMWrite(addr);
+                        if ((addr & 0x7fff) < (0x8000 - Mem::StackSize)) {
+                            iWRAMWrite(addr);
+                        }
                     }
                 }
                 case MemoryRegion::VRAM:

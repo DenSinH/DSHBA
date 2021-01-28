@@ -118,7 +118,9 @@ void Mem::Write(u32 address, T value) {
             WriteArray<T>(eWRAM, address & 0x3'ffff, value);
             return;
         case MemoryRegion::iWRAM:
-            iWRAMWrite(address);
+            if ((address & 0x7fff) < (0x8000 - Mem::StackSize)) {
+                iWRAMWrite(address);
+            }
             WriteArray<T>(iWRAM, address & 0x7fff, value);
             return;
         case MemoryRegion::IO:

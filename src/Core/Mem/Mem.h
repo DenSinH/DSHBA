@@ -88,6 +88,8 @@ public:
         }
     }
 
+    static constexpr u32 StackSize = 0x400;
+
 private:
     friend class GBAPPU;   // allow VMEM to be buffered
     friend class Mem_INL;  // to cheese IDEs

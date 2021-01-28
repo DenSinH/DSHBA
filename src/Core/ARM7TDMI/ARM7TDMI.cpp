@@ -136,8 +136,10 @@ SCHEDULER_EVENT(ARM7TDMI::InterruptPollEvent) {
             cpu->pc = static_cast<u32>(ExceptionVector::IRQ);
             cpu->FakePipelineFlush<true>();
             cpu->pc += 4;  // get ready to receive next instruction
+            return true;  // cpu affected
         }
     }
+    return false;
 }
 
 void ARM7TDMI::ScheduleInterruptPoll() {
@@ -204,17 +206,27 @@ void ARM7TDMI::RunMakeCache() {
         DebugChecks(until);
 #endif
         if (unlikely(Step<true>())) {
-            return;
-        }
-
-        if (unlikely(Scheduler->ShouldDoEvents())) {
-            Scheduler->DoEvents();
+            // cache done
+            if (unlikely((*CurrentCache)->Instructions.empty())) {
+                // empty caches will hang the emulator
+                // they might happen when branches close to pc get written (self modifying code)
+                *CurrentCache = nullptr;
+            }
             return;
         }
 
         if (unlikely(!CurrentCache)) {
             // cache destroyed by near write
             return;
+        }
+
+        if (unlikely(Scheduler->ShouldDoEvents())) {
+            if (unlikely(Scheduler->DoEvents())) {
+                // CPU state affected
+                // just destroy the cache, we want the caches to be as big as possible
+                *CurrentCache = nullptr;
+                return;
+            }
         }
     }
 }
@@ -240,8 +252,10 @@ void ARM7TDMI::RunCache() {
             *timer += cycles;
             pc += 4;
             if (unlikely(Scheduler->ShouldDoEvents())) {
-                Scheduler->DoEvents();
-                return;
+                if (unlikely(Scheduler->DoEvents())) {
+                    // CPU state affected
+                    return;
+                }
             }
 
             // block was destroyed (very unlikely)
@@ -262,8 +276,10 @@ void ARM7TDMI::RunCache() {
             pc += 2;
 
             if (unlikely(Scheduler->ShouldDoEvents())) {
-                Scheduler->DoEvents();
-                return;
+                if (unlikely(Scheduler->DoEvents())) {
+                    // CPU state affected
+                    return;
+                }
             }
 
             // block was destroyed (very unlikely)

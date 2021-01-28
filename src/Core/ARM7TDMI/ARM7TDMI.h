@@ -184,30 +184,56 @@ private:
     };
 
     // shift by 1 because of instruction alignment
-    std::array<std::unique_ptr<InstructionCache>, (0x8000 >> 1)> iWRAMCache = {};
+    // we don't want to include the stack so that we don't have to check this all the time
+    std::array<std::unique_ptr<InstructionCache>, (0x4000 >> 1)> BIOSCache = {};
+    std::array<std::unique_ptr<InstructionCache>, ((0x8000 - Mem::StackSize) >> 1)> iWRAMCache = {};
     std::array<std::unique_ptr<InstructionCache>, (0x0200'0000 >> 1)> ROMCache = {};
     
     std::unique_ptr<InstructionCache>* CurrentCache = nullptr;
 
+    static constexpr bool InCacheRegion(const u32 address) {
+        const bool in_bios = address < 0x4000;
+        const bool in_iwram = (static_cast<MemoryRegion>(address >> 24) == MemoryRegion::iWRAM) && ((address & 0x7fff) < (0x8000 - Mem::StackSize));
+        const bool in_rom = address >= (static_cast<u32>(MemoryRegion::ROM_L) << 24);
+        return in_iwram || in_rom;
+    }
+
     constexpr std::unique_ptr<InstructionCache>* GetCache(const u32 address) {
         switch (static_cast<MemoryRegion>(address >> 24)) {
-//            case MemoryRegion::iWRAM:
-//                if (iWRAMCache[(address & 0x7fff) >> 1]) {
-//                    return &iWRAMCache[(address & 0x7fff) >> 1];
-//                }
-//                iWRAMCache[(address & 0x7fff) >> 1] = nullptr;
-//                return &iWRAMCache[(address & 0x7fff) >> 1];
+            case MemoryRegion::BIOS: {
+                const u32 index = (address & 0x3fff) >> 1;
+                if (likely(address < 0x4000)) {
+                    if (BIOSCache[index]) {
+                        return &BIOSCache[index];
+                    }
+                    BIOSCache[index] = nullptr;
+                    return &BIOSCache[index];
+                }
+            }
+            case MemoryRegion::iWRAM: {
+                const u32 index = (address & 0x7fff) >> 1;
+                if ((address & 0x7fff) < (0x8000 - Mem::StackSize)) {
+                    if (iWRAMCache[index]) {
+                        return &iWRAMCache[index];
+                    }
+                    iWRAMCache[index] = nullptr;
+                    return &iWRAMCache[index];
+                }
+                return nullptr;
+            }
             case MemoryRegion::ROM_L:
             case MemoryRegion::ROM_H:
             case MemoryRegion::ROM_L1:
             case MemoryRegion::ROM_H1:
             case MemoryRegion::ROM_L2:
-            case MemoryRegion::ROM_H2:
-                if (ROMCache[(address & 0x1ff'ffff) >> 1]) {
-                    return &ROMCache[(address & 0x1ff'ffff) >> 1];
+            case MemoryRegion::ROM_H2: {
+                const u32 index = (address & 0x1ff'ffff) >> 1;
+                if (ROMCache[index]) {
+                    return &ROMCache[index];
                 }
-                ROMCache[(address & 0x1ff'ffff) >> 1] = nullptr;
-                return &ROMCache[(address & 0x1ff'ffff) >> 1];
+                ROMCache[index] = nullptr;
+                return &ROMCache[index];
+            }
             default:
                 return nullptr;
         }
@@ -581,8 +607,6 @@ skip_adding_instruction_to_cache_THUMB:
     }
     else {
         // return whether we might have a cache block
-        const bool in_iwram = (static_cast<MemoryRegion>(pc >> 24) == MemoryRegion::iWRAM);
-        const bool in_rom = pc >= (static_cast<u32>(MemoryRegion::ROM_L) << 24);
-        return in_iwram || in_rom;
+        return InCacheRegion(corrected_pc);
     }
 }

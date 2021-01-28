@@ -17,8 +17,8 @@
 struct s_scheduler;
 struct s_event;
 
-// todo: string field in event to view top event name in debugger?
-#define SCHEDULER_EVENT(name) void name(void* caller, s_event* event, s_scheduler* scheduler)
+// returns whether CPU was affected
+#define SCHEDULER_EVENT(name) bool name(void* caller, s_event* event, s_scheduler* scheduler)
 
 typedef struct s_event {
     SCHEDULER_EVENT((*callback));
@@ -83,7 +83,7 @@ struct s_scheduler {
 
     explicit s_scheduler(i32* timer) {
         this->infty = (s_event) {
-            .callback = [](void* caller, s_event* event, s_scheduler* scheduler) {
+            .callback = [] (void* caller, s_event* event, s_scheduler* scheduler) -> bool {
                 *(scheduler->timer) -= 0x7000'0000;
                 scheduler->queue.map([](s_event** value) {
                     (*value)->time -= 0x7000'0000;
@@ -91,6 +91,7 @@ struct s_scheduler {
 
                 // schedule at 0x7000'0000 again
                 scheduler->AddEvent(event);
+                return false;
             },
             .caller = this,
             .time = 0x7000'0000
@@ -152,13 +153,14 @@ struct s_scheduler {
         AddEvent(event);
     }
 
-    void DoEvents() {
+    bool DoEvents() {
         s_event* first = queue.top();
+        bool cpu_affected = false;
         while (first->time <= *timer) {
             first->active = false;
 
             queue.pop();
-            first->callback(first->caller, first, this);
+            cpu_affected |= first->callback(first->caller, first, this);
 
             log_sched("Doing event at time %llx, now %x events in queue", first->time, queue.size());
 
@@ -166,6 +168,7 @@ struct s_scheduler {
             first = queue.top();
         }
         top = first->time;
+        return cpu_affected;
     }
 
     ALWAYS_INLINE u64 PeekEvent() const {

@@ -94,6 +94,7 @@ SCHEDULER_EVENT(GBAAPU::TickFrameSequencerEvent) {
 
     event->time += FrameSequencerPeriod;
     scheduler->AddEvent(event);
+    return false;
 }
 
 static float tester = 0;
@@ -186,6 +187,7 @@ SCHEDULER_EVENT(GBAAPU::ProvideSampleEvent) {
 
     event->time += SamplePeriod;
     scheduler->AddEvent(event);
+    return false;
 }
 
 void GBAAPU::AudioDestroy() {

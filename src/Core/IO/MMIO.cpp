@@ -285,12 +285,14 @@ SCHEDULER_EVENT(MMIO::HBlankEvent) {
             IO->DISPSTAT &= ~static_cast<u16>(DISPSTATFlags::VCount);
         }
     }
+    return false;  // the InterruptPoll event affects the CPU, not this one
 }
 
 SCHEDULER_EVENT(MMIO::HBlankFlagEvent) {
     auto IO = (MMIO*)caller;
 
     IO->DISPSTAT |= static_cast<u16>(DISPSTATFlags::HBLank);
+    return false;
 }
 
 SCHEDULER_EVENT(MMIO::VBlankEvent) {
@@ -319,6 +321,7 @@ SCHEDULER_EVENT(MMIO::VBlankEvent) {
         event->time += CYCLES_PER_SCANLINE * VISIBLE_SCREEN_HEIGHT;
         IO->Scheduler->AddEvent(event);
     }
+    return false;  // the InterruptPoll event affects the CPU, not this one
 }
 
 WRITE_CALLBACK(MMIO::WriteDISPCNT) {
@@ -546,6 +549,7 @@ SCHEDULER_EVENT(MMIO::HaltEvent) {
         *IO->Scheduler->timer = IO->Scheduler->PeekEvent();
         IO->Scheduler->DoEvents();
     }
+    return false;  // the InterruptPoll event affects the CPU, not this one
 }
 
 WRITE_CALLBACK(MMIO::WritePOSTFLG_HALTCNT) {

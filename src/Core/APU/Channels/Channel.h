@@ -135,5 +135,6 @@ private:
         chan->TriggerTime = event->time;
         event->time += chan->Period;
         scheduler->AddEvent(event);
+        return false;
     }
 };

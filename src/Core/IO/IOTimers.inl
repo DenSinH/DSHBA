@@ -58,6 +58,7 @@ SCHEDULER_EVENT(MMIO::TimerOverflowEvent) {
     auto IO = (MMIO*)caller;
 
     IO->OverflowTimer<x>();
+    return false;  // the InterruptPoll event affects the CPU, not this event
 }
 
 template<u8 x>
