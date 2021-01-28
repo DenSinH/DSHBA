@@ -184,8 +184,8 @@ private:
     };
 
     // shift by 1 because of instruction alignment
-    // we don't want to include the stack so that we don't have to check this all the time
     std::array<std::unique_ptr<InstructionCache>, (0x4000 >> 1)> BIOSCache = {};
+    // we don't want to include the stack so that we don't have to check this all the time
     std::array<std::unique_ptr<InstructionCache>, ((0x8000 - Mem::StackSize) >> 1)> iWRAMCache = {};
     std::array<std::unique_ptr<InstructionCache>, (0x0200'0000 >> 1)> ROMCache = {};
     
@@ -195,7 +195,7 @@ private:
         const bool in_bios = address < 0x4000;
         const bool in_iwram = (static_cast<MemoryRegion>(address >> 24) == MemoryRegion::iWRAM) && ((address & 0x7fff) < (0x8000 - Mem::StackSize));
         const bool in_rom = address >= (static_cast<u32>(MemoryRegion::ROM_L) << 24);
-        return in_iwram || in_rom;
+        return in_iwram || in_rom || in_bios;
     }
 
     constexpr std::unique_ptr<InstructionCache>* GetCache(const u32 address) {
@@ -209,6 +209,7 @@ private:
                     BIOSCache[index] = nullptr;
                     return &BIOSCache[index];
                 }
+                return nullptr;
             }
             case MemoryRegion::iWRAM: {
                 const u32 index = (address & 0x7fff) >> 1;

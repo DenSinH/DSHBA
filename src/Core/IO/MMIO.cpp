@@ -107,7 +107,7 @@ void MMIO::TriggerInterrupt(u16 interrupt) {
     CPU->ScheduleInterruptPoll();
 }
 
-void MMIO::RunDMAChannel(u8 x) {
+bool MMIO::RunDMAChannel(u8 x) {
     const u16 control = DMAData[x].CNT_H;
 
     bool other_dma_active = false;
@@ -123,20 +123,21 @@ void MMIO::RunDMAChannel(u8 x) {
     }
 
     DMAsActive++;
+    bool cpu_affected;  // cpu affected by intermittent events
     if (control & static_cast<u16>(DMACNT_HFlags::WordSized)) {
         if (other_dma_active) {
-            Memory->DoDMA<u32, true>(&DMAData[x]);
+            cpu_affected = Memory->DoDMA<u32, true>(&DMAData[x]);
         }
         else {
-            Memory->DoDMA<u32, false>(&DMAData[x]);
+            cpu_affected = Memory->DoDMA<u32, false>(&DMAData[x]);
         }
     }
     else {
         if (other_dma_active) {
-            Memory->DoDMA<u16, true>(&DMAData[x]);
+            cpu_affected = Memory->DoDMA<u16, true>(&DMAData[x]);
         }
         else {
-            Memory->DoDMA<u16, false>(&DMAData[x]);
+            cpu_affected = Memory->DoDMA<u16, false>(&DMAData[x]);
         }
     }
     DMAsActive--;
@@ -174,6 +175,8 @@ void MMIO::RunDMAChannel(u8 x) {
         log_dma("Trigger DMA%x interrupt (IE %x)", x, CPU->IE);
         TriggerInterrupt(static_cast<u16>(Interrupt::DMA0) << x);
     }
+
+    return cpu_affected;
 }
 
 void MMIO::TriggerDMATiming(DMACNT_HFlags start_timing) {

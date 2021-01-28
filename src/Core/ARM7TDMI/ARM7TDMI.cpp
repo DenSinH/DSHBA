@@ -30,7 +30,9 @@ ARM7TDMI::ARM7TDMI(s_scheduler *scheduler, Mem *memory)  {
     Breakpoints = {};
     Paused      = false;
 
-//    add_breakpoint(&Breakpoints, 0x0800'0370);
+//    add_breakpoint(&Breakpoints, 0x0800a29c);
+//    add_breakpoint(&Breakpoints, 0x0000001c);
+    // add_breakpoint(&Breakpoints, 0x080096ac);
 //    add_breakpoint(&Breakpoints, 0x0800'037a);
 //    add_breakpoint(&Breakpoints, 0x0800'0928);
 //    add_breakpoint(&Breakpoints, 0x0800'8e74);
@@ -151,7 +153,7 @@ void ARM7TDMI::ScheduleInterruptPoll() {
 
 void ARM7TDMI::iWRAMWrite(u32 address) {
     // clear all instruction caches in a CacheBlockSizeBytes sized region
-    const u32 base = (((address & 0x7fff) >> 1) & ~(CacheBlockSizeBytes - 1));
+    const u32 base = ((address & 0x7fff) & ~(CacheBlockSizeBytes - 1)) >> 1;
     for (u32 offs = 0; offs < CacheBlockSizeBytes >> 1; offs++) {
         iWRAMCache[base + offs] = nullptr;
     }
@@ -202,9 +204,19 @@ void ARM7TDMI::RunMakeCache() {
 #endif
     // log_debug("Making cache block at %x", pc);
     while (true) {
+        if (unlikely(Scheduler->ShouldDoEvents())) {
+            if (unlikely(Scheduler->DoEvents())) {
+                // CPU state affected
+                // just destroy the cache, we want the caches to be as big as possible
+                *CurrentCache = nullptr;
+                return;
+            }
+        }
+
 #ifdef DO_DEBUGGER
         DebugChecks(until);
 #endif
+
         if (unlikely(Step<true>())) {
             // cache done
             if (unlikely((*CurrentCache)->Instructions.empty())) {
@@ -218,15 +230,6 @@ void ARM7TDMI::RunMakeCache() {
         if (unlikely(!CurrentCache)) {
             // cache destroyed by near write
             return;
-        }
-
-        if (unlikely(Scheduler->ShouldDoEvents())) {
-            if (unlikely(Scheduler->DoEvents())) {
-                // CPU state affected
-                // just destroy the cache, we want the caches to be as big as possible
-                *CurrentCache = nullptr;
-                return;
-            }
         }
     }
 }
@@ -242,6 +245,15 @@ void ARM7TDMI::RunCache() {
     if ((*CurrentCache)->ARM) {
         // ARM mode, we need to check the condition now too
         for (auto& instr : (*CurrentCache)->Instructions) {
+            if (unlikely(Scheduler->ShouldDoEvents())) {
+                // u32 old_pc = corrected_pc;
+                if (unlikely(Scheduler->DoEvents())) {
+                    // CPU state affected
+                    // log_debug("CPU state affected by scheduler, returning (%x -> %x)", old_pc, corrected_pc);
+                    return;
+                }
+            }
+
 #ifdef DO_DEBUGGER
             DebugChecks(until);
 #endif
@@ -251,15 +263,10 @@ void ARM7TDMI::RunCache() {
 
             *timer += cycles;
             pc += 4;
-            if (unlikely(Scheduler->ShouldDoEvents())) {
-                if (unlikely(Scheduler->DoEvents())) {
-                    // CPU state affected
-                    return;
-                }
-            }
 
             // block was destroyed (very unlikely)
             if (unlikely(!CurrentCache)) {
+                // log_debug("Block destroyed, returning (%x)", corrected_pc);
                 return;
             }
         }
@@ -267,6 +274,15 @@ void ARM7TDMI::RunCache() {
     else {
         // THUMB mode, no need to check instructions
         for (auto& instr : (*CurrentCache)->Instructions) {
+            // u32 old_pc = corrected_pc;
+            if (unlikely(Scheduler->ShouldDoEvents())) {
+                if (unlikely(Scheduler->DoEvents())) {
+                    // CPU state affected
+                    // log_debug("CPU state affected by scheduler, returning (%x -> %x)", old_pc, corrected_pc);
+                    return;
+                }
+            }
+
 #ifdef DO_DEBUGGER
             DebugChecks(until);
 #endif
@@ -275,15 +291,9 @@ void ARM7TDMI::RunCache() {
             *timer += cycles;
             pc += 2;
 
-            if (unlikely(Scheduler->ShouldDoEvents())) {
-                if (unlikely(Scheduler->DoEvents())) {
-                    // CPU state affected
-                    return;
-                }
-            }
-
             // block was destroyed (very unlikely)
             if (unlikely(!CurrentCache)) {
+                // log_debug("Block destroyed, returning (%x)", corrected_pc);
                 return;
             }
         }

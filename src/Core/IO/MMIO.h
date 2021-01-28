@@ -131,7 +131,7 @@ private:
     s_DMAData DMAData[4]     = {};  // shadow registers on DMA enable
     s_event DMAStart[4]      = {};  // starting needs to be delayed because of immediate DMAs (might be mid-instruction)
     template<u8 x> static SCHEDULER_EVENT(DMAStartEvent);
-    void RunDMAChannel(u8 x);
+    bool RunDMAChannel(u8 x);
     inline void TriggerDMAChannel(u8 x) {
         if (DMAsActive) {
             // if other DMAs are active, there is no delay

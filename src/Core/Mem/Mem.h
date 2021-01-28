@@ -76,7 +76,7 @@ public:
     }
     void LoadBIOS(const std::string& file_path);
     u8* GetPtr(u32 address);
-    template<typename T, bool intermittent_events> void DoDMA(s_DMAData* DMA);
+    template<typename T, bool intermittent_events> bool DoDMA(s_DMAData* DMA);
 
     template<typename T>
     [[nodiscard]] ALWAYS_INLINE u8 GetAccessTime(MemoryRegion R) const {
@@ -224,10 +224,10 @@ private:
 #undef INLINED_INCLUDES
 
 #ifdef FAST_DMA
-    template<typename T, bool intermittent_events> void FastDMA(s_DMAData* DMA);    // incrementing DMAs in both directions
-    template<typename T, bool intermittent_events> void MediumDMA(s_DMAData* DMA);  // DMAs from and to safe memory regions
+    template<typename T, bool intermittent_events> bool FastDMA(s_DMAData* DMA);    // incrementing DMAs in both directions
+    template<typename T, bool intermittent_events> bool MediumDMA(s_DMAData* DMA);  // DMAs from and to safe memory regions
 #endif
-    template<typename T, bool intermittent_events> void SlowDMA(s_DMAData* DMA);    // DMAs with wrapping/special behavior
+    template<typename T, bool intermittent_events> bool SlowDMA(s_DMAData* DMA);    // DMAs with wrapping/special behavior
 };
 
 #include "MemReadWrite.inl" // Read/Write related templated functions

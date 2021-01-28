@@ -66,6 +66,5 @@ template<u8 x>
 SCHEDULER_EVENT(MMIO::DMAStartEvent) {
     auto IO = (MMIO*)caller;
 
-    IO->RunDMAChannel(x);
-    return false;  // the InterruptPoll event affects the CPU, not the DMA
+    return IO->RunDMAChannel(x);  // interrupts might happen during DMA
 }

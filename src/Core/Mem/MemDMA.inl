@@ -1,7 +1,7 @@
 
 #ifdef FAST_DMA
 template<typename T, bool intermittent_events>
-void Mem::FastDMA(s_DMAData* DMA) {
+bool Mem::FastDMA(s_DMAData* DMA) {
     /*
      * Safe direct DMAs with both incrementing addresses
      * */
@@ -13,6 +13,8 @@ void Mem::FastDMA(s_DMAData* DMA) {
     u8* src    = GetPtr(DMA->SAD & ~(sizeof(T) - 1));
     const u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
     log_dma("Fast DMA %x -> %x (len: %x, control: %04x), size %d", DMA->SAD, DMA->DAD, length, DMA->CNT_H, sizeof(T));
+
+    bool cpu_affected;  // cpu affected by events
 
     if constexpr(!intermittent_events) {
         // direct memcpy
@@ -39,7 +41,7 @@ void Mem::FastDMA(s_DMAData* DMA) {
                     accesses_until_next_event * sizeof(T)
             );
             (*timer) += accesses_until_next_event * cycles_per_access;
-            Scheduler->DoEvents();
+            cpu_affected |= Scheduler->DoEvents();
 
             units_left -= accesses_until_next_event;
             dest += accesses_until_next_event * sizeof(T);
@@ -61,10 +63,11 @@ void Mem::FastDMA(s_DMAData* DMA) {
     // handle writeback/reload in IO class
     DMA->DAD += length * sizeof(T);
     DMA->SAD += length * sizeof(T);
+    return cpu_affected;
 }
 
 template<typename T, bool intermittent_events>
-void Mem::MediumDMA(s_DMAData* DMA) {
+bool Mem::MediumDMA(s_DMAData* DMA) {
     /*
      * Safe direct DMAs with varying src/dest address control
      * */
@@ -87,6 +90,8 @@ void Mem::MediumDMA(s_DMAData* DMA) {
 
     log_dma("Medium DMA %x -> %x (len: %x, control: %04x), size %d", DMA->SAD, DMA->DAD, length, DMA->CNT_H, sizeof(T));
     log_dma("ddad = %x, dsad = %x", delta_dad, delta_sad);
+    bool cpu_affected = false;  // cpu affected by scheduler events
+
     if constexpr(!intermittent_events) {
         // direct memcpy
         log_dma("Medium DMA, no intermissions");
@@ -114,7 +119,7 @@ void Mem::MediumDMA(s_DMAData* DMA) {
                 src  += delta_sad;
             }
             (*timer) += accesses_until_next_event * cycles_per_access;
-            Scheduler->DoEvents();
+            cpu_affected |= Scheduler->DoEvents();
 
             units_left -= accesses_until_next_event;
         }
@@ -135,11 +140,12 @@ void Mem::MediumDMA(s_DMAData* DMA) {
     DMA->DAD += length * delta_dad;
     DMA->SAD += length * delta_sad;
     log_dma("Post medium SAD %x, DAD %x", DMA->SAD, DMA->DAD);
+    return cpu_affected;
 }
 #endif
 
 template<typename T, bool intermittent_events>
-void Mem::SlowDMA(s_DMAData* DMA) {
+bool Mem::SlowDMA(s_DMAData* DMA) {
     // address alignment happens in read/write handlers
     u32 dad = DMA->DAD;
     u32 sad = DMA->SAD;
@@ -159,6 +165,7 @@ void Mem::SlowDMA(s_DMAData* DMA) {
     log_dma("Slow DMA %x -> %x (len: %x, control: %04x)", sad, dad, DMA->CNT_L, control);
 
     u32 latch;
+    bool cpu_affected = false;  // cpu affected by scheduler events
     for (u32 i = 0; i < length; i++) {
         // we don't want to reflush
         // if a game overwrites the area PC is in with DMA, the result is probably fairly unpredictable anyway
@@ -167,7 +174,7 @@ void Mem::SlowDMA(s_DMAData* DMA) {
 
         if constexpr(intermittent_events) {
             if (unlikely(Scheduler->ShouldDoEvents())) {
-                Scheduler->DoEvents();
+                cpu_affected |= Scheduler->DoEvents();
             }
         }
 
@@ -189,10 +196,12 @@ void Mem::SlowDMA(s_DMAData* DMA) {
     // handle writeback/reload in IO class
     DMA->DAD = dad;
     DMA->SAD = sad;
+
+    return cpu_affected;
 }
 
 template<typename T, bool intermittent_events>
-void Mem::DoDMA(s_DMAData* DMA) {
+bool Mem::DoDMA(s_DMAData* DMA) {
 #ifdef FAST_DMA
     u32 length = DMA->CNT_L ? DMA->CNT_L : DMA->CNT_L_MAX;
 
@@ -251,7 +260,7 @@ void Mem::DoDMA(s_DMAData* DMA) {
 
                     // todo: move this
                     constexpr size_t InstructionCacheSize = 256;
-                    for (u32 addr = low & ~((InstructionCacheSize << 1) - 1); addr < high; addr += InstructionCacheSize << 1) {
+                    for (u32 addr = low & ~((InstructionCacheSize) - 1); addr < high; addr += InstructionCacheSize) {
                         if ((addr & 0x7fff) < (0x8000 - Mem::StackSize)) {
                             iWRAMWrite(addr);
                         }
@@ -282,8 +291,7 @@ void Mem::DoDMA(s_DMAData* DMA) {
                     break;
             }
 
-            MediumDMA<T, intermittent_events>(DMA);
-            break;
+            return MediumDMA<T, intermittent_events>(DMA);
         case DMAAction::Fast:
             // invalidate VRAM and OAM, we do this before the transfer because the transfer updates DMA*
             // for fast DMAs, we know both address controls are increasing
@@ -294,7 +302,7 @@ void Mem::DoDMA(s_DMAData* DMA) {
 
                     // todo: move this
                     constexpr size_t InstructionCacheSize = 256;
-                    for (u32 addr = low & ~((InstructionCacheSize << 1) - 1); addr < high; addr += InstructionCacheSize << 1) {
+                    for (u32 addr = low & ~((InstructionCacheSize) - 1); addr < high; addr += InstructionCacheSize) {
                         if ((addr & 0x7fff) < (0x8000 - Mem::StackSize)) {
                             iWRAMWrite(addr);
                         }
@@ -320,11 +328,9 @@ void Mem::DoDMA(s_DMAData* DMA) {
                     break;
             }
 
-            FastDMA<T, intermittent_events>(DMA);
-            return;
+            return FastDMA<T, intermittent_events>(DMA);
         case DMAAction::Slow:
-            SlowDMA<T, intermittent_events>(DMA);
-            return;
+            return SlowDMA<T, intermittent_events>(DMA);
         case DMAAction::Skip: {
             log_dma("Skipping DMA");
             u32 cycles_per_access = GetAccessTime<T>(static_cast<MemoryRegion>(DMA->DAD >> 24));
@@ -334,12 +340,13 @@ void Mem::DoDMA(s_DMAData* DMA) {
 
             // handle writeback/reload in IO class
             DMA->DAD += length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::DestAddrControl));
-            DMA->SAD += length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl));;
+            DMA->SAD += length * DeltaXAD<T>(DMA->CNT_H & static_cast<u16>(DMACNT_HFlags::SrcAddrControl));
+            return false;
         }
         default:
-            break;
+            return false;
     }
 #else
-    SlowDMA<T, intermittent_events>(DMA);
+    return SlowDMA<T, intermittent_events>(DMA);
 #endif
 }
