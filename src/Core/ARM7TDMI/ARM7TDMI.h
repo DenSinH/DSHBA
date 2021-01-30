@@ -113,11 +113,6 @@ public:
     void DebugChecks(void** const interaction);
 #endif
 
-    void SkipBIOS();
-
-    template<bool MakeCache>
-    ALWAYS_INLINE bool Step();
-    void Run(void** const until);
 #ifdef DO_DEBUGGER
     void RunMakeCache(void** const until);
     void RunCache(void** const until);
@@ -125,6 +120,18 @@ public:
     void RunMakeCache();
     void RunCache();
 #endif
+
+#ifdef CHECK_CACHED_STATS
+    u32 RunCacheSteps = 0;
+    u32 MakeCacheSteps = 0;
+    u32 NoCacheSteps = 0;
+#endif
+
+    void SkipBIOS();
+
+    template<bool MakeCache>
+    ALWAYS_INLINE bool Step();
+    void Run(void** const until);
     void PipelineReflush();
     void Reset();
 

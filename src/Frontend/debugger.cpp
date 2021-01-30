@@ -8,6 +8,7 @@
 #include "widgets/register_viewer.h"
 #include "widgets/disassembly_viewer.h"
 #include "widgets/memory_viewer.h"
+#include "widgets/cache_block_stats.h"
 
 #ifdef NDEBUG
 #define DEFAULT_DEBUGGER_WIDGET_STATE false
@@ -20,6 +21,7 @@ static bool show_register_viewer = DEFAULT_DEBUGGER_WIDGET_STATE;
 static bool show_disassembly_viewer = DEFAULT_DEBUGGER_WIDGET_STATE;
 static bool show_overlay = false;
 static bool show_memory_viewer = DEFAULT_DEBUGGER_WIDGET_STATE;
+static bool show_cached_block_stats = DEFAULT_DEBUGGER_WIDGET_STATE;
 
 // Our state
 static struct s_debugger {
@@ -28,6 +30,7 @@ static struct s_debugger {
     DisassemblyViewer disassembly_viewer;
     Overlay overlay;
     MemoryViewer memory_viewer;
+    CacheBlockStats cache_block_stats;
 } Debugger;
 
 void add_command(const char* command, const char* description, CONSOLE_COMMAND((*callback))) {
@@ -38,6 +41,9 @@ void add_command(const char* command, const char* description, CONSOLE_COMMAND((
     });
 }
 
+void bind_cache_step_data(uint32_t* cached, uint32_t* make_cached, uint32_t* non_cached) {
+    Debugger.cache_block_stats = CacheBlockStats(cached, make_cached, non_cached);
+}
 
 void add_overlay_info(OVERLAY_INFO((*getter))) {
     Debugger.overlay.AddInfo(getter);
@@ -70,6 +76,7 @@ void debugger_video_init(const char* glsl_version, SDL_Window* window, SDL_GLCon
 // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
 
     Debugger.overlay.io = frontend_set_io();
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
@@ -112,7 +119,8 @@ void debugger_render() {
                 &show_register_viewer,
                 &show_disassembly_viewer,
                 &show_memory_viewer,
-                &show_overlay
+                &show_overlay,
+                &show_cached_block_stats
         );
     }
 
@@ -126,4 +134,7 @@ void debugger_render() {
         Debugger.overlay.Draw(&show_overlay);
     if (show_memory_viewer)
         Debugger.memory_viewer.Draw(&show_memory_viewer);
+    Debugger.cache_block_stats.Update();
+    if (show_cached_block_stats)
+        Debugger.cache_block_stats.Draw(&show_cached_block_stats);
 }

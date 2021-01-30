@@ -219,6 +219,10 @@ void ARM7TDMI::RunMakeCache() {
         DebugChecks(until);
 #endif
 
+#ifdef CHECK_CACHED_STATS
+        MakeCacheSteps++;
+#endif
+
         if (unlikely(Step<true>())) {
             // cache done
             if (unlikely((*CurrentCache)->Instructions.empty())) {
@@ -244,6 +248,12 @@ void ARM7TDMI::RunCache() {
     // log_debug("Running cache block at %x", pc);
     const i32 cycles = (*CurrentCache)->AccessTime;
 
+    /*
+     * NOTE: If code gets run as ARM and THUMB, without it being overwritten, this goes wrong
+     * Technically, I should check if ARMode == (*CurrentCache)->ARM
+     * However, no game will do this, and it's an unnecessary check.
+     * */
+
     if ((*CurrentCache)->ARM) {
         // ARM mode, we need to check the condition now too
         for (auto& instr : (*CurrentCache)->Instructions) {
@@ -258,6 +268,10 @@ void ARM7TDMI::RunCache() {
 
 #ifdef DO_DEBUGGER
             DebugChecks(until);
+#endif
+
+#ifdef CHECK_CACHED_STATS
+            RunCacheSteps++;
 #endif
             *timer += cycles;
             if (CheckCondition(instr.Instruction >> 28)) {
@@ -288,6 +302,10 @@ void ARM7TDMI::RunCache() {
 #ifdef DO_DEBUGGER
             DebugChecks(until);
 #endif
+
+#ifdef CHECK_CACHED_STATS
+            RunCacheSteps++;
+#endif
             *timer += cycles;
             (this->*instr.Pointer)(instr.Instruction);
 
@@ -316,6 +334,10 @@ void ARM7TDMI::Run(void** const until) {
 
 #ifdef DO_DEBUGGER
                 DebugChecks(until);
+#endif
+
+#ifdef CHECK_CACHED_STATS
+                NoCacheSteps++;
 #endif
                 if (Step<false>()) {
                     break;

@@ -391,6 +391,10 @@ GBA* Initializer::init() {
     add_overlay_info(cpu_cache_block);
     add_overlay_info(audio_samples);
 
+#ifdef CHECK_CACHED_STATS
+    bind_cache_step_data(&gba->CPU.RunCacheSteps, &gba->CPU.MakeCacheSteps, &gba->CPU.NoCacheSteps);
+#endif
+
     int game_tab = add_menu_tab((char*)"Game");
     add_menu_item(game_tab, "Load ROM", nullptr, load_ROM);
 

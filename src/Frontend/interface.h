@@ -57,6 +57,8 @@ extern "C" {
     void add_sliderf(int tab, const char* name, float* value, float min, float max);
     void open_file_explorer(const char* title, char** filters, size_t filter_count, FILE_SELECT_CALLBACK((*callback)));
 
+    void bind_cache_step_data(uint32_t* cached, uint32_t* make_cached, uint32_t* non_cached);
+
     void bind_video_init(void (*initializer)());
     void bind_video_render(s_framebuffer (*render)(size_t));
     void bind_video_blit(void (*blit)(const float* data));

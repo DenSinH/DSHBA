@@ -7,5 +7,6 @@ void ShowMenuBar(
         bool* register_viewer_enabled,
         bool* disassembly_viewer_enabled,
         bool* memory_viewer_enabled,
-        bool* show_overlay
+        bool* show_overlay,
+        bool* show_cached_block_stats
 );

@@ -29,6 +29,8 @@ endif()
 set(FRONTEND_SRCS
         imgui/imgui_impl_opengl3.cpp
         imgui/imgui_impl_sdl.cpp
+        imgui/implot.cpp
+        imgui/implot_items.cpp
         frontend.cpp
         widgets/menubar.cpp
         widgets/disassemble.c
@@ -40,6 +42,8 @@ set(FRONTEND_SRCS
 set(FRONTEND_HDRS
         imgui/imgui_impl_opengl3.h
         imgui/imgui_impl_sdl.h
+        imgui/implot.h
+        imgui/implot_internal.h
         widgets/memory_viewer.h
         widgets/console.h
         widgets/menubar.h
@@ -53,7 +57,7 @@ set(FRONTEND_HDRS
         interface.h
         controller.h
         settings.h
-)
+        widgets/cache_block_stats.h)
 
 add_library(Frontend ${FRONTEND_SRCS} ${FRONTEND_HDRS})
 

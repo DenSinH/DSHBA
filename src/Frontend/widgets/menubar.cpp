@@ -172,7 +172,8 @@ void ShowMenuBar(
         bool* register_viewer_enabled,
         bool* disassembly_viewer_enabled,
         bool* memory_viewer_enabled,
-        bool* overlay_enabled
+        bool* overlay_enabled,
+        bool* show_cached_block_stats
         )
 {
     ImGui::BeginMainMenuBar();
@@ -185,6 +186,8 @@ void ShowMenuBar(
         if (ImGui::MenuItem("Mem Viewer", nullptr, memory_viewer_enabled)) {}
         ImGui::Separator();
         if (ImGui::MenuItem("Overlay", nullptr, overlay_enabled)) {}
+        ImGui::Separator();
+        if (ImGui::MenuItem("Cached Block Stats", nullptr, show_cached_block_stats)) {}
         ImGui::EndMenu();
     }
 
