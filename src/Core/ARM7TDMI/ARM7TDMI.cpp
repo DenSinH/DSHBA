@@ -58,10 +58,10 @@ void ARM7TDMI::Reset() {
 
     // reset instruction caches
     for (auto & i : ROMCache) {
-        i = nullptr;
+        i = InstructionCache();
     }
     for (auto & i : iWRAMCache) {
-        i = nullptr;
+        i = InstructionCache();
     }
     // pc += 8;
 }
@@ -156,14 +156,14 @@ void ARM7TDMI::iWRAMWrite(u32 address) {
     const u32 cache_page_index = (address & 0x7fff) / Mem::InstructionCacheBlockSizeBytes;
 
     for (u32 index : iWRAMCacheFilled[cache_page_index]) {
-        iWRAMCache[index] = nullptr;
+        iWRAMCache[index] = InstructionCache();
     }
     iWRAMCacheFilled[cache_page_index].clear();
 
     if ((corrected_pc & ~(Mem::InstructionCacheBlockSizeBytes - 1)) == (address & ~(Mem::InstructionCacheBlockSizeBytes - 1))) {
         // current block destroyed
         if (CurrentCache) {
-            *CurrentCache = nullptr;
+            *CurrentCache = InstructionCache();
             CurrentCache = nullptr;
         }
     }
@@ -210,7 +210,7 @@ void ARM7TDMI::RunMakeCache() {
             if (unlikely(Scheduler->DoEvents())) {
                 // CPU state affected
                 // just destroy the cache, we want the caches to be as big as possible
-                *CurrentCache = nullptr;
+                *CurrentCache = InstructionCache();
                 return;
             }
         }
@@ -225,10 +225,10 @@ void ARM7TDMI::RunMakeCache() {
 
         if (unlikely(Step<true>())) {
             // cache done
-            if (unlikely((*CurrentCache)->Instructions.empty())) {
+            if (unlikely(!(CurrentCache->Length))) {
                 // empty caches will hang the emulator
                 // they might happen when branches close to pc get written (self modifying code)
-                *CurrentCache = nullptr;
+                *CurrentCache = InstructionCache();
             }
             return;
         }
@@ -245,8 +245,9 @@ void ARM7TDMI::RunCache(void** const until) {
 #else
 void ARM7TDMI::RunCache() {
 #endif
+    const InstructionCache& cache = *CurrentCache;
     // log_debug("Running cache block at %x", pc);
-    const i32 cycles = (*CurrentCache)->AccessTime;
+    const i32 cycles = cache.AccessTime;
 
     /*
      * NOTE: If code gets run as ARM and THUMB, without it being overwritten, this goes wrong
@@ -254,9 +255,9 @@ void ARM7TDMI::RunCache() {
      * However, no game will do this, and it's an unnecessary check.
      * */
 
-    if ((*CurrentCache)->ARM) {
+    if (cache.ARM) {
         // ARM mode, we need to check the condition now too
-        for (auto& instr : (*CurrentCache)->Instructions) {
+        for (auto& instr : cache) {
             if (unlikely(Scheduler->ShouldDoEvents())) {
                 // u32 old_pc = corrected_pc;
                 if (unlikely(Scheduler->DoEvents())) {
@@ -289,7 +290,7 @@ void ARM7TDMI::RunCache() {
     }
     else {
         // THUMB mode, no need to check instructions
-        for (auto& instr : (*CurrentCache)->Instructions) {
+        for (auto& instr : cache) {
             // u32 old_pc = corrected_pc;
             if (unlikely(Scheduler->ShouldDoEvents())) {
                 if (unlikely(Scheduler->DoEvents())) {
@@ -345,16 +346,7 @@ void ARM7TDMI::Run(void** const until) {
             }
         }
         else if (unlikely(!(*CurrentCache))) {
-            // possible cache, but none present
-            // make new one
-            if (ARMMode) {
-                const auto access_time = Memory->GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24));
-                *CurrentCache = std::make_unique<InstructionCache>(access_time, true);
-            }
-            else {
-                const auto access_time = Memory->GetAccessTime<u16>(static_cast<MemoryRegion>(pc >> 24));
-                *CurrentCache = std::make_unique<InstructionCache>(access_time, false);
-            }
+            // possible cache, but none present, new one has already been made
 
 #ifdef DO_DEBUGGER
             RunMakeCache(until);

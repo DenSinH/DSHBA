@@ -166,36 +166,77 @@ private:
     bool ARMMode = true;
 
     struct CachedInstruction {
+        CachedInstruction() :
+            Instruction(0),
+            Pointer(nullptr) {
+
+        }
+
         CachedInstruction(u32 instruction, InstructionPtr ptr) :
                 Instruction(instruction),
                 Pointer(ptr) {
 
         }
 
-        const u32 Instruction;
-        const InstructionPtr Pointer;
+        u32 Instruction;
+        InstructionPtr Pointer;
     };
 
     struct InstructionCache {
-        InstructionCache(u16 access_time, bool arm) :
+        InstructionCache(u16 access_time, bool arm, CachedInstruction* instructions) :
                 AccessTime(access_time),
-                ARM(arm) {
-            Instructions.reserve(Mem::InstructionCacheBlockSizeBytes >> 1);
+                ARM(arm),
+                Instructions(instructions) {
         }
 
-        const bool ARM;
-        const u16 AccessTime;
-        std::vector<CachedInstruction> Instructions;
+        InstructionCache() :
+                AccessTime(0),
+                ARM(false),
+                Instructions(nullptr) {
+        }
+
+        explicit operator bool () const {
+            return Length != 0;
+        }
+
+        [[nodiscard]] CachedInstruction* begin() const {
+            return Instructions;
+        }
+
+        [[nodiscard]] CachedInstruction* end() const {
+            return Instructions + Length;
+        }
+
+        bool ARM;
+        u8 Length = 0;
+        u16 AccessTime;
+        CachedInstruction* Instructions;
     };
 
     // shift by 1 because of instruction alignment
-    std::array<std::unique_ptr<InstructionCache>, (0x4000 >> 1)> BIOSCache = {};
+    std::array<InstructionCache, (0x4000 >> 1)> BIOSCache = {};
+    u32 BIOSInstructionCacheEnd = 0;
+    std::array<CachedInstruction, 0x8000> BIOSInstructionCache = {};
+
     // we don't want to include the stack so that we don't have to check this all the time
     std::array<std::vector<u32>, (0x8000 - Mem::StackSize) / Mem::InstructionCacheBlockSizeBytes> iWRAMCacheFilled = {};
-    std::array<std::unique_ptr<InstructionCache>, ((0x8000 - Mem::StackSize) >> 1)> iWRAMCache = {};
-    std::array<std::unique_ptr<InstructionCache>, (0x0200'0000 >> 1)> ROMCache = {};
-    
-    std::unique_ptr<InstructionCache>* CurrentCache = nullptr;
+    std::array<InstructionCache, ((0x8000 - Mem::StackSize) >> 1)> iWRAMCache = {};
+    u32 iWRAMInstructionCacheEnd = 0;
+    std::array<CachedInstruction, 0x10000> iWRAMInstructionCache = {};
+
+    std::array<InstructionCache, (0x0200'0000 >> 1)> ROMCache = {};
+    u32 ROMInstructionCacheEnd = 0;
+    std::array<CachedInstruction, 0x0200'0000> ROMInstructionCache = {};
+
+    enum class CacheRegion {
+        iWRAM = 0,
+        BIOS,
+        ROM,
+        None,
+    };
+
+    CacheRegion CurrentCacheRegion = CacheRegion::ROM;
+    InstructionCache* CurrentCache = nullptr;
 
     static constexpr bool InCacheRegion(const u32 address) {
         const bool in_bios = address < 0x4000;
@@ -204,30 +245,78 @@ private:
         return in_iwram || in_rom || in_bios;
     }
 
-    constexpr std::unique_ptr<InstructionCache>* GetCache(const u32 address) {
+    void BumpAlloc(CachedInstruction&& instr) {
+        CurrentCache->Length++;
+        switch (CurrentCacheRegion) {
+            case CacheRegion::iWRAM: {
+                iWRAMInstructionCache[iWRAMInstructionCacheEnd++] = instr;
+                return;
+            }
+            case CacheRegion::ROM: {
+                ROMInstructionCache[ROMInstructionCacheEnd++] = instr;
+                return;
+            }
+            case CacheRegion::BIOS: {
+                BIOSInstructionCache[BIOSInstructionCacheEnd++] = instr;
+                return;
+            }
+            default: UNREACHABLE
+                // this can never happen
+                return;
+        }
+    }
+
+    void InvalidateiWRAMCache() {
+        iWRAMInstructionCacheEnd = 0;
+        for (auto& cache_page : iWRAMCacheFilled) {
+            for (auto index : cache_page) {
+                iWRAMCache[index].Length = 0;
+            }
+            cache_page.clear();
+        }
+    }
+
+    ALWAYS_INLINE InstructionCache* GetCache(const u32 address) {
+        u32 access_time;
+        if (ARMMode) {
+            access_time = Memory->GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24));
+        }
+        else {
+            access_time = Memory->GetAccessTime<u16>(static_cast<MemoryRegion>(pc >> 24));
+        }
+
         switch (static_cast<MemoryRegion>(address >> 24)) {
             case MemoryRegion::BIOS: {
                 const u32 index = (address & 0x3fff) >> 1;
                 if (likely(address < 0x4000)) {
+                    CurrentCacheRegion = CacheRegion::BIOS;
                     if (BIOSCache[index]) {
                         return &BIOSCache[index];
                     }
-                    BIOSCache[index] = nullptr;
+                    BIOSCache[index] = InstructionCache(access_time, ARMMode, &BIOSInstructionCache[BIOSInstructionCacheEnd]);
                     return &BIOSCache[index];
                 }
+                CurrentCacheRegion = CacheRegion::None;
                 return nullptr;
             }
             case MemoryRegion::iWRAM: {
                 const u32 index = (address & 0x7fff) >> 1;
                 if ((address & 0x7fff) < (0x8000 - Mem::StackSize)) {
+                    CurrentCacheRegion = CacheRegion::iWRAM;
                     if (iWRAMCache[index]) {
                         return &iWRAMCache[index];
                     }
                     // mark index as filled
                     iWRAMCacheFilled[(address & 0x7fff) / Mem::InstructionCacheBlockSizeBytes].push_back(index);
-                    iWRAMCache[index] = nullptr;
+                    if (unlikely(iWRAMInstructionCacheEnd >= (iWRAMInstructionCache.size() - (Mem::InstructionCacheBlockSizeBytes >> 1)))) {
+                        // overflow the bump allocator
+                        InvalidateiWRAMCache();
+                    }
+
+                    iWRAMCache[index] = InstructionCache(access_time, ARMMode, &iWRAMInstructionCache[iWRAMInstructionCacheEnd]);
                     return &iWRAMCache[index];
                 }
+                CurrentCacheRegion = CacheRegion::None;
                 return nullptr;
             }
             case MemoryRegion::ROM_L:
@@ -237,18 +326,20 @@ private:
             case MemoryRegion::ROM_L2:
             case MemoryRegion::ROM_H2: {
                 const u32 index = (address & 0x1ff'ffff) >> 1;
+                CurrentCacheRegion = CacheRegion::ROM;
                 if (ROMCache[index]) {
                     return &ROMCache[index];
                 }
-                ROMCache[index] = nullptr;
+                ROMCache[index] = InstructionCache(access_time, ARMMode, &ROMInstructionCache[ROMInstructionCacheEnd]);
                 return &ROMCache[index];
             }
             default:
+                CurrentCacheRegion = CacheRegion::None;
                 return nullptr;
         }
     }
-    void iWRAMWrite(u32 address);
 
+    void iWRAMWrite(u32 address);
 
     // used to reduce the amount of times we need to set the NZ flags in THUMB mode
     // basically, we only need to update them when transitioning back to ARM or on conditional branches
@@ -577,9 +668,8 @@ bool ARM7TDMI::Step() {
     if (ARMMode) {
         // ARM mode
         if constexpr(MakeCache) {
-            auto instr = CachedInstruction(instruction, ARMInstructions[ARMHash(instruction)]);
-            (*CurrentCache)->Instructions.push_back(instr);
-            // also check if Rd == pc (does not detect multiplies with pc as destination)
+            BumpAlloc(CachedInstruction(instruction, ARMInstructions[ARMHash(instruction)]));
+            // also check if Rd == pc (does not detect multiplies with pc as destination!)
             block_end = IsARMBranch[ARMHash(instruction)]
                      || ((instruction & 0x0000f000) == 0x0000f000)   // any operation with PC as destination
                      || ((instruction & 0x0e108000) == 0x08108000);  // ldm r, { .. pc }
@@ -596,8 +686,7 @@ skip_adding_instruction_to_cache_ARM:
     else {
         // THUMB mode
         if constexpr(MakeCache) {
-            auto instr = CachedInstruction(instruction, THUMBInstructions[THUMBHash((u16)instruction)]);
-            (*CurrentCache)->Instructions.push_back(instr);
+            BumpAlloc(CachedInstruction(instruction, THUMBInstructions[THUMBHash((u16)instruction)]));
             // also check for hi-reg-ops with PC as destination
             block_end = IsTHUMBBranch[THUMBHash((u16)instruction)] || ((instruction & 0xfc87) == 0x4487);
         }

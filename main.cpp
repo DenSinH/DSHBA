@@ -70,6 +70,7 @@ int main() {
     // gba->LoadROM("D:\\Data\\GBA\\Dash\\dash.gba");
     // gba->LoadROM("D:\\User\\Downloads\\Doom (USA, Europe).gba");
     gba->LoadROM("D:\\User\\Downloads\\Legend of Zelda, The - The Minish Cap (USA).gba");
+    // gba->LoadROM("D:\\User\\Downloads\\Pokemon - Emerald Version (USA, Europe).gba");
     // gba->LoadROM("D:\\User\\Downloads\\AGS.gba");
     // gba->LoadROM("D:\\User\\Downloads\\suite.gba");
     // gba->LoadROM("D:\\Data\\CProjects\\DSHBA\\files\\roms\\main.gba");
