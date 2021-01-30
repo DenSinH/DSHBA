@@ -165,6 +165,18 @@ private:
 
     bool ARMMode = true;
 
+    /*
+     * CACHED INTERPRETER STUFF:
+     *
+     * Basically, the idea is this. When running code, if we run it for the first time, keep track of the instruction
+     * decoding, so we don't have to do expensive memory reads and table lookups every instruction.
+     *
+     * Then when we jump to code we have seen before (in ROM/iWRAM or BIOS), we can just call the instructions
+     * as we decoded them before. Now iWRAM has a little bit of a catch: it can be written to. We limit the cache blocks
+     * to align by 256 bytes, and whenever a write to iWRAM happens, we look up in the "cache page table"
+     * (iWRAMCacheFilled) which addresses have caches that are filled. Then we delete those caches,
+     * and have to recreate them if we jump to those addresses in the future.
+     * */
     struct CachedInstruction {
         CachedInstruction(u32 instruction, InstructionPtr ptr) :
                 Instruction(instruction),
@@ -247,7 +259,11 @@ private:
                 return nullptr;
         }
     }
+
+    // clear caches on writes to address, also reset the current cache if the cache we are currently in is destroyed
     void iWRAMWrite(u32 address);
+
+    // end of cached interpreter stuff
 
 
     // used to reduce the amount of times we need to set the NZ flags in THUMB mode
