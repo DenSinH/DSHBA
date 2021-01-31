@@ -10,16 +10,11 @@
 
 class Channel {
 public:
-    explicit Channel(s_scheduler* scheduler) {
-        Tick = (s_event) {
-            .callback = TickEvent,
-            .caller = this,
-        };
-
+    explicit Channel(s_scheduler* scheduler) :
+            Scheduler(scheduler) {
         // we don't need to store a reference to the scheduler in this class,
         // all events are recursive and nonstop anyway
-        scheduler->AddEvent(&Tick);
-        Scheduler = scheduler;
+        scheduler->AddEvent(Tick);
     }
 
     i16 CurrentSample = 0;
@@ -41,24 +36,24 @@ public:
 
     void UpdateEvent() {
         if (SoundOn()) {
-            if (Tick.active) {
+            if (Tick->active) {
                 // already was active
-                i32 diff = (Tick.time - TriggerTime + Period) & s_scheduler::TimeMask;
+                i32 diff = (Tick->time - TriggerTime + Period) & s_scheduler::TimeMask;
                 if (std::abs(diff) > 0x100) {
                     // only reschedule if time has actually changed
                     // we keep a bit of a resolution cause a 0x100 tick difference we can probably barely hear anyway
                     // and rescheduling events is expensive
-                    Scheduler->RescheduleEvent(&Tick, Tick.time - diff);
+                    Scheduler->RescheduleEvent(Tick, Tick->time - diff);
                 }
             }
             else {
                 // event was activated
                 TriggerTime = *Scheduler->timer;
-                Scheduler->AddEventAfter(&Tick, Period);
+                Scheduler->AddEventAfter(Tick, Period);
             }
         }
-        else if (Tick.active) {
-            Scheduler->RemoveEvent(&Tick);
+        else if (Tick->active) {
+            Scheduler->RemoveEvent(Tick);
         }
     }
 
@@ -117,8 +112,11 @@ private:
      * do the channel event more times than necessary, when we don't hear it anyway
      * */
     u32 BatchSize = 1;
-    s_event Tick;
-    s_scheduler* Scheduler;
+    s_scheduler* const Scheduler;
+    s_event* const Tick = Scheduler->MakeEvent(
+            this,
+            TickEvent
+    );
     i32 TriggerTime;
 
     static SCHEDULER_EVENT(TickEvent) {

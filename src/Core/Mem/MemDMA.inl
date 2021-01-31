@@ -239,7 +239,7 @@ bool Mem::DoDMA(s_DMAData* DMA) {
         }
     }
 
-    if (DMA->DAD > (0x0800'0000 + ROMSize)) {
+    if (DMA->DAD > (0x0800'0000 + CurrentROMSize)) {
         dma_action = DMAAction::Slow;  // ROM OOB DMA
     }
 #endif

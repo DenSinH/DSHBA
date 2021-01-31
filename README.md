@@ -1,9 +1,11 @@
 # DSHBA
 
+[![CodeFactor](https://www.codefactor.io/repository/github/densinh/dshba/badge)](https://www.codefactor.io/repository/github/densinh/dshba)
+
 After writing [my GBA emulator, GBAC-, found here](https://github.com/DenSinH/GBAC-), I wanted to write a new one, but faster.
 One extra challenge I wanted to add was writing a hardware renderer.
 
-<img src="https://github.com/DenSinH/DSHBA/blob/0.1/files/DSHBA_Ruby.png" alt="Pokemon Ruby" width=640>
+<img src="https://github.com/DenSinH/DSHBA/blob/master/files/DSHBA_Ruby.png" alt="Pokemon Ruby" width=640>
 
 ### Requirements
 
@@ -59,6 +61,41 @@ In the hardware renderer I also added a lot of optimizations:
     
  The hardware renderer save a lot of CPU usage, but these extra optimizations also saved a lot of CPU time, and gained me some extra performance in the process.
  
+ ### The Cached Interpreter
+ I recently decided that I wanted to try and write a cached interpreter. I spent some time thinking
+ and writing the code, and after I got it working, I gained another 10-20% boost in most games. 
+ 
+ The basic idea for the cached interpreter is that you want to skip the expensive memory reads and
+ instruction decodes when you run code. Especially in the ROM and BIOS regions this is extremely useful,
+ since those regions cannot be written to, and the code will always be the same. 
+ 
+ In iWRAM this is a bit different. It's very common for games to run code in iWRAM. What I did
+ was have an "instruction cache page table". Basically, the instruction caches are limited to 256 bytes, aligned
+ by 256 byte page boundaries. Whenever a write to an iWRAM location happens, I look in the page table
+ to see how which addresses are filled (just a vector with those addresses), and clear those addresses.
+ Usually, I would expect there to be at most 1 or 2 blocks in that region (perhaps some more if there are a lot of short branches).
+ Since the stack is also in iWRAM, and I don't want to unnecessarily check for blocks on every push/pop, I limit the iWRAM region by a few hunder bytes.
+ The number I chose here was pretty arbitrary, and I did not test different values of it. With the cache page tables, clearing the blocks did not take long anyway.
+ 
+ Basically, the run loop is no longer `fetch -> decode -> execute`, but it's now:
+ 
+ 1. Check if there is an instruction cache at `pc`
+ 2. If there is, do the following for every instruction in the cache:
+    * check if scheduler events happen that affect the CPU (IRQs)
+        * If not, execute the next instruction in the cache
+        * If yes, break the block early and go to step 1.
+ 3. If there is not, check if we can make a cache (in ROM/BIOS/iWRAM regions). Then do the following:
+    * check if scheduler events happen that affect the CPU (IRQs)
+        * If not, `fetch -> decode` the next instruction. Store it in the current
+          cache block (pointer to call and instruction).
+            * If the instruction was a branch, or affects pc, then end the block and return to step 1.
+            * If the instruction was not a branch, keep doing this. 
+        * If the scheduler did interrupt the CPU, then throw away the block (we want them to be as long as possible)
+          and return to step 1.
+ 4. If we cannot make a cache in this region (not ROM/BIOS/iWRAM), keep running "the old fashioned way", until we can, or
+    a cache block is available.   
+    
+ 
  ### Compatibility
  
  I have tried a bunch of games, most worked fine, some with a few graphical glitches. As for accuracy: I pass all AGS tests, except the ones requiring very accurate timings
@@ -86,8 +123,8 @@ In the hardware renderer I also added a lot of optimizations:
  ### The performance
  
  I am really proud of the performance of my newly rewritten emulator. On my fairly old system (intel i7 2600 and a GTX670). On Pokemon Emerald (notoriously slow for using waitloops),
- I got framerates of about 800-900fps on the intro sequence and about 800 in game (as a reference: this is comparable to mGBA!). Some games gave me insane performance though:
- the GTA menu screen spiked over 10k fps and the Zelda menu gave me framerates of about 5kfps.
+ I got framerates of about 1000fps on the intro sequence and about 900 in game (as a reference: this is more than mGBA!). Some games gave me insane performance though:
+ the GTA menu screen spiked over 10k fps and the Zelda menu gave me framerates of about 5kfps, the highest framerate I've seen is in the Doom menu screen, at 17k fps.
  
  ![Zelda menu screen](https://github.com/DenSinH/DSHBA/blob/master/files/DSHBA_unlocked.png)
  
@@ -99,4 +136,4 @@ The UI and the debugger are written in ImGui. I tried to keep them as generic as
 
 ### BIOS
 
-In my project, I included Normmatt's replacement BIOS. If you want to use a different file, you will have to build the project yourself, changing the `BIOS_FILE` macro to whatever path the BIOS file you want to use is at.
+I have included the replacement BIOS that Fleroviux and I made for the GBA (repo is [here](https://github.com/Cult-of-GBA/BIOS)). If you want to use a different file, you will have to build yourself, and uncomment the `gba->LoadBIOS("path");` call and add the right path to your BIOS file, or change the `BIOS_FILE` macro and uncomment that call. The replacement BIOS should have all functionality the official one has that is used in games.

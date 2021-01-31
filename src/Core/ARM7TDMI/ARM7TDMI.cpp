@@ -5,19 +5,13 @@
 #include <iomanip>
 #endif
 
-ARM7TDMI::ARM7TDMI(s_scheduler *scheduler, Mem *memory)  {
-    Scheduler = scheduler;
-    timer = scheduler->timer;
-    Memory = memory;
+ARM7TDMI::ARM7TDMI(s_scheduler *scheduler, Mem *memory) :
+        Scheduler(scheduler),
+        timer(scheduler->timer),
+        Memory(memory) {
 
     BuildARMTable();
     BuildTHUMBTable();
-
-    InterruptPoll = (s_event) {
-        .callback = &ARM7TDMI::InterruptPollEvent,
-        .caller = this,
-        .active = false,
-    };
 
 #if defined(TRACE_LOG) || defined(ALWAYS_TRACE_LOG)
     trace.open("DSHBA.log", std::fstream::out | std::fstream::app);
@@ -145,9 +139,9 @@ SCHEDULER_EVENT(ARM7TDMI::InterruptPollEvent) {
 }
 
 void ARM7TDMI::ScheduleInterruptPoll() {
-    if (!InterruptPoll.active) {
+    if (likely(!InterruptPoll->active)) {
         // schedule immediately
-        Scheduler->AddEventAfter(&InterruptPoll, 0);
+        Scheduler->AddEventAfter(InterruptPoll, 0);
     }
 }
 
@@ -204,6 +198,8 @@ void ARM7TDMI::RunMakeCache(void** const until) {
 #else
 void ARM7TDMI::RunMakeCache() {
 #endif
+    // run the interpreter "normally", but record the instructions we execute in the current cache
+
     // log_debug("Making cache block at %x", pc);
     while (true) {
         if (unlikely(Scheduler->ShouldDoEvents())) {
@@ -245,8 +241,12 @@ void ARM7TDMI::RunCache(void** const until) {
 #else
 void ARM7TDMI::RunCache() {
 #endif
+    // run created cache
+
+    const InstructionCache& cache = **CurrentCache;
     // log_debug("Running cache block at %x", pc);
-    const i32 cycles = (*CurrentCache)->AccessTime;
+    const u8 cycles = (*CurrentCache)->AccessTime;
+    const bool deletable = (*CurrentCache)->Deletable;
 
     /*
      * NOTE: If code gets run as ARM and THUMB, without it being overwritten, this goes wrong
@@ -254,9 +254,9 @@ void ARM7TDMI::RunCache() {
      * However, no game will do this, and it's an unnecessary check.
      * */
 
-    if ((*CurrentCache)->ARM) {
+    if (cache.ARM) {
         // ARM mode, we need to check the condition now too
-        for (auto& instr : (*CurrentCache)->Instructions) {
+        for (const auto& instr : cache.Instructions) {
             if (unlikely(Scheduler->ShouldDoEvents())) {
                 // u32 old_pc = corrected_pc;
                 if (unlikely(Scheduler->DoEvents())) {
@@ -281,7 +281,7 @@ void ARM7TDMI::RunCache() {
             pc += 4;
 
             // block was destroyed (very unlikely)
-            if (unlikely(!CurrentCache)) {
+            if (deletable && unlikely(!CurrentCache)) {
                 // log_debug("Block destroyed, returning (%x)", corrected_pc);
                 return;
             }
@@ -289,7 +289,7 @@ void ARM7TDMI::RunCache() {
     }
     else {
         // THUMB mode, no need to check instructions
-        for (auto& instr : (*CurrentCache)->Instructions) {
+        for (const auto& instr : cache.Instructions) {
             // u32 old_pc = corrected_pc;
             if (unlikely(Scheduler->ShouldDoEvents())) {
                 if (unlikely(Scheduler->DoEvents())) {
@@ -312,7 +312,7 @@ void ARM7TDMI::RunCache() {
             pc += 2;
 
             // block was destroyed (very unlikely)
-            if (unlikely(!CurrentCache)) {
+            if (deletable && unlikely(!CurrentCache)) {
                 // log_debug("Block destroyed, returning (%x)", corrected_pc);
                 return;
             }
@@ -327,6 +327,7 @@ void ARM7TDMI::Run(void** const until) {
 
         if (unlikely(!CurrentCache)) {
             // nullptr: no cache (not iWRAM / ROM)
+            // run interpreter normally, without recording cache
             while (true) {
                 if (unlikely(Scheduler->ShouldDoEvents())) {
                     Scheduler->DoEvents();
@@ -339,6 +340,7 @@ void ARM7TDMI::Run(void** const until) {
 #ifdef CHECK_CACHED_STATS
                 NoCacheSteps++;
 #endif
+                // if Step returns true, we are in a region where we can generate a cache
                 if (Step<false>()) {
                     break;
                 }
@@ -349,11 +351,11 @@ void ARM7TDMI::Run(void** const until) {
             // make new one
             if (ARMMode) {
                 const auto access_time = Memory->GetAccessTime<u32>(static_cast<MemoryRegion>(pc >> 24));
-                *CurrentCache = std::make_unique<InstructionCache>(access_time, true);
+                *CurrentCache = std::make_unique<InstructionCache>(access_time, true, static_cast<MemoryRegion>(pc >> 24) == MemoryRegion::iWRAM);
             }
             else {
                 const auto access_time = Memory->GetAccessTime<u16>(static_cast<MemoryRegion>(pc >> 24));
-                *CurrentCache = std::make_unique<InstructionCache>(access_time, false);
+                *CurrentCache = std::make_unique<InstructionCache>(access_time, false, static_cast<MemoryRegion>(pc >> 24) == MemoryRegion::iWRAM);
             }
 
 #ifdef DO_DEBUGGER
@@ -363,6 +365,7 @@ void ARM7TDMI::Run(void** const until) {
 #endif
         }
         else {
+            // cache possible and present
 #ifdef DO_DEBUGGER
             RunCache(until);
 #else

@@ -506,7 +506,6 @@ void GBAPPU::InitBlitBuffers() {
 }
 
 void GBAPPU::InitBGBuffers() {
-
     // Setup VAO to bind the buffers to
     glGenVertexArrays(1, &BGVAO);
     glBindVertexArray(BGVAO);
@@ -834,7 +833,6 @@ void GBAPPU::DrawObjWindow(int win_start, int win_end) {
             glUniform1ui(WinObjAffLocation, true);
             glBufferData(GL_ARRAY_BUFFER, sizeof(u64) * NumberOfAffineObjVerts, ObjAttrBuffer, GL_STATIC_DRAW);
             glDrawElements(GL_TRIANGLE_FAN, (NumberOfAffineObjVerts >> 2) * 5, GL_UNSIGNED_SHORT, 0);
-
         }
 
         log_ppu("%d objects enabled in lines %d - %d of object window", NumberOfRegularObjVerts >> 2, scanline, scanline + batch_size);
@@ -1096,7 +1094,6 @@ void GBAPPU::DrawScanlines(u32 scanline, u32 amount) {
 }
 
 struct s_framebuffer GBAPPU::Render() {
-
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_BLEND);

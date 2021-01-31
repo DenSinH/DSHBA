@@ -50,7 +50,7 @@ int main() {
     gba = Initializer::init();
 
     // gba->LoadBIOS(std::string("D:\\Data\\GBA\\BIOS\\bios.bin"));
-    gba->LoadBIOS(std::string(BIOS_FILE));
+    // gba->LoadBIOS(std::string(BIOS_FILE));
 
 #ifdef BENCHMARKING
     benchmark();

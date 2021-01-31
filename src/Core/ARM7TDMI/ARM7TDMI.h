@@ -91,15 +91,13 @@ static constexpr ALWAYS_INLINE u32 THUMBHash(const u16 instruction) {
 
 class ARM7TDMI {
 public:
-    i32* timer;
+    i32* const timer;
 
     ARM7TDMI(s_scheduler* scheduler, Mem* memory);
     ~ARM7TDMI() {
-
 #if defined(TRACE_LOG) || defined(ALWAYS_TRACE_LOG)
         trace.close();
 #endif
-
     };
 
     bool Paused = false;
@@ -189,29 +187,31 @@ private:
     };
 
     struct InstructionCache {
-        InstructionCache(u16 access_time, bool arm) :
+        InstructionCache(u16 access_time, bool arm, bool deletable) :
                 AccessTime(access_time),
-                ARM(arm) {
+                ARM(arm),
+                Deletable(deletable) {
             Instructions.reserve(Mem::InstructionCacheBlockSizeBytes >> 1);
         }
 
         const bool ARM;
+        const bool Deletable;
         const u16 AccessTime;
         std::vector<CachedInstruction> Instructions;
     };
 
     // shift by 1 because of instruction alignment
-    std::array<std::unique_ptr<InstructionCache>, (0x4000 >> 1)> BIOSCache = {};
+    std::array<std::unique_ptr<InstructionCache>, (Mem::BIOSSize >> 1)> BIOSCache = {};
     // we don't want to include the stack so that we don't have to check this all the time
-    std::array<std::vector<u32>, (0x8000 - Mem::StackSize) / Mem::InstructionCacheBlockSizeBytes> iWRAMCacheFilled = {};
-    std::array<std::unique_ptr<InstructionCache>, ((0x8000 - Mem::StackSize) >> 1)> iWRAMCache = {};
-    std::array<std::unique_ptr<InstructionCache>, (0x0200'0000 >> 1)> ROMCache = {};
+    std::array<std::vector<u32>, (Mem::iWRAMSize - Mem::StackSize) / Mem::InstructionCacheBlockSizeBytes> iWRAMCacheFilled = {};
+    std::array<std::unique_ptr<InstructionCache>, ((Mem::iWRAMSize - Mem::StackSize) >> 1)> iWRAMCache = {};
+    std::array<std::unique_ptr<InstructionCache>, (Mem::ROMSize >> 1)> ROMCache = {};
     
     std::unique_ptr<InstructionCache>* CurrentCache = nullptr;
 
     static constexpr bool InCacheRegion(const u32 address) {
-        const bool in_bios = address < 0x4000;
-        const bool in_iwram = (static_cast<MemoryRegion>(address >> 24) == MemoryRegion::iWRAM) && ((address & 0x7fff) < (0x8000 - Mem::StackSize));
+        const bool in_bios = address < Mem::BIOSSize;
+        const bool in_iwram = (static_cast<MemoryRegion>(address >> 24) == MemoryRegion::iWRAM) && ((address & (Mem::iWRAMSize - 1)) < (Mem::iWRAMSize - Mem::StackSize));
         const bool in_rom = address >= (static_cast<u32>(MemoryRegion::ROM_L) << 24);
         return in_iwram || in_rom || in_bios;
     }
@@ -219,25 +219,30 @@ private:
     constexpr std::unique_ptr<InstructionCache>* GetCache(const u32 address) {
         switch (static_cast<MemoryRegion>(address >> 24)) {
             case MemoryRegion::BIOS: {
-                const u32 index = (address & 0x3fff) >> 1;
-                if (likely(address < 0x4000)) {
+                const u32 index = (address & (Mem::BIOSSize - 1)) >> 1;
+                if (likely(address < Mem::BIOSSize)) {
+                    // check if cache exists
                     if (BIOSCache[index]) {
                         return &BIOSCache[index];
                     }
-                    BIOSCache[index] = nullptr;
+
+                    // show that no cache exists, but can be created
+                    // BIOSCache[index] = nullptr;
                     return &BIOSCache[index];
                 }
+
+                // no cache
                 return nullptr;
             }
             case MemoryRegion::iWRAM: {
-                const u32 index = (address & 0x7fff) >> 1;
-                if ((address & 0x7fff) < (0x8000 - Mem::StackSize)) {
+                const u32 index = (address & (Mem::iWRAMSize - 1)) >> 1;
+                if ((address & (Mem::iWRAMSize - 1)) < (Mem::iWRAMSize - Mem::StackSize)) {
                     if (iWRAMCache[index]) {
                         return &iWRAMCache[index];
                     }
-                    // mark index as filled
-                    iWRAMCacheFilled[(address & 0x7fff) / Mem::InstructionCacheBlockSizeBytes].push_back(index);
-                    iWRAMCache[index] = nullptr;
+                    // mark index as filled for faster page clearing
+                    iWRAMCacheFilled[(address & (Mem::iWRAMSize - 1)) / Mem::InstructionCacheBlockSizeBytes].push_back(index);
+                    // iWRAMCache[index] = nullptr;
                     return &iWRAMCache[index];
                 }
                 return nullptr;
@@ -248,11 +253,11 @@ private:
             case MemoryRegion::ROM_H1:
             case MemoryRegion::ROM_L2:
             case MemoryRegion::ROM_H2: {
-                const u32 index = (address & 0x1ff'ffff) >> 1;
+                const u32 index = (address & (Mem::ROMSize - 1)) >> 1;
                 if (ROMCache[index]) {
                     return &ROMCache[index];
                 }
-                ROMCache[index] = nullptr;
+                // ROMCache[index] = nullptr;
                 return &ROMCache[index];
             }
             default:
@@ -328,13 +333,13 @@ private:
     // we still keep PC ahead of course
     s_Pipeline Pipeline;
 
-    Mem* Memory;
-    s_scheduler* Scheduler;
+    Mem* const Memory;
+    s_scheduler* const Scheduler;
 
     // We want to make this an event that will always be scheduled right away, so that we don't have to think about
     // whether we are in an instruction or not, cause we will never be in this case, and we will always be 4/8 ahead
     // of the next instruction to be executed
-    s_event InterruptPoll;
+    s_event* const InterruptPoll = Scheduler->MakeEvent(this, &ARM7TDMI::InterruptPollEvent);
     static SCHEDULER_EVENT(InterruptPollEvent);
     void ScheduleInterruptPoll();
 

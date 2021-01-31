@@ -7,6 +7,7 @@
 
 #include <functional>
 #include <queue>
+#include <array>
 
 #include "log.h"
 
@@ -20,13 +21,30 @@ struct s_event;
 // returns whether CPU was affected
 #define SCHEDULER_EVENT(name) bool name(void* caller, s_event* event, s_scheduler* scheduler)
 
-typedef struct s_event {
+struct s_event {
+    constexpr s_event() :
+        caller(nullptr),
+        callback(nullptr) {
+
+    }
+
+    constexpr s_event(void* const _caller, SCHEDULER_EVENT((*_callback))) :
+        caller(_caller),
+        callback(_callback) {
+
+    }
+
+    constexpr s_event(void* const _caller, SCHEDULER_EVENT((*_callback)), i32 _time) :
+        s_event(_caller, _callback) {
+        time = _time;
+    }
+
     SCHEDULER_EVENT((*callback));
 
-    void *caller;
-    i32 time;
-    bool active;   // signifies if event is in the scheduler or not
-} s_event;
+    void* caller;
+    i32 time = 0;
+    bool active = false;   // signifies if event is in the scheduler or not
+};
 
 /*
  * Idea: make a heap structure, add events sorted on time, remove events sorted on time, then check if callback is equal
@@ -47,7 +65,6 @@ template<
         class Compare=std::less<typename Container::value_type>
 >
 class deleteable_priority_queue : public std::priority_queue<T, Container, Compare> {
-
 public:
 
     bool remove(const T &value) {
@@ -71,34 +88,47 @@ public:
 
 // we know that there is always _something_ in the queue
 struct s_scheduler {
+private:
+    friend class Initializer;
+    // event to put in queue to make sure it is not empty
+    s_event infty = s_event(
+        this,
+        [] (void* caller, s_event* event, s_scheduler* scheduler) -> bool {
+            *(scheduler->timer) -= 0x7000'0000;
+            scheduler->queue.map([](s_event** value) {
+                (*value)->time -= 0x7000'0000;
+            });
 
+            // schedule at 0x7000'0000 again
+            scheduler->AddEvent(event);
+            return false;
+        },
+        0x7000'0000
+    );
+
+    u32 number_of_events = 0;
+    std::array<s_event, SCHEDULER_MAX_EVENTS> events = {};
+    deleteable_priority_queue<s_event*, std::vector<s_event*>, decltype(cmp)> queue;
+
+public:
     const static i32 TimeMask = 0x3fff'ffff;
 
-    deleteable_priority_queue<s_event*, std::vector<s_event*>, decltype(cmp)> queue;
-    i32* timer;
+    i32* const timer;
     i32 top;
 
-    // event to put in queue to make sure it is not empty
-    s_event infty;
-
-    explicit s_scheduler(i32* timer) {
-        this->infty = (s_event) {
-            .callback = [] (void* caller, s_event* event, s_scheduler* scheduler) -> bool {
-                *(scheduler->timer) -= 0x7000'0000;
-                scheduler->queue.map([](s_event** value) {
-                    (*value)->time -= 0x7000'0000;
-                });
-
-                // schedule at 0x7000'0000 again
-                scheduler->AddEvent(event);
-                return false;
-            },
-            .caller = this,
-            .time = 0x7000'0000
-        };
-        this->timer = timer;
-
+    explicit s_scheduler(i32* _timer) :
+            timer(_timer) {
         this->Reset();
+    }
+
+    constexpr s_event* MakeEvent(void* caller, SCHEDULER_EVENT((*callback))) {
+        events[number_of_events] = s_event(caller, callback);
+        return &events[number_of_events++];
+    }
+
+    constexpr s_event* MakeEvent(void* caller, SCHEDULER_EVENT((*callback)), i32 time) {
+        events[number_of_events] = s_event(caller, callback, time);
+        return &events[number_of_events++];
     }
 
     void Reset() {

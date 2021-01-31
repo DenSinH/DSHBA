@@ -62,16 +62,20 @@ private:
 
     /* Internal function */
 
-    s_scheduler* Scheduler;
+    s_scheduler* const Scheduler;
     u32 FrameSequencer = 0;
     static const u32 FrameSequencerPeriod = 0x8000;  // CPU cycles
     static const u32 SamplePeriod = CLOCK_FREQUENCY / SampleFrequency;
 
     static SCHEDULER_EVENT(TickFrameSequencerEvent);
-    s_event TickFrameSequencer;
+    s_event* const TickFrameSequencer = Scheduler->MakeEvent(
+            this, TickFrameSequencerEvent
+    );
     static SCHEDULER_EVENT(ProvideSampleEvent);
     void DoProvideSample();
-    s_event ProvideSample;
+    s_event* const ProvideSample = Scheduler->MakeEvent(
+            this, ProvideSampleEvent
+    );
 
     u8 MasterVolumeRight = 0;
     u8 MasterVolumeLeft = 0;

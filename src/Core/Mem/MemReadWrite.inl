@@ -180,8 +180,8 @@ void Mem::Write(u32 address, T value) {
                 if (IsEEPROMAccess(address)) {
                     Backup->Write(address, value);
                     Backup->Dirty = BackupMem::MaxDirtyChecks;
-                    if (!DumpSave.active) {
-                        Scheduler->AddEventAfter(&DumpSave, CYCLES_PER_FRAME);
+                    if (!DumpSave->active) {
+                        Scheduler->AddEventAfter(DumpSave, CYCLES_PER_FRAME);
                     }
                 }
             }
@@ -189,8 +189,8 @@ void Mem::Write(u32 address, T value) {
         case MemoryRegion::SRAM:
             Backup->Write(address, value);
             Backup->Dirty = BackupMem::MaxDirtyChecks;
-            if (!DumpSave.active) {
-                Scheduler->AddEventAfter(&DumpSave, CYCLES_PER_FRAME);
+            if (!DumpSave->active) {
+                Scheduler->AddEventAfter(DumpSave, CYCLES_PER_FRAME);
             }
             return;
         default:

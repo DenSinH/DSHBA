@@ -41,14 +41,14 @@ void MMIO::OverflowTimer() {
 
     // reschedule event, timer 0 is never in count-up mode
     if (x == 0 || !(Timers[x].Register.CNT_H & static_cast<u16>(TMCNT_HFlags::CountUp))) {
-        if (likely(!Timers[x].Overflow.active)) {
-            Timers[x].Overflow.time += (0x10000 - Timers[x].Register.CNT_L) << Timers[x].PrescalerShift;
-            Scheduler->AddEvent(&Timers[x].Overflow);
+        if (likely(!Timers[x].Overflow->active)) {
+            Timers[x].Overflow->time += (0x10000 - Timers[x].Register.CNT_L) << Timers[x].PrescalerShift;
+            Scheduler->AddEvent(Timers[x].Overflow);
         }
         else {
             log_warn("Timer event in scheduler on overflow");
-            Scheduler->RescheduleEvent(&Timers[x].Overflow,
-                             Timers[x].Overflow.time + ((0x10000 - Timers[x].Register.CNT_L) << Timers[x].PrescalerShift));
+            Scheduler->RescheduleEvent(Timers[x].Overflow,
+                             Timers[x].Overflow->time + ((0x10000 - Timers[x].Register.CNT_L) << Timers[x].PrescalerShift));
         }
     }
 }
@@ -111,8 +111,8 @@ WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
         if (!(value & static_cast<u16>(TMCNT_HFlags::Enabled))) {
             // timer got disabled
             Timers[x].Register.CNT_H = value;
-            if (likely(Timers[x].Overflow.active)) {
-                Scheduler->RemoveEvent(&Timers[x].Overflow);
+            if (likely(Timers[x].Overflow->active)) {
+                Scheduler->RemoveEvent(Timers[x].Overflow);
             }
             return;
         }
@@ -135,8 +135,8 @@ WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
     // schedule overflow event
     if (x == 0 || !(Timers[x].Register.CNT_H & static_cast<u16>(TMCNT_HFlags::CountUp))) {
         // for direct timers: schedule/reschedule event
-        if (unlikely(Timers[x].Overflow.active)) {
-            Scheduler->RemoveEvent(&Timers[x].Overflow);
+        if (unlikely(Timers[x].Overflow->active)) {
+            Scheduler->RemoveEvent(Timers[x].Overflow);
         }
 
         // delta time
@@ -144,9 +144,9 @@ WRITE_CALLBACK(MMIO::WriteTMxCNT_H) {
         // time that has already passed
         i32 passed = (((*Scheduler->timer) & Scheduler->TimeMask) - Timers[x].TriggerTime);
 
-        Scheduler->AddEventAfter(&Timers[x].Overflow, new_period - passed);
+        Scheduler->AddEventAfter(Timers[x].Overflow, new_period - passed);
     }
-    else if (unlikely(Timers[x].Overflow.active)) {
-        Scheduler->RemoveEvent(&Timers[x].Overflow);
+    else if (unlikely(Timers[x].Overflow->active)) {
+        Scheduler->RemoveEvent(Timers[x].Overflow);
     }
 }

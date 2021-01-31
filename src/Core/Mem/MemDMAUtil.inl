@@ -77,7 +77,7 @@ static DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 length, co
         case MemoryRegion::SRAM:
             return DMAAction::Slow;
         case MemoryRegion::VRAM:
-            if (MaskVRAMAddress(sad) + (length * sizeof(T)) > 0x1'8000) {
+            if (MaskVRAMAddress(sad) + (length * sizeof(T)) > RegionSize::VRAMSize) {
                 return DMAAction::Slow;
             }
         case MemoryRegion::BIOS:
@@ -117,7 +117,7 @@ static DMAAction AllowFastDMA(const u32 dad, const u32 sad, const u32 length, co
         case MemoryRegion::SRAM:
             return DMAAction::Slow;
         case MemoryRegion::VRAM:
-            if (MaskVRAMAddress(dad) + (length * sizeof(T)) > 0x1'8000) {
+            if (MaskVRAMAddress(dad) + (length * sizeof(T)) > RegionSize::VRAMSize) {
                 return DMAAction::Slow;
             }
         case MemoryRegion::eWRAM:

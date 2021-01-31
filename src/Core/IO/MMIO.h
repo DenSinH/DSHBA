@@ -57,7 +57,7 @@ struct s_TimerData {
     FIFOChannel* FIFOA = nullptr;
     FIFOChannel* FIFOB = nullptr;
 
-    s_event Overflow;
+    s_event* Overflow;
 
     void FlushDirect(i32 CurrentTime) {
         // we assume that Reload + (TriggerTime - CurrentTime) / Prescaler < 0x10000 at all times!
@@ -99,6 +99,12 @@ private:
     friend class Mem;
     friend class Initializer;
 
+    ARM7TDMI* const CPU;
+    GBAPPU* const PPU;
+    GBAAPU* const APU;
+    Mem* const Memory;
+    s_scheduler* const Scheduler;
+
     void TriggerInterrupt(u16 interrupt);
 
     /*============== LCD ==============*/
@@ -109,12 +115,24 @@ private:
     u16 BLDCNT   = 0;
 
     static SCHEDULER_EVENT(HBlankEvent);
-    s_event HBlank = {};
+    s_event* const HBlank = Scheduler->MakeEvent(
+            this,
+            HBlankEvent,
+            960 // (see below)
+    );
     static SCHEDULER_EVENT(VBlankEvent);
-    s_event VBlank = {};
+    s_event* const VBlank = Scheduler->MakeEvent(
+            this,
+            VBlankEvent,
+            CYCLES_PER_SCANLINE * VISIBLE_SCREEN_HEIGHT
+    );
     bool LCDVBlank = false;  // does not correspond to the flag
     static SCHEDULER_EVENT(HBlankFlagEvent);
-    s_event HBlankFlag = {};
+    s_event* const HBlankFlag = Scheduler->MakeEvent(
+            this,
+            HBlankFlagEvent
+            // time is set by HBlank event
+    );
 
     u32 ReferenceLine2 = 0;
     u32 ReferenceLine3 = 0;
@@ -126,20 +144,34 @@ private:
     WRITE_CALLBACK(WriteBLDCNT);
 
     /*============== DMA ==============*/
-    u8 DMAsActive            = 0;  // if a DMA is active, another DMA won't have delay
-    bool DMAEnabled[4]       = {};
-    s_DMAData DMAData[4]     = {};  // shadow registers on DMA enable
-    s_event DMAStart[4]      = {};  // starting needs to be delayed because of immediate DMAs (might be mid-instruction)
+    u8 DMAsActive               = 0;  // if a DMA is active, another DMA won't have delay
+    bool DMAEnabled[4]          = {};
+    s_DMAData DMAData[4]        = {};  // shadow registers on DMA enable
+    s_event* const DMAStart[4]  = {
+            Scheduler->MakeEvent(
+                    this, DMAStartEvent<0>
+            ),
+            Scheduler->MakeEvent(
+                    this, DMAStartEvent<1>
+            ),
+            Scheduler->MakeEvent(
+                    this, DMAStartEvent<2>
+            ),
+            Scheduler->MakeEvent(
+                    this, DMAStartEvent<3>
+            ),
+    };
+    // starting needs to be delayed because of immediate DMAs (might be mid-instruction)
     template<u8 x> static SCHEDULER_EVENT(DMAStartEvent);
     bool RunDMAChannel(u8 x);
     inline void TriggerDMAChannel(u8 x) {
         if (DMAsActive) {
             // if other DMAs are active, there is no delay
-            Scheduler->AddEventAfter(&DMAStart[x], 0);
+            Scheduler->AddEventAfter(DMAStart[x], 0);
         }
         else {
             // account for startup delay todo: ROM extra cycles
-            Scheduler->AddEventAfter(&DMAStart[x], 0);
+            Scheduler->AddEventAfter(DMAStart[x], 0);
         }
     };
     void TriggerDMATiming(DMACNT_HFlags start_timing);
@@ -189,15 +221,12 @@ private:
     READ_PRECALL(ReadIF);     // and can be changed externally
     WRITE_CALLBACK(WritePOSTFLG_HALTCNT);
     static SCHEDULER_EVENT(HaltEvent);
-    s_event Halt;
+    s_event* const Halt = Scheduler->MakeEvent(
+            this,
+            HaltEvent
+    );
 
     u16 KEYINPUT = 0xffff;  // flipped
-
-    ARM7TDMI* CPU;
-    GBAPPU* PPU;
-    GBAAPU* APU;
-    Mem* Memory;
-    s_scheduler* Scheduler;
 
     u8 Registers[0x400]      = {};
 

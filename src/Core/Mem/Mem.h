@@ -93,6 +93,16 @@ public:
 
     static constexpr u32 StackSize = 0x400;
 
+    enum RegionSize : size_t {
+        BIOSSize  = 0x4000,
+        eWRAMSize = 0x4'0000,
+        iWRAMSize = 0x8000,
+        PALSize   = 0x400,
+        OAMSize   = 0x400,
+        VRAMSize  = 0x18000,
+        ROMSize   = 0x0200'0000,
+    };
+
 private:
     friend class GBAPPU;   // allow VMEM to be buffered
     friend class Mem_INL;  // to cheese IDEs
@@ -111,7 +121,7 @@ private:
     // assumes save type is actually EEPROM
     [[nodiscard]] ALWAYS_INLINE constexpr bool IsEEPROMAccess(const u32 address) const {
         ASSUME((address >= 0x0800'0000));
-        return ((address & 0x01ff'ffff) > 0x01ff'feff) || ((ROMSize <= 0x0100'0000) && (address >= 0x0d00'0000));
+        return ((address & 0x01ff'ffff) > 0x01ff'feff) || ((CurrentROMSize <= 0x0100'0000) && (address >= 0x0d00'0000));
     }
 
     template<typename T> ALWAYS_INLINE T ReadDMALatch(u32 address) {
@@ -145,7 +155,7 @@ private:
     u8 ROM   [0x0200'0000]   = {};
     BackupMem* Backup        = nullptr;
     BackupType Type = BackupType::SRAM;
-    size_t ROMSize = 0;
+    size_t CurrentROMSize = 0;
 
     BackupType FindBackupType();
     u32 BusValue();
@@ -153,7 +163,7 @@ private:
     std::string ROMFile;
     std::string SaveFile;
 
-    s_event DumpSave;
+    s_event* const DumpSave = Scheduler->MakeEvent(this, DumpSaveEvent);
     static SCHEDULER_EVENT(DumpSaveEvent);
 
     u32 DMALatch = 0;

@@ -11,7 +11,7 @@ add_library(Mem STATIC
         Backup/BackupDefault.h
         Backup/EEPROM.cpp
         Backup/EEPROM.h
-        NormmattBIOS.h MemPageTables.inl)
+        MemPageTables.inl)
 
 # for logging / stuff I want to use in all files
 include_directories(

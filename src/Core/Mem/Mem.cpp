@@ -2,7 +2,7 @@
 
 #include "CoreUtils.h"
 #include "Backup/BackupDB.h"
-#include "NormmattBIOS.h"
+#include "BIOS.h"
 
 #include <filesystem>
 #include <string>
@@ -62,12 +62,14 @@ Mem::Mem(
     memset(ROM, 0, sizeof(ROM));
     const u8 IdleBranch[5] = "\xfe\xff\xff\xea";
     memcpy(ROM, IdleBranch, 4);
-    Reset();
 
-    DumpSave = (s_event) {
-        .callback = DumpSaveEvent,
-        .caller = this
-    };
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+    memcpy_s(BIOS, sizeof(BIOS), ::BIOS, sizeof(::BIOS));
+#else
+    memcpy(BIOS, ::BIOS, std::min(sizeof(BIOS), sizeof(::BIOS)));
+#endif
+
+    Reset();
 }
 
 Mem::~Mem() {
@@ -150,7 +152,7 @@ BackupType Mem::FindBackupType() {
 
     // not in DB, try matching save type substrings
     for (auto type : { BackupType::EEPROM, BackupType::FLASH_128, BackupType::FLASH_64, BackupType::FLASH }) {
-        if (FindInROM(ROM, ROMSize, type)) {
+        if (FindInROM(ROM, CurrentROMSize, type)) {
             return type;
         }
     }
@@ -168,7 +170,7 @@ void Mem::LoadROM(const std::string file_path) {
 
     log_debug("Loading %s", file_path.c_str());
     ROMFile = file_path;
-    ROMSize = LoadFileTo(reinterpret_cast<char *>(ROM), file_path, 0x0200'0000);
+    CurrentROMSize = LoadFileTo(reinterpret_cast<char *>(ROM), file_path, 0x0200'0000);
     SaveFile = file_path.substr(0, file_path.find_last_of('.')) + ".dshba";
 
     Type = FindBackupType();
@@ -213,7 +215,7 @@ void Mem::LoadROM(const std::string file_path) {
 
     Backup->Load(SaveFile);
 
-    for (size_t addr = ((ROMSize + 3) & ~3); addr < sizeof(ROM); addr += 2) {
+    for (size_t addr = ((CurrentROMSize + 3) & ~3); addr < sizeof(ROM); addr += 2) {
         // out of bounds ROM accesses
         // start at next power of 2
         WriteArray<u16>(ROM, addr, addr >> 1);
@@ -229,9 +231,9 @@ void Mem::LoadBIOS(const std::string& file_path) {
             // check if something has been loaded into the BIOS already (reset vector should not be 0)
             log_warn("BIOS file %s does not exist, loading default...", file_path.c_str());
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-            memcpy_s(BIOS, sizeof(BIOS), NormattsBIOS, sizeof(NormattsBIOS));
+            memcpy_s(BIOS, sizeof(BIOS), ::BIOS, sizeof(::BIOS));
 #else
-            memcpy(BIOS, NormattsBIOS, std::min(sizeof(BIOS), sizeof(NormattsBIOS)));
+            memcpy(BIOS, ::BIOS, std::min(sizeof(BIOS), sizeof(::BIOS)));
 #endif
         }
     }

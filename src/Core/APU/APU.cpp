@@ -5,28 +5,14 @@
 #include <cmath>
 
 GBAAPU::GBAAPU(s_scheduler* scheduler, u8* wave_ram_ptr, const std::function<void(u32)>& fifo_callback) :
+    Scheduler(scheduler),
     sq{Square(scheduler), Square(scheduler)},
     ns(scheduler),
     wav(scheduler, wave_ram_ptr),
     fifo{FIFOChannel(fifo_callback, 0x0400'00a0), FIFOChannel(fifo_callback, 0x0400'00a4)}
 {
-
-    this->Scheduler = scheduler;
-
-    TickFrameSequencer = (s_event) {
-        .callback = TickFrameSequencerEvent,
-        .caller = this,
-        .time = 0,
-    };
-    scheduler->AddEvent(&TickFrameSequencer);
-
-    ProvideSample = (s_event) {
-        .callback = ProvideSampleEvent,
-        .caller = this,
-        .time = SamplePeriod
-    };
-
-    scheduler->AddEvent(&ProvideSample);
+    scheduler->AddEvent(TickFrameSequencer);
+    scheduler->AddEvent(ProvideSample);
 }
 
 void GBAAPU::AudioInit() {

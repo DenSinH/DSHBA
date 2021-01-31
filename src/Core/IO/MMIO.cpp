@@ -5,83 +5,39 @@
 #include "../ARM7TDMI/ARM7TDMI.h"
 #include "../Mem/Mem.h"
 
-MMIO::MMIO(GBAPPU* ppu, GBAAPU* apu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) {
-    PPU = ppu;
-    APU = apu;
-    CPU = cpu;
-    Memory = memory;
-    Scheduler = scheduler;
+MMIO::MMIO(GBAPPU* ppu, GBAAPU* apu, ARM7TDMI* cpu, Mem* memory, s_scheduler* scheduler) :
+        PPU(ppu),
+        APU(apu),
+        CPU(cpu),
+        Memory(memory),
+        Scheduler(scheduler) {
 
     // set to 0xff to detect HALT writes properly
     WriteArray<u8>(Registers, static_cast<u32>(IORegister::HALTCNT), 0xff);
-
-    HBlank = {
-        .callback = HBlankEvent,
-        .caller   = this,
-        .time = 960 // (see below)
-    };
-
-    HBlankFlag = {
-        .callback = HBlankFlagEvent,
-        .caller   = this,
-        // time is set by HBlank event
-    };
-
-    VBlank = {
-        .callback = VBlankEvent,
-        .caller   = this,
-        .time     = CYCLES_PER_SCANLINE * VISIBLE_SCREEN_HEIGHT
-    };
-
-    Halt = {
-        .callback = HaltEvent,
-        .caller   = this,
-    };
 
     DMAData[0].CNT_L_MAX = 0x4000;
     DMAData[1].CNT_L_MAX = 0x4000;
     DMAData[2].CNT_L_MAX = 0x4000;
     DMAData[3].CNT_L_MAX = 0x10000;
 
-    DMAStart[0] = (s_event) {
-        .callback = DMAStartEvent<0>,
-        .caller = this,
-    };
-    DMAStart[1] = (s_event) {
-        .callback = DMAStartEvent<1>,
-        .caller = this,
-    };
-    DMAStart[2] = (s_event) {
-        .callback = DMAStartEvent<2>,
-        .caller = this,
-    };
-    DMAStart[3] = (s_event) {
-        .callback = DMAStartEvent<3>,
-        .caller = this,
-    };
-
-    Timers[0].Overflow = (s_event) {
-        .callback = TimerOverflowEvent<0>,
-        .caller   = this,
-    };
-    Timers[1].Overflow = (s_event) {
-        .callback = TimerOverflowEvent<1>,
-        .caller   = this,
-    };
-    Timers[2].Overflow = (s_event) {
-        .callback = TimerOverflowEvent<2>,
-        .caller   = this,
-    };
-    Timers[3].Overflow = (s_event) {
-        .callback = TimerOverflowEvent<3>,
-        .caller   = this,
-    };
+    Timers[0].Overflow = Scheduler->MakeEvent(
+            this, TimerOverflowEvent<0>
+    );
+    Timers[1].Overflow = Scheduler->MakeEvent(
+            this, TimerOverflowEvent<1>
+    );
+    Timers[2].Overflow = Scheduler->MakeEvent(
+            this, TimerOverflowEvent<2>
+    );
+    Timers[3].Overflow = Scheduler->MakeEvent(
+            this, TimerOverflowEvent<3>
+    );
 
     Timers[0].FIFOA = &APU->fifo[0];
     Timers[0].FIFOB = &APU->fifo[1];
 
-    Scheduler->AddEvent(&HBlank);
-    Scheduler->AddEvent(&VBlank);
+    Scheduler->AddEvent(HBlank);
+    Scheduler->AddEvent(VBlank);
 }
 
 void MMIO::Reset() {
@@ -216,8 +172,8 @@ SCHEDULER_EVENT(MMIO::HBlankEvent) {
 
     if (!(IO->DISPSTAT & static_cast<u16>(DISPSTATFlags::HBLank))) {
         // HBlank, set flag after 46 cycles
-        IO->HBlankFlag.time = event->time + CYCLES_HBLANK_FLAG_DELAY;
-        IO->Scheduler->AddEvent(&IO->HBlankFlag);
+        IO->HBlankFlag->time = event->time + CYCLES_HBLANK_FLAG_DELAY;
+        IO->Scheduler->AddEvent(IO->HBlankFlag);
 
         // clear after 226 cycles
         event->time += CYCLES_HBLANK;
@@ -561,7 +517,7 @@ WRITE_CALLBACK(MMIO::WritePOSTFLG_HALTCNT) {
         CPU->Halted = true;
 
         // halting needs to happen outside of the instruction scope
-        Scheduler->AddEventAfter(&Halt, 0);
+        Scheduler->AddEventAfter(Halt, 0);
 
         // reset to 0xff to detect HALT writes properly
         WriteArray<u8>(Registers, static_cast<u32>(IORegister::HALTCNT), 0xff);
