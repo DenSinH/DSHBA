@@ -1,0 +1,43 @@
+[controller]
+[buttons]
+// controller buttons use decimal indices
+A      = 0
+B      = 1
+X      = 3
+Y      = 2
+select = 4
+start  = 6
+up     = 11
+down   = 12
+left   = 13
+right  = 14
+L      = 9
+R      = 10
+
+[axis]
+left_x  = 0
+left_y  = 1
+right_x = 2
+right_y = 3
+
+[keyboard]
+[buttons]
+// keyboard uses hex values
+A      = 0x7a  // Z
+B      = 0x78  // X
+X      = 0x63  // C
+Y      = 0x76  // V
+up     = 0x40000052  // up
+down   = 0x40000051  // down
+left   = 0x40000050  // left
+right  = 0x4000004f  // right
+start  = 0x61  // A
+select = 0x73  // S
+L      = 0x71  // Q
+R      = 0x65  // E
+
+[axis]
+left_x      = 0x6c  // L
+left_x_neg  = 0x6a  // J
+left_y      = 0x69  // I
+left_y_neg  = 0x6b  // K
