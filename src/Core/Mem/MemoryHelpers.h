@@ -40,7 +40,7 @@ template<>
 u32 ReadArray(const u8 array[], u32 address) {
 #ifndef DIRTY_MEMORY_ACCESS
     address &= ~3;
-    return *(u32*)&array[address];
+    return (array[address + 3] << 24) | (array[address + 2] << 16) | (array[address + 1] << 8) | array[address];
 #else
     return *(u32*)&array[address & ~3];
 #endif
