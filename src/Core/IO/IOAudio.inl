@@ -10,7 +10,7 @@ template<u8 x>
 WRITE_CALLBACK(MMIO::WriteSquareCNT_L) {
     APU->sq[x].LengthCounter = (64 - value & 0x003f);
     APU->sq[x].SetDuty((value >> 6) & 3);
-    APU->sq[x].EnvelopeTime = (value >> 8) & 7;
+    APU->sq[x].EnvelopePeriod = APU->sq[x].EnvelopeTime = (value >> 8) & 7;
     APU->sq[x].EnvelopeUp  = (value & 0x0800) != 0;
 
     bool was_off = APU->sq[x].Volume == 0;

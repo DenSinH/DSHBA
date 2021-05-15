@@ -13,15 +13,19 @@ class EnvelopeChannel : public Channel {
 public:
     explicit EnvelopeChannel(s_scheduler* scheduler) : Channel(scheduler) {}
 
+    i32 EnvelopePeriod = 0;
     i32 EnvelopeTime = 0;
     bool EnvelopeUp = false;
 
     void DoEnvelope() {
-        if (EnvelopeTime > 0) {
+        if (EnvelopePeriod) {
             EnvelopeTime--;
             Volume += EnvelopeUp ? 1 : -1;
 
             Volume = std::clamp((i32)Volume, 0, 16);
+            if (!EnvelopeTime) {
+                EnvelopeTime = EnvelopePeriod;
+            }
         }
     }
 };
