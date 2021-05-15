@@ -4,7 +4,7 @@
 #include "default.h"
 
 
-typedef struct {
+typedef struct s_Pipeline {
 private:
     friend class Initializer;
     u32 Storage[4] = {};
