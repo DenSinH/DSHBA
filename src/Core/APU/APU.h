@@ -47,6 +47,7 @@ public:
     void AudioInit();
     void AudioDestroy();
 
+    bool SyncToAudio = true;
     bool ExternalEnable = true;
     float ExternalVolume = 1.0;
     bool ExternalChannelEnable[4] = { true, true, true, true };
@@ -72,6 +73,7 @@ private:
             this, TickFrameSequencerEvent
     );
     static SCHEDULER_EVENT(ProvideSampleEvent);
+    void WaitForAudioSync();
     void DoProvideSample();
     s_event* const ProvideSample = Scheduler->MakeEvent(
             this, ProvideSampleEvent

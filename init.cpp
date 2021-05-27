@@ -413,6 +413,8 @@ GBA* Initializer::init() {
     int audio_tab = add_menu_tab((char*)"Audio");
     const float max_volume = 2.0;
 
+    add_menu_item(audio_tab, "Audio Sync", &gba->APU.SyncToAudio, nullptr);
+
     add_menu_item(audio_tab, "Master Enable", &gba->APU.ExternalEnable, nullptr);
     add_sliderf(audio_tab, "Master Volume", &gba->APU.ExternalVolume, 0.0, max_volume);
 

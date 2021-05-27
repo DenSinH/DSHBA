@@ -56,6 +56,13 @@ void GBAAPU::AudioCallback(void *apu, u8 *stream, int length) {
     }
 }
 
+
+void GBAAPU::WaitForAudioSync() {
+    while (SDL_AudioStreamAvailable(Stream) > 0.5 * SampleFrequency * sizeof(i16)) {
+        // wait
+    }
+}
+
 SCHEDULER_EVENT(GBAAPU::TickFrameSequencerEvent) {
     auto APU = (GBAAPU*)caller;
     APU->FrameSequencer++;
@@ -160,6 +167,10 @@ void GBAAPU::DoProvideSample() {
             (i16)((i32)(SampleLeft  * ExternalVolume) >> 4),  // left
             (i16)((i32)(SampleRight * ExternalVolume) >> 4),  // right
     };
+
+    if (SyncToAudio) {
+        WaitForAudioSync();
+    }
 
     BufferMutex.lock();
     SDL_AudioStreamPut(Stream, samples, 2 * sizeof(i16));
