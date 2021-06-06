@@ -1198,93 +1198,92 @@ const char* VertexShaderSource =
 ;
 
 
-// WindowFragmentShaderSource (from window_fragment.glsl, lines 2 to 87)
+// WindowFragmentShaderSource (from window_fragment.glsl, lines 2 to 86)
 const char* WindowFragmentShaderSource = 
 "#version 330 core\n                                                                                "    // l:1
 "\n                                                                                                 "    // l:2
 "in vec2 screenCoord;\n                                                                             "    // l:3
 "\n                                                                                                 "    // l:4
 "out uvec4 FragColor;\n                                                                             "    // l:5
-"out float gl_FragDepth;\n                                                                          "    // l:6
-"\n                                                                                                 "    // l:7
-"uint readVRAM8(uint address);\n                                                                    "    // l:8
-"uint readVRAM16(uint address);\n                                                                   "    // l:9
-"uint readVRAM32(uint address);\n                                                                   "    // l:10
-"\n                                                                                                 "    // l:11
-"uint readIOreg(uint address);\n                                                                    "    // l:12
-"vec4 readPALentry(uint index);\n                                                                   "    // l:13
-"\n                                                                                                 "    // l:14
-"void main() {\n                                                                                    "    // l:15
-"    uint DISPCNT = readIOreg(0x00u);\n                                                             "    // l:16
-"\n                                                                                                 "    // l:17
-"    if ((DISPCNT & 0xe000u) == 0u) {\n                                                             "    // l:18
-"        // windows are disabled, enable all windows\n                                              "    // l:19
-"        // we should have caught this before rendering, but eh, I guess we'll check again...\n     "    // l:20
-"        FragColor.x = 0x3fu;\n                                                                     "    // l:21
-"        gl_FragDepth = 1.0;\n                                                                      "    // l:22
-"        return;\n                                                                                  "    // l:23
-"    }\n                                                                                            "    // l:24
-"\n                                                                                                 "    // l:25
-"    uint x = uint(screenCoord.x);\n                                                                "    // l:26
-"    uint y = uint(screenCoord.y);\n                                                                "    // l:27
-"\n                                                                                                 "    // l:28
-"    // window 0 has higher priority\n                                                              "    // l:29
-"    for (uint window = 0u; window < 2u; window++) {\n                                              "    // l:30
-"        if ((DISPCNT & (0x2000u << window)) == 0u) {\n                                             "    // l:31
-"            // window disabled\n                                                                   "    // l:32
-"            continue;\n                                                                            "    // l:33
-"        }\n                                                                                        "    // l:34
-"\n                                                                                                 "    // l:35
-"        uint WINH = readIOreg(0x40u + 2u * window);\n                                              "    // l:36
-"        uint WINV = readIOreg(0x44u + 2u * window);\n                                              "    // l:37
-"        uint WININ = (readIOreg(0x48u) >> (window * 8u)) & 0x3fu;\n                                "    // l:38
-"\n                                                                                                 "    // l:39
-"        uint X1 = WINH >> 8;\n                                                                     "    // l:40
-"        uint X2 = WINH & 0xffu;\n                                                                  "    // l:41
-"        if (X2 > 240u) {\n                                                                         "    // l:42
-"            X2 = 240u;\n                                                                           "    // l:43
-"        }\n                                                                                        "    // l:44
-"\n                                                                                                 "    // l:45
-"        uint Y1 = WINV >> 8;\n                                                                     "    // l:46
-"        uint Y2 = WINV & 0xffu;\n                                                                  "    // l:47
-"\n                                                                                                 "    // l:48
-"        if (Y1 <= Y2) {\n                                                                          "    // l:49
-"            // no vert wrap and out of bounds, continue\n                                          "    // l:50
-"            if (y < Y1 || y > Y2) {\n                                                              "    // l:51
-"                continue;\n                                                                        "    // l:52
-"            }\n                                                                                    "    // l:53
-"        }\n                                                                                        "    // l:54
-"        else {\n                                                                                   "    // l:55
-"            // vert wrap and \"in bounds\":\n                                                      "    // l:56
-"            if ((y < Y1) && (y > Y2)) {\n                                                          "    // l:57
-"                continue;\n                                                                        "    // l:58
-"            }\n                                                                                    "    // l:59
-"        }\n                                                                                        "    // l:60
-"\n                                                                                                 "    // l:61
-"        if (X1 <= X2) {\n                                                                          "    // l:62
-"            // no hor wrap\n                                                                       "    // l:63
-"            if (x >= X1 && x < X2) {\n                                                             "    // l:64
-"                // pixel in WININ\n                                                                "    // l:65
-"                FragColor.x = WININ;\n                                                             "    // l:66
-"                gl_FragDepth = 0.0;\n                                                              "    // l:67
-"                return;\n                                                                          "    // l:68
-"            }\n                                                                                    "    // l:69
-"        }\n                                                                                        "    // l:70
-"        else {\n                                                                                   "    // l:71
-"            // hor wrap\n                                                                          "    // l:72
-"            if (x < X2 || x >= X1) {\n                                                             "    // l:73
-"                // pixel in WININ\n                                                                "    // l:74
-"                FragColor.x = WININ;\n                                                             "    // l:75
-"                gl_FragDepth = 0.0;\n                                                              "    // l:76
-"                return;\n                                                                          "    // l:77
-"            }\n                                                                                    "    // l:78
-"        }\n                                                                                        "    // l:79
-"    }\n                                                                                            "    // l:80
-"\n                                                                                                 "    // l:81
-"    FragColor.x = readIOreg(0x4au) & 0x3fu;  // WINOUT\n                                           "    // l:82
-"    gl_FragDepth = 1.0;\n                                                                          "    // l:83
-"}\n                                                                                                "    // l:84
-"\n                                                                                                 "    // l:85
+"\n                                                                                                 "    // l:6
+"uint readVRAM8(uint address);\n                                                                    "    // l:7
+"uint readVRAM16(uint address);\n                                                                   "    // l:8
+"uint readVRAM32(uint address);\n                                                                   "    // l:9
+"\n                                                                                                 "    // l:10
+"uint readIOreg(uint address);\n                                                                    "    // l:11
+"vec4 readPALentry(uint index);\n                                                                   "    // l:12
+"\n                                                                                                 "    // l:13
+"void main() {\n                                                                                    "    // l:14
+"    uint DISPCNT = readIOreg(0x00u);\n                                                             "    // l:15
+"\n                                                                                                 "    // l:16
+"    if ((DISPCNT & 0xe000u) == 0u) {\n                                                             "    // l:17
+"        // windows are disabled, enable all windows\n                                              "    // l:18
+"        // we should have caught this before rendering, but eh, I guess we'll check again...\n     "    // l:19
+"        FragColor.x = 0x3fu;\n                                                                     "    // l:20
+"        gl_FragDepth = 1.0;\n                                                                      "    // l:21
+"        return;\n                                                                                  "    // l:22
+"    }\n                                                                                            "    // l:23
+"\n                                                                                                 "    // l:24
+"    uint x = uint(screenCoord.x);\n                                                                "    // l:25
+"    uint y = uint(screenCoord.y);\n                                                                "    // l:26
+"\n                                                                                                 "    // l:27
+"    // window 0 has higher priority\n                                                              "    // l:28
+"    for (uint window = 0u; window < 2u; window++) {\n                                              "    // l:29
+"        if ((DISPCNT & (0x2000u << window)) == 0u) {\n                                             "    // l:30
+"            // window disabled\n                                                                   "    // l:31
+"            continue;\n                                                                            "    // l:32
+"        }\n                                                                                        "    // l:33
+"\n                                                                                                 "    // l:34
+"        uint WINH = readIOreg(0x40u + 2u * window);\n                                              "    // l:35
+"        uint WINV = readIOreg(0x44u + 2u * window);\n                                              "    // l:36
+"        uint WININ = (readIOreg(0x48u) >> (window * 8u)) & 0x3fu;\n                                "    // l:37
+"\n                                                                                                 "    // l:38
+"        uint X1 = WINH >> 8;\n                                                                     "    // l:39
+"        uint X2 = WINH & 0xffu;\n                                                                  "    // l:40
+"        if (X2 > 240u) {\n                                                                         "    // l:41
+"            X2 = 240u;\n                                                                           "    // l:42
+"        }\n                                                                                        "    // l:43
+"\n                                                                                                 "    // l:44
+"        uint Y1 = WINV >> 8;\n                                                                     "    // l:45
+"        uint Y2 = WINV & 0xffu;\n                                                                  "    // l:46
+"\n                                                                                                 "    // l:47
+"        if (Y1 <= Y2) {\n                                                                          "    // l:48
+"            // no vert wrap and out of bounds, continue\n                                          "    // l:49
+"            if (y < Y1 || y > Y2) {\n                                                              "    // l:50
+"                continue;\n                                                                        "    // l:51
+"            }\n                                                                                    "    // l:52
+"        }\n                                                                                        "    // l:53
+"        else {\n                                                                                   "    // l:54
+"            // vert wrap and \"in bounds\":\n                                                      "    // l:55
+"            if ((y < Y1) && (y > Y2)) {\n                                                          "    // l:56
+"                continue;\n                                                                        "    // l:57
+"            }\n                                                                                    "    // l:58
+"        }\n                                                                                        "    // l:59
+"\n                                                                                                 "    // l:60
+"        if (X1 <= X2) {\n                                                                          "    // l:61
+"            // no hor wrap\n                                                                       "    // l:62
+"            if (x >= X1 && x < X2) {\n                                                             "    // l:63
+"                // pixel in WININ\n                                                                "    // l:64
+"                FragColor.x = WININ;\n                                                             "    // l:65
+"                gl_FragDepth = 0.0;\n                                                              "    // l:66
+"                return;\n                                                                          "    // l:67
+"            }\n                                                                                    "    // l:68
+"        }\n                                                                                        "    // l:69
+"        else {\n                                                                                   "    // l:70
+"            // hor wrap\n                                                                          "    // l:71
+"            if (x < X2 || x >= X1) {\n                                                             "    // l:72
+"                // pixel in WININ\n                                                                "    // l:73
+"                FragColor.x = WININ;\n                                                             "    // l:74
+"                gl_FragDepth = 0.0;\n                                                              "    // l:75
+"                return;\n                                                                          "    // l:76
+"            }\n                                                                                    "    // l:77
+"        }\n                                                                                        "    // l:78
+"    }\n                                                                                            "    // l:79
+"\n                                                                                                 "    // l:80
+"    FragColor.x = readIOreg(0x4au) & 0x3fu;  // WINOUT\n                                           "    // l:81
+"    gl_FragDepth = 1.0;\n                                                                          "    // l:82
+"}\n                                                                                                "    // l:83
+"\n                                                                                                 "    // l:84
 ;
 
 #endif  // GC__SHADER_H

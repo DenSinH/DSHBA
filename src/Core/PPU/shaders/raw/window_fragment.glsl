@@ -5,7 +5,6 @@
 in vec2 screenCoord;
 
 out uvec4 FragColor;
-out float gl_FragDepth;
 
 uint readVRAM8(uint address);
 uint readVRAM16(uint address);

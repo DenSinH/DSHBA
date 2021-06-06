@@ -222,6 +222,7 @@ INSTRUCTION(MultipleLoadStore) {
     }
 
     if constexpr(L) {
+        Registers[rb] = address + 4 * std::popcount(rlist);
 #if !defined(CTTZ_LDM_STM_LOOP_BASE) || !defined(HAS_CTTZ)
         for (unsigned i = 0; i < 8; i++) {
 #else
@@ -232,7 +233,6 @@ INSTRUCTION(MultipleLoadStore) {
                 address += 4;
             }
         }
-        Registers[rb] = address;
 
         // internal cycle
         (*timer)++;
@@ -258,7 +258,7 @@ INSTRUCTION(MultipleLoadStore) {
         }
 
         // new base:
-        Registers[rb] = (address + (popcount(rlist) << 2));
+        Registers[rb] = (address + (std::popcount(rlist) << 2));
 
 #if !defined(CTTZ_LDM_STM_LOOP_BASE) || !defined(HAS_CTTZ)
         for (unsigned i = 0; i < 8; i++) {
